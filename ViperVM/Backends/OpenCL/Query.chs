@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
 {-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, CPP #-}
 module ViperVM.Backends.OpenCL.Query( 
-  getNumPlatforms,
   -- * Types
   CLPlatformInfo(..), CLPlatformID, CLDeviceID, CLDeviceType(..),
   CLDeviceFPConfig(..), CLDeviceExecCapability(..), CLDeviceLocalMemType(..),

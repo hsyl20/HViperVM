@@ -8,14 +8,11 @@ module ViperVM.Backends.OpenCL.Loader (
 import Prelude hiding (catch)
 
 import System.Posix.DynamicLinker
-import Foreign.Marshal.Alloc
 import Foreign.Ptr
-import Foreign.Storable
 import Foreign.C.Types
 import Foreign.C.String
 import Data.Maybe (fromMaybe)
 import Data.Map
-import Data.Word
 import Data.Traversable
 
 import ViperVM.Backends.OpenCL.Types
