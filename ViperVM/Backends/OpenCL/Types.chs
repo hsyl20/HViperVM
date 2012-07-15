@@ -40,6 +40,8 @@ module ViperVM.Backends.OpenCL.Types(
   CLProgramInfo_, CLBuildStatus_,CLKernel, CLProgramBuildInfo_, CLKernelInfo_,
   CLKernelWorkGroupInfo_, CLDeviceLocalMemType_, CLDeviceMemCacheType_,
   CLSampler, CLFilterMode_, CLSamplerInfo_, CLAddressingMode_,
+  -- * Memory Types
+  CLImageFormat(..), CLImageFormat_p, CLChannelOrder(..), CLChannelType(..),
   -- * High Level Types
   CLError(..), CLDeviceFPConfig(..), CLDeviceMemCacheType(..), 
   CLDeviceExecCapability(..), CLDeviceLocalMemType(..), CLDeviceType(..), 
@@ -58,7 +60,7 @@ import Foreign
 import Foreign.C.Types
 import Data.List( foldl' )
 import Data.Typeable( Typeable(..) )
-import Control.Applicative( (<$>) )
+import Control.Applicative( (<$>) , (<*>))
 import Control.Exception( Exception(..), throwIO )
 
 #ifdef __APPLE__
@@ -686,6 +688,131 @@ enum CLFilterMode {
 #endc
 {#enum CLFilterMode {upcaseFirstLetter} deriving( Show ) #}
 
+#c
+enum CLChannelOrder {
+  cL_R=CL_R,
+  cL_A=CL_A,
+  cL_INTENSITY=CL_INTENSITY,
+  cL_LUMINANCE=CL_LUMINANCE,
+  cL_RG=CL_RG,
+  cL_RA=CL_RA,
+  cL_RGB=CL_RGB,
+  cL_RGBA=CL_RGBA,
+  cL_ARGB=CL_ARGB,
+  cL_BGRA=CL_BGRA,
+  };
+#endc
+{-| Specifies the number of channels and the channel layout i.e. the memory
+layout in which channels are stored in the image. Valid values are described in
+the table below.
+ 
+ * 'CL_R', 'CL_A'.
+
+ * 'CL_INTENSITY', This format can only be used if channel data type =
+'CL_UNORM_INT8', 'CL_UNORM_INT16', 'CL_SNORM_INT8', 'CL_SNORM_INT16',
+'CL_HALF_FLOAT', or 'CL_FLOAT'.
+
+ * 'CL_LUMINANCE', This format can only be used if channel data type =
+'CL_UNORM_INT8', 'CL_UNORM_INT16', 'CL_SNORM_INT8', 'CL_SNORM_INT16',
+'CL_HALF_FLOAT', or 'CL_FLOAT'.
+
+ * 'CL_RG', 'CL_RA'.
+
+ * 'CL_RGB', This format can only be used if channel data type =
+'CL_UNORM_SHORT_565', 'CL_UNORM_SHORT_555' or 'CL_UNORM_INT101010'.
+
+ * 'CL_RGBA'.
+
+ * 'CL_ARGB', 'CL_BGRA'. This format can only be used if channel data type =
+'CL_UNORM_INT8', 'CL_SNORM_INT8', 'CL_SIGNED_INT8' or 'CL_UNSIGNED_INT8'.  
+-}
+{#enum CLChannelOrder {upcaseFirstLetter} deriving(Show)#}
+
+#c
+enum CLChannelType {
+  cL_SNORM_INT8=CL_SNORM_INT8,
+  cL_SNORM_INT16=CL_SNORM_INT16,
+  cL_UNORM_INT8=CL_UNORM_INT8,
+  cL_UNORM_INT16=CL_UNORM_INT16,
+  cL_UNORM_SHORT_565=CL_UNORM_SHORT_565,
+  cL_UNORM_SHORT_555=CL_UNORM_SHORT_555,
+  cL_UNORM_INT_101010=CL_UNORM_INT_101010,
+  cL_SIGNED_INT8=CL_SIGNED_INT8,
+  cL_SIGNED_INT16=CL_SIGNED_INT16,
+  cL_SIGNED_INT32=CL_SIGNED_INT32,
+  cL_UNSIGNED_INT8=CL_UNSIGNED_INT8,
+  cL_UNSIGNED_INT16=CL_UNSIGNED_INT16,
+  cL_UNSIGNED_INT32=CL_UNSIGNED_INT32,
+  cL_HALF_FLOAT=CL_HALF_FLOAT,
+  cL_FLOAT=CL_FLOAT,
+  };
+#endc
+{-| Describes the size of the channel data type. The number of bits per element
+determined by the image_channel_data_type and image_channel_order must be a
+power of two. The list of supported values is described in the table below.
+
+ * 'CL_SNORM_INT8', Each channel component is a normalized signed 8-bit integer
+value.
+
+ * 'CL_SNORM_INT16', Each channel component is a normalized signed 16-bit
+integer value.
+
+ * 'CL_UNORM_INT8', Each channel component is a normalized unsigned 8-bit
+integer value.
+
+ * 'CL_UNORM_INT16', Each channel component is a normalized unsigned 16-bit
+integer value.
+
+ * 'CL_UNORM_SHORT_565', Represents a normalized 5-6-5 3-channel RGB image. The
+channel order must be 'CL_RGB'.
+
+ * 'CL_UNORM_SHORT_555', Represents a normalized x-5-5-5 4-channel xRGB
+image. The channel order must be 'CL_RGB'.
+
+ * 'CL_UNORM_INT_101010', Represents a normalized x-10-10-10 4-channel xRGB
+image. The channel order must be 'CL_RGB'.
+
+ * 'CL_SIGNED_INT8', Each channel component is an unnormalized signed 8-bit
+integer value.
+
+ * 'CL_SIGNED_INT16', Each channel component is an unnormalized signed 16-bit
+integer value.
+
+ * 'CL_SIGNED_INT32', Each channel component is an unnormalized signed 32-bit
+integer value.
+
+ * 'CL_UNSIGNED_INT8', Each channel component is an unnormalized unsigned 8-bit
+integer value.
+
+ * 'CL_UNSIGNED_INT16', Each channel component is an unnormalized unsigned
+16-bit integer value.
+
+ * 'CL_UNSIGNED_INT32', Each channel component is an unnormalized unsigned
+32-bit integer value.
+
+ * 'CL_HALF_FLOAT', Each channel component is a 16-bit half-float value.
+
+ * 'CL_FLOAT', Each channel component is a single precision floating-point
+value.
+-}
+{#enum CLChannelType {upcaseFirstLetter} deriving(Show)#}
+data CLImageFormat = CLImageFormat
+                     { image_channel_order :: ! CLChannelOrder
+                     , image_channel_data_type :: ! CLChannelType }
+                     deriving( Show )
+{#pointer *cl_image_format as CLImageFormat_p -> CLImageFormat#}
+
+instance Storable CLImageFormat where
+  alignment _ = alignment (undefined :: CDouble)
+  sizeOf _ = {#sizeof cl_image_format #}
+  peek p =
+    CLImageFormat <$> fmap getEnumCL ({#get cl_image_format.image_channel_order #} p)
+           <*> fmap getEnumCL ({#get cl_image_format.image_channel_data_type #} p)
+  poke p (CLImageFormat a b) = do
+    {#set cl_image_format.image_channel_order #} p (getCLValue a)
+    {#set cl_image_format.image_channel_data_type #} p (getCLValue b)
+
+
 -- -----------------------------------------------------------------------------
 getCLValue :: (Enum a, Integral b) => a -> b
 getCLValue = fromIntegral . fromEnum
@@ -734,3 +861,4 @@ bitmaskToMemFlags :: CLMemFlags_ -> [CLMemFlag]
 bitmaskToMemFlags = bitmaskToFlags (binaryFlags maxBound)
 
 -- -----------------------------------------------------------------------------
+

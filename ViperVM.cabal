@@ -21,6 +21,7 @@ library
     ViperVM.Backends.OpenCL.Types
     ViperVM.Backends.OpenCL.Query
     ViperVM.Backends.OpenCL.Loader
+    ViperVM.Backends.OpenCL.Memory
 
   -- other-modules:       
   build-depends:       base ==4.5.*, unix ==2.5.*, containers ==0.4.*

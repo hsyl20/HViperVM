@@ -71,7 +71,7 @@ import Foreign.C.Types( CSize )
 import Foreign.Storable( sizeOf )
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Types( 
-  CLbool, CLint, CLuint, CLulong, CLPlatformInfo_, CLDeviceType_,
+  CLbool, CLuint, CLulong, CLDeviceType_,
   CLDeviceInfo_, CLDeviceFPConfig(..), CLDeviceExecCapability(..),
   CLDeviceLocalMemType(..), CLDeviceMemCacheType(..), CLPlatformInfo(..),
   CLPlatformID, CLDeviceID, CLDeviceType(..), CLCommandQueueProperty, 
