@@ -145,6 +145,13 @@ type EnqueueWaitForEventsFun = CLCommandQueue -> CLuint -> Ptr CLEvent -> IO CLi
 type EnqueueBarrierFun = CLCommandQueue -> IO CLint 
 type FlushFun = CLCommandQueue -> IO CLint
 type FinishFun = CLCommandQueue -> IO CLint
+-- Event
+type WaitForEventsFun = CLuint -> Ptr CLEvent -> IO CLint
+type GetEventInfoFun = CLEvent -> CLEventInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+type RetainEventFun = CLEvent -> IO CLint 
+type ReleaseEventFun = CLEvent -> IO CLint 
+type GetEventProfilingInfoFun = CLEvent -> CLProfilingInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+
 
 
 
@@ -176,29 +183,35 @@ data OpenCLLibrary = OpenCLLibrary {
   raw_clReleaseContext    :: ReleaseContextFun,
   raw_clGetContextInfo    :: GetContextInfoFun,
   -- CommandQueue
-  raw_clCreateCommandQueue :: CreateCommandQueueFun,
-  raw_clRetainCommandQueue :: RetainCommandQueueFun,
-  raw_clReleaseCommandQueue :: ReleaseCommandQueueFun,
-  raw_clGetCommandQueueInfo :: GetCommandQueueInfoFun,
+  raw_clCreateCommandQueue    :: CreateCommandQueueFun,
+  raw_clRetainCommandQueue    :: RetainCommandQueueFun,
+  raw_clReleaseCommandQueue   :: ReleaseCommandQueueFun,
+  raw_clGetCommandQueueInfo   :: GetCommandQueueInfoFun,
   raw_clSetCommandQueueProperty :: SetCommandQueuePropertyFun,
-  raw_clEnqueueReadBuffer :: EnqueueReadBufferFun,
-  raw_clEnqueueWriteBuffer :: EnqueueWriteBufferFun,
-  raw_clEnqueueReadImage :: EnqueueReadImageFun,
-  raw_clEnqueueWriteImage :: EnqueueWriteImageFun,
-  raw_clEnqueueCopyImage :: EnqueueCopyImageFun,
+  raw_clEnqueueReadBuffer     :: EnqueueReadBufferFun,
+  raw_clEnqueueWriteBuffer    :: EnqueueWriteBufferFun,
+  raw_clEnqueueReadImage      :: EnqueueReadImageFun,
+  raw_clEnqueueWriteImage     :: EnqueueWriteImageFun,
+  raw_clEnqueueCopyImage      :: EnqueueCopyImageFun,
   raw_clEnqueueCopyImageToBuffer :: EnqueueCopyImageToBufferFun,
   raw_clEnqueueCopyBufferToImage :: EnqueueCopyBufferToImageFun,
-  raw_clEnqueueMapBuffer :: EnqueueMapBufferFun,
-  raw_clEnqueueMapImage :: EnqueueMapImageFun,
+  raw_clEnqueueMapBuffer      :: EnqueueMapBufferFun,
+  raw_clEnqueueMapImage       :: EnqueueMapImageFun,
   raw_clEnqueueUnmapMemObject :: EnqueueUnmapMemObjectFun,
-  raw_clEnqueueNDRangeKernel :: EnqueueNDRangeKernelFun,
-  raw_clEnqueueNativeKernel :: EnqueueNativeKernelFun,
-  raw_clEnqueueTask :: EnqueueTaskFun,
-  raw_clEnqueueMarker :: EnqueueMarkerFun,
-  raw_clEnqueueWaitForEvents :: EnqueueWaitForEventsFun,
-  raw_clEnqueueBarrier :: EnqueueBarrierFun,
-  raw_clFlush :: FlushFun,
-  raw_clFinish :: FinishFun
+  raw_clEnqueueNDRangeKernel  :: EnqueueNDRangeKernelFun,
+  raw_clEnqueueNativeKernel   :: EnqueueNativeKernelFun,
+  raw_clEnqueueTask           :: EnqueueTaskFun,
+  raw_clEnqueueMarker         :: EnqueueMarkerFun,
+  raw_clEnqueueWaitForEvents  :: EnqueueWaitForEventsFun,
+  raw_clEnqueueBarrier        :: EnqueueBarrierFun,
+  raw_clFlush                 :: FlushFun,
+  raw_clFinish                :: FinishFun,
+  -- Event
+  raw_clWaitForEvents         :: WaitForEventsFun,
+  raw_clGetEventInfo          :: GetEventInfoFun,
+  raw_clRetainEvent           :: RetainEventFun,
+  raw_clReleaseEvent          :: ReleaseEventFun,
+  raw_clGetEventProfilingInfo :: GetEventProfilingInfoFun
 }
 
 foreign import CALLCONV "dynamic" mkGetPlatformIDsFun :: FunPtr GetPlatformIDsFun -> GetPlatformIDsFun
@@ -250,6 +263,12 @@ foreign import CALLCONV "dynamic" mkEnqueueWaitForEventsFun :: FunPtr EnqueueWai
 foreign import CALLCONV "dynamic" mkEnqueueBarrierFun :: FunPtr EnqueueBarrierFun -> EnqueueBarrierFun
 foreign import CALLCONV "dynamic" mkFlushFun :: FunPtr FlushFun -> FlushFun
 foreign import CALLCONV "dynamic" mkFinishFun :: FunPtr FinishFun -> FinishFun
+-- Event
+foreign import CALLCONV "dynamic" mkWaitForEventsFun :: FunPtr WaitForEventsFun -> WaitForEventsFun
+foreign import CALLCONV "dynamic" mkGetEventInfoFun :: FunPtr GetEventInfoFun -> GetEventInfoFun
+foreign import CALLCONV "dynamic" mkRetainEventFun :: FunPtr RetainEventFun -> RetainEventFun
+foreign import CALLCONV "dynamic" mkReleaseEventFun :: FunPtr ReleaseEventFun -> ReleaseEventFun
+foreign import CALLCONV "dynamic" mkGetEventProfilingInfoFun :: FunPtr GetEventProfilingInfoFun -> GetEventProfilingInfoFun
 
 -- | dlsym without exception (may return nullFunPtr)
 mydlsym :: DL -> String -> IO (FunPtr a)
@@ -327,6 +346,12 @@ loadOpenCL lib = do
     raw_clEnqueueWaitForEvents = mkEnqueueWaitForEventsFun $ v_1_0 "clEnqueueWaitForEvents",
     raw_clEnqueueBarrier      = mkEnqueueBarrierFun $ v_1_0 "clEnqueueBarrier",
     raw_clFlush               = mkFlushFun $ v_1_0 "clFlush",
-    raw_clFinish              = mkFinishFun $ v_1_0 "clFinish"
+    raw_clFinish              = mkFinishFun $ v_1_0 "clFinish",
+    -- Event
+    raw_clWaitForEvents         = mkWaitForEventsFun $ v_1_0 "clWaitForEvents",
+    raw_clGetEventInfo          = mkGetEventInfoFun $ v_1_0 "clGetEventInfo",
+    raw_clRetainEvent           = mkRetainEventFun $ v_1_0 "clRetainEvent",
+    raw_clReleaseEvent          = mkReleaseEventFun $ v_1_0 "clReleaseEvent",
+    raw_clGetEventProfilingInfo = mkGetEventProfilingInfoFun $ v_1_0 "clGetEventProfilingInfo"
   }
 

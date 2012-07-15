@@ -30,7 +30,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
 {-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, CPP #-}
-module Control.Parallel.OpenCL.Event(  
+module ViperVM.Backends.OpenCL.Event(  
   -- * Types
   CLEvent, CLCommandType(..), CLProfilingInfo(..), CLCommandExecutionStatus(..),
   -- * Functions
@@ -41,9 +41,9 @@ module Control.Parallel.OpenCL.Event(
 
 -- -----------------------------------------------------------------------------
 import Foreign
-import Foreign.C.Types
-import Control.Parallel.OpenCL.Types( 
-  CLEvent, CLint, CLuint, CLulong, CLEventInfo_, CLProfilingInfo_,
+import ViperVM.Backends.OpenCL.Loader
+import ViperVM.Backends.OpenCL.Types( 
+  CLEvent, CLint, CLulong,
   CLCommandQueue, CLCommandType(..), CLCommandType_, 
   CLCommandExecutionStatus(..), CLProfilingInfo(..), getCommandExecutionStatus, 
   getCLValue, getEnumCL, wrapCheckSuccess, wrapGetInfo )
@@ -55,18 +55,6 @@ import Control.Parallel.OpenCL.Types(
 #endif
 
 -- -----------------------------------------------------------------------------
-foreign import CALLCONV "clWaitForEvents" raw_clWaitForEvents :: 
-  CLuint -> Ptr CLEvent -> IO CLint
-foreign import CALLCONV "clGetEventInfo" raw_clGetEventInfo :: 
-  CLEvent -> CLEventInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
-foreign import CALLCONV "clRetainEvent" raw_clRetainEvent :: 
-  CLEvent -> IO CLint 
-foreign import CALLCONV "clReleaseEvent" raw_clReleaseEvent :: 
-  CLEvent -> IO CLint 
-foreign import CALLCONV "clGetEventProfilingInfo" raw_clGetEventProfilingInfo :: 
-  CLEvent -> CLProfilingInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
-
--- -----------------------------------------------------------------------------
 -- | Waits on the host thread for commands identified by event objects in 
 -- event_list to complete. A command is considered complete if its execution 
 -- status is 'CL_COMPLETE' or a negative value.
@@ -74,11 +62,11 @@ foreign import CALLCONV "clGetEventProfilingInfo" raw_clGetEventProfilingInfo ::
 -- if the list of events is empty, or if events specified in event_list do not 
 -- belong to the same context, or if event objects specified in event_list are 
 -- not valid event objects.
-clWaitForEvents :: [CLEvent] -> IO Bool
-clWaitForEvents [] = return False
-clWaitForEvents xs = allocaArray nevents $ \pevents -> do
+clWaitForEvents :: OpenCLLibrary -> [CLEvent] -> IO Bool
+clWaitForEvents _ [] = return False
+clWaitForEvents lib xs = allocaArray nevents $ \pevents -> do
   pokeArray pevents xs
-  wrapCheckSuccess $ raw_clWaitForEvents (fromIntegral nevents) pevents
+  wrapCheckSuccess $ raw_clWaitForEvents lib (fromIntegral nevents) pevents
     where
       nevents = length xs
   
@@ -86,8 +74,8 @@ clWaitForEvents xs = allocaArray nevents $ \pevents -> do
 -- The OpenCL commands that return an event perform an implicit retain.
 -- Returns 'True' if the function is executed successfully. It returns 'False' 
 -- if event is not a valid event object.
-clRetainEvent :: CLEvent -> IO Bool
-clRetainEvent ev = wrapCheckSuccess $ raw_clRetainEvent ev
+clRetainEvent :: OpenCLLibrary -> CLEvent -> IO Bool
+clRetainEvent lib ev = wrapCheckSuccess $ raw_clRetainEvent lib ev
 
 -- | Decrements the event reference count.
 -- Decrements the event reference count. The event object is deleted once the 
@@ -96,8 +84,8 @@ clRetainEvent ev = wrapCheckSuccess $ raw_clRetainEvent ev
 -- of a context that require a wait for this event to complete.
 -- Returns 'True' if the function is executed successfully. It returns 'False' 
 -- if event is not a valid event object.
-clReleaseEvent :: CLEvent -> IO Bool
-clReleaseEvent ev = wrapCheckSuccess $ raw_clReleaseEvent ev
+clReleaseEvent :: OpenCLLibrary -> CLEvent -> IO Bool
+clReleaseEvent lib ev = wrapCheckSuccess $ raw_clReleaseEvent lib ev
 
 #c
 enum CLEventInfo {
@@ -113,10 +101,10 @@ enum CLEventInfo {
 -- | Return the command-queue associated with event.
 --
 -- This function execute OpenCL clGetEventInfo with 'CL_EVENT_COMMAND_QUEUE'.
-clGetEventCommandQueue :: CLEvent -> IO CLCommandQueue
-clGetEventCommandQueue ev =
+clGetEventCommandQueue :: OpenCLLibrary -> CLEvent -> IO CLCommandQueue
+clGetEventCommandQueue lib ev =
     wrapGetInfo (\(dat :: Ptr CLCommandQueue) ->
-        raw_clGetEventInfo ev infoid size (castPtr dat)) id
+        raw_clGetEventInfo lib ev infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_EVENT_COMMAND_QUEUE
       size = fromIntegral $ sizeOf (nullPtr::CLCommandQueue)
@@ -124,10 +112,10 @@ clGetEventCommandQueue ev =
 -- | Return the command associated with event.
 --
 -- This function execute OpenCL clGetEventInfo with 'CL_EVENT_COMMAND_TYPE'.
-clGetEventCommandType :: CLEvent -> IO CLCommandType
-clGetEventCommandType ev =
+clGetEventCommandType :: OpenCLLibrary -> CLEvent -> IO CLCommandType
+clGetEventCommandType lib ev =
     wrapGetInfo (\(dat :: Ptr CLCommandType_) ->
-        raw_clGetEventInfo ev infoid size (castPtr dat)) getEnumCL
+        raw_clGetEventInfo lib ev infoid size (castPtr dat)) getEnumCL
     where 
       infoid = getCLValue CL_EVENT_COMMAND_TYPE
       size = fromIntegral $ sizeOf (0::CLCommandType_)
@@ -137,10 +125,10 @@ clGetEventCommandType ev =
 -- This feature is provided for identifying memory leaks.
 --
 -- This function execute OpenCL clGetEventInfo with 'CL_EVENT_REFERENCE_COUNT'.
-clGetEventReferenceCount :: CLEvent -> IO CLint
-clGetEventReferenceCount ev =
+clGetEventReferenceCount :: OpenCLLibrary -> CLEvent -> IO CLint
+clGetEventReferenceCount lib ev =
     wrapGetInfo (\(dat :: Ptr CLint) ->
-        raw_clGetEventInfo ev infoid size (castPtr dat)) id
+        raw_clGetEventInfo lib ev infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_EVENT_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0::CLint)
@@ -149,10 +137,10 @@ clGetEventReferenceCount ev =
 --
 -- This function execute OpenCL clGetEventInfo with
 -- 'CL_EVENT_COMMAND_EXECUTION_STATUS'.
-clGetEventCommandExecutionStatus :: CLEvent -> IO CLCommandExecutionStatus
-clGetEventCommandExecutionStatus ev =
+clGetEventCommandExecutionStatus :: OpenCLLibrary -> CLEvent -> IO CLCommandExecutionStatus
+clGetEventCommandExecutionStatus lib ev =
     wrapGetInfo (\(dat :: Ptr CLint) ->
-        raw_clGetEventInfo ev infoid size (castPtr dat)) getCommandExecutionStatus
+        raw_clGetEventInfo lib ev infoid size (castPtr dat)) getCommandExecutionStatus
     where 
       infoid = getCLValue CL_EVENT_COMMAND_EXECUTION_STATUS
       size = fromIntegral $ sizeOf (0::CLint)
@@ -180,10 +168,10 @@ command-queue and if the profiling information is currently not available
 (because the command identified by event has not completed), or if event is a 
 not a valid event object.
 -} 
-clGetEventProfilingInfo :: CLEvent -> CLProfilingInfo -> IO CLulong
-clGetEventProfilingInfo ev prof =
+clGetEventProfilingInfo :: OpenCLLibrary -> CLEvent -> CLProfilingInfo -> IO CLulong
+clGetEventProfilingInfo lib ev prof =
     wrapGetInfo (\(dat :: Ptr CLulong) ->
-        raw_clGetEventProfilingInfo ev infoid size (castPtr dat)) id
+        raw_clGetEventProfilingInfo lib ev infoid size (castPtr dat)) id
     where 
       infoid = getCLValue prof
       size = fromIntegral $ sizeOf (0::CLulong)
