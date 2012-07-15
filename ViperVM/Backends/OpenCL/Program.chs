@@ -30,7 +30,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
 {-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, CPP #-}
-module Control.Parallel.OpenCL.Program(  
+module ViperVM.Backends.OpenCL.Program(  
   -- * Types
   CLProgram, CLBuildStatus(..), CLKernel,
   -- * Program Functions
@@ -53,10 +53,11 @@ import Control.Monad( zipWithM, forM )
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String( CString, withCString, peekCString )
-import Control.Parallel.OpenCL.Types( 
+import ViperVM.Backends.OpenCL.Loader
+import ViperVM.Backends.OpenCL.Types( 
   CLint, CLuint, CLulong, CLProgram, CLContext, CLKernel, CLDeviceID, CLError,
-  CLProgramInfo_, CLBuildStatus(..), CLBuildStatus_, CLProgramBuildInfo_, 
-  CLKernelInfo_, CLKernelWorkGroupInfo_, wrapCheckSuccess, 
+  CLProgramInfo_, CLBuildStatus(..), CLBuildStatus_, 
+  CLKernelInfo_, wrapCheckSuccess, 
   whenSuccess, wrapPError, wrapGetInfo, getCLValue, getEnumCL )
 
 #ifdef __APPLE__
@@ -64,39 +65,6 @@ import Control.Parallel.OpenCL.Types(
 #else
 #include <CL/cl.h>
 #endif
-
--- -----------------------------------------------------------------------------
-type BuildCallback = CLProgram -> Ptr () -> IO ()
-foreign import CALLCONV "clCreateProgramWithSource" raw_clCreateProgramWithSource :: 
-  CLContext -> CLuint -> Ptr CString -> Ptr CSize -> Ptr CLint -> IO CLProgram
-foreign import CALLCONV "clCreateProgramWithBinary" raw_clCreateProgramWithBinary :: 
-  CLContext -> CLuint -> Ptr CLDeviceID -> Ptr CSize -> Ptr (Ptr Word8) -> Ptr CLint -> Ptr CLint -> IO CLProgram
-foreign import CALLCONV "clRetainProgram" raw_clRetainProgram :: 
-  CLProgram -> IO CLint
-foreign import CALLCONV "clReleaseProgram" raw_clReleaseProgram :: 
-  CLProgram -> IO CLint
-foreign import CALLCONV "clBuildProgram" raw_clBuildProgram :: 
-  CLProgram -> CLuint -> Ptr CLDeviceID -> CString -> FunPtr BuildCallback -> Ptr () -> IO CLint
-foreign import CALLCONV "clUnloadCompiler" raw_clUnloadCompiler :: 
-  IO CLint
-foreign import CALLCONV "clGetProgramInfo" raw_clGetProgramInfo :: 
-  CLProgram -> CLProgramInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
-foreign import CALLCONV "clGetProgramBuildInfo"  raw_clGetProgramBuildInfo :: 
-  CLProgram -> CLDeviceID -> CLProgramBuildInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
-foreign import CALLCONV "clCreateKernel" raw_clCreateKernel :: 
-  CLProgram -> CString -> Ptr CLint -> IO CLKernel 
-foreign import CALLCONV "clCreateKernelsInProgram" raw_clCreateKernelsInProgram :: 
-  CLProgram -> CLuint -> Ptr CLKernel -> Ptr CLuint -> IO CLint 
-foreign import CALLCONV "clRetainKernel" raw_clRetainKernel :: 
-  CLKernel -> IO CLint 
-foreign import CALLCONV "clReleaseKernel" raw_clReleaseKernel :: 
-  CLKernel -> IO CLint 
-foreign import CALLCONV "clSetKernelArg" raw_clSetKernelArg :: 
-  CLKernel -> CLuint -> CSize -> Ptr () -> IO CLint
-foreign import CALLCONV "clGetKernelInfo" raw_clGetKernelInfo :: 
-  CLKernel -> CLKernelInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
-foreign import CALLCONV "clGetKernelWorkGroupInfo" raw_clGetKernelWorkGroupInfo :: 
-  CLKernel -> CLDeviceID -> CLKernelWorkGroupInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
 
 -- -----------------------------------------------------------------------------
 {-| Creates a program object for a context, and loads the source code specified
@@ -130,11 +98,11 @@ following 'CLError' exceptions:
  * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
 by the OpenCL implementation on the host.  
 -}
-clCreateProgramWithSource :: CLContext -> String -> IO CLProgram
-clCreateProgramWithSource ctx source =
+clCreateProgramWithSource :: OpenCLLibrary -> CLContext -> String -> IO CLProgram
+clCreateProgramWithSource lib ctx source =
   withCString source $ \cSource ->
   withArray [cSource] $ \sourcesP ->
-  wrapPError (raw_clCreateProgramWithSource ctx 1 sourcesP nullPtr)
+  wrapPError (raw_clCreateProgramWithSource lib ctx 1 sourcesP nullPtr)
 
 {-| Creates a program object for a context, and loads specified binary data into
 the program object.
@@ -181,9 +149,9 @@ device.
  * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
 by the OpenCL implementation on the host.  
 -} 
-clCreateProgramWithBinary :: CLContext -> [CLDeviceID] -> [[Word8]] 
+clCreateProgramWithBinary :: OpenCLLibrary -> CLContext -> [CLDeviceID] -> [[Word8]] 
                              -> IO (CLProgram, [CLError])
-clCreateProgramWithBinary ctx devs bins = wrapPError $ \perr ->
+clCreateProgramWithBinary lib ctx devs bins = wrapPError $ \perr ->
   withArray devs $ \pdevs ->
     withArray lbins $ \plbins -> do
       buffs <- forM bins $ \bs -> do
@@ -193,7 +161,7 @@ clCreateProgramWithBinary ctx devs bins = wrapPError $ \perr ->
 
       ret <- withArray buffs $ \(pbuffs :: Ptr (Ptr Word8)) -> do
         allocaArray ndevs $ \(perrs :: Ptr CLint) -> do
-          prog <- raw_clCreateProgramWithBinary ctx (fromIntegral ndevs) pdevs plbins pbuffs perrs perr
+          prog <- raw_clCreateProgramWithBinary lib ctx (fromIntegral ndevs) pdevs plbins pbuffs perrs perr
           errs <- peekArray ndevs perrs
           return (prog, map getEnumCL errs)
 
@@ -207,16 +175,16 @@ clCreateProgramWithBinary ctx devs bins = wrapPError $ \perr ->
 -- | Increments the program reference count. 'clRetainProgram' returns 'True' if 
 -- the function is executed successfully. It returns 'False' if program is not a 
 -- valid program object.
-clRetainProgram :: CLProgram -> IO Bool
-clRetainProgram prg = wrapCheckSuccess $ raw_clRetainProgram prg
+clRetainProgram :: OpenCLLibrary -> CLProgram -> IO Bool
+clRetainProgram lib prg = wrapCheckSuccess $ raw_clRetainProgram lib prg
 
 -- | Decrements the program reference count. The program object is deleted after 
 -- all kernel objects associated with program have been deleted and the program 
 -- reference count becomes zero. 'clReleseProgram' returns 'True' if 
 -- the function is executed successfully. It returns 'False' if program is not a 
 -- valid program object.
-clReleaseProgram :: CLProgram -> IO Bool
-clReleaseProgram prg = wrapCheckSuccess $ raw_clReleaseProgram prg
+clReleaseProgram :: OpenCLLibrary -> CLProgram -> IO Bool
+clReleaseProgram lib prg = wrapCheckSuccess $ raw_clReleaseProgram lib prg
 
 -- | Allows the implementation to release the resources allocated by the OpenCL
 -- compiler. This is a hint from the application and does not guarantee that the
@@ -224,8 +192,8 @@ clReleaseProgram prg = wrapCheckSuccess $ raw_clReleaseProgram prg
 -- unloaded by the implementation. Calls to 'clBuildProgram' after
 -- 'clUnloadCompiler' will reload the compiler, if necessary, to build the
 -- appropriate program executable.
-clUnloadCompiler :: IO ()
-clUnloadCompiler = raw_clUnloadCompiler >> return ()
+clUnloadCompiler :: OpenCLLibrary -> IO ()
+clUnloadCompiler lib = raw_clUnloadCompiler lib >> return ()
 
 {-| Builds (compiles and links) a program executable from the program source or
 binary. OpenCL allows program executables to be built using the source or the
@@ -370,11 +338,11 @@ until the build has completed.
  * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
 by the OpenCL implementation on the host.  
 -}
-clBuildProgram :: CLProgram -> [CLDeviceID] -> String -> IO ()
-clBuildProgram prg devs opts = allocaArray ndevs $ \pdevs -> do
+clBuildProgram :: OpenCLLibrary -> CLProgram -> [CLDeviceID] -> String -> IO ()
+clBuildProgram lib prg devs opts = allocaArray ndevs $ \pdevs -> do
   pokeArray pdevs devs
   withCString opts $ \copts -> do
-    whenSuccess (raw_clBuildProgram prg cndevs pdevs copts nullFunPtr nullPtr)
+    whenSuccess (raw_clBuildProgram lib prg cndevs pdevs copts nullFunPtr nullPtr)
       $ return ()
     where
       ndevs = length devs
@@ -393,9 +361,9 @@ enum CLProgramInfo {
 #endc
 {#enum CLProgramInfo {upcaseFirstLetter} #}
 
-getProgramInfoSize :: CLProgram -> CLProgramInfo_ -> IO CSize
-getProgramInfoSize prg infoid = alloca $ \(value_size :: Ptr CSize) -> do
-  whenSuccess (raw_clGetProgramInfo prg infoid 0 nullPtr value_size)
+getProgramInfoSize :: OpenCLLibrary -> CLProgram -> CLProgramInfo_ -> IO CSize
+getProgramInfoSize lib prg infoid = alloca $ \(value_size :: Ptr CSize) -> do
+  whenSuccess (raw_clGetProgramInfo lib prg infoid 0 nullPtr value_size)
     $ peek value_size
   
 -- | Return the program reference count. The reference count returned should be
@@ -404,10 +372,10 @@ getProgramInfoSize prg infoid = alloca $ \(value_size :: Ptr CSize) -> do
 --
 -- This function execute OpenCL clGetProgramInfo with
 -- 'CL_PROGRAM_REFERENCE_COUNT'.
-clGetProgramReferenceCount :: CLProgram -> IO CLuint
-clGetProgramReferenceCount prg =
+clGetProgramReferenceCount :: OpenCLLibrary -> CLProgram -> IO CLuint
+clGetProgramReferenceCount lib prg =
     wrapGetInfo (\(dat :: Ptr CLuint) ->
-        raw_clGetProgramInfo prg infoid size (castPtr dat)) id
+        raw_clGetProgramInfo lib prg infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_PROGRAM_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0::CLuint)
@@ -415,10 +383,10 @@ clGetProgramReferenceCount prg =
 -- | Return the context specified when the program object is created.
 --
 -- This function execute OpenCL clGetProgramInfo with 'CL_PROGRAM_CONTEXT'.
-clGetProgramContext :: CLProgram -> IO CLContext
-clGetProgramContext prg =
+clGetProgramContext :: OpenCLLibrary -> CLProgram -> IO CLContext
+clGetProgramContext lib prg =
     wrapGetInfo (\(dat :: Ptr CLContext) ->
-        raw_clGetProgramInfo prg infoid size (castPtr dat)) id
+        raw_clGetProgramInfo lib prg infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_PROGRAM_CONTEXT
       size = fromIntegral $ sizeOf (nullPtr::CLContext)
@@ -426,10 +394,10 @@ clGetProgramContext prg =
 -- | Return the number of devices associated with program.
 --
 -- This function execute OpenCL clGetProgramInfo with 'CL_PROGRAM_NUM_DEVICES'.
-clGetProgramNumDevices :: CLProgram -> IO CLuint
-clGetProgramNumDevices prg =
+clGetProgramNumDevices :: OpenCLLibrary -> CLProgram -> IO CLuint
+clGetProgramNumDevices lib prg =
     wrapGetInfo (\(dat :: Ptr CLuint) ->
-        raw_clGetProgramInfo prg infoid size (castPtr dat)) id
+        raw_clGetProgramInfo lib prg infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_PROGRAM_NUM_DEVICES
       size = fromIntegral $ sizeOf (0::CLuint)
@@ -440,11 +408,11 @@ clGetProgramNumDevices prg =
 -- is created using 'clCreateProgramWithBinary'.
 --
 -- This function execute OpenCL clGetProgramInfo with 'CL_PROGRAM_DEVICES'.
-clGetProgramDevices :: CLProgram -> IO [CLDeviceID]
-clGetProgramDevices prg = do
-  size <- getProgramInfoSize prg infoid
+clGetProgramDevices :: OpenCLLibrary -> CLProgram -> IO [CLDeviceID]
+clGetProgramDevices lib prg = do
+  size <- getProgramInfoSize lib prg infoid
   allocaArray (numElems size) $ \(buff :: Ptr CLDeviceID) -> do
-    whenSuccess (raw_clGetProgramInfo prg infoid size (castPtr buff) nullPtr)
+    whenSuccess (raw_clGetProgramInfo lib prg infoid size (castPtr buff) nullPtr)
       $ peekArray (numElems size) buff
     where 
       infoid = getCLValue CL_PROGRAM_DEVICES
@@ -459,11 +427,11 @@ clGetProgramDevices prg = do
 -- code including the null terminator is returned in param_value_size_ret.
 --
 -- This function execute OpenCL clGetProgramInfo with 'CL_PROGRAM_SOURCE'.
-clGetProgramSource :: CLProgram -> IO String
-clGetProgramSource prg = do
-  n <- getProgramInfoSize prg infoid
+clGetProgramSource :: OpenCLLibrary -> CLProgram -> IO String
+clGetProgramSource lib prg = do
+  n <- getProgramInfoSize lib prg infoid
   allocaArray (fromIntegral n) $ \(buff :: CString) -> do
-    whenSuccess (raw_clGetProgramInfo prg infoid n (castPtr buff) nullPtr)
+    whenSuccess (raw_clGetProgramInfo lib prg infoid n (castPtr buff) nullPtr)
       $ peekCString buff
     where 
       infoid = getCLValue CL_PROGRAM_SOURCE
@@ -474,11 +442,11 @@ clGetProgramSource prg = do
 -- device(s), a size of zero is returned.
 --
 -- This function execute OpenCL clGetProgramInfo with 'CL_PROGRAM_BINARY_SIZES'.
-clGetProgramBinarySizes :: CLProgram -> IO [CSize]
-clGetProgramBinarySizes prg = do
-  size <- getProgramInfoSize prg infoid
+clGetProgramBinarySizes :: OpenCLLibrary -> CLProgram -> IO [CSize]
+clGetProgramBinarySizes lib prg = do
+  size <- getProgramInfoSize lib prg infoid
   allocaArray (numElems size) $ \(buff :: Ptr CSize) -> do
-    whenSuccess (raw_clGetProgramInfo prg infoid size (castPtr buff) nullPtr)
+    whenSuccess (raw_clGetProgramInfo lib prg infoid size (castPtr buff) nullPtr)
       $ peekArray (numElems size) buff
     where 
       infoid = getCLValue CL_PROGRAM_BINARY_SIZES
@@ -502,14 +470,14 @@ array of devices returned by 'clGetProgramDevices'.
 
 This function execute OpenCL clGetProgramInfo with 'CL_PROGRAM_BINARIES'.
 -}
-clGetProgramBinaries :: CLProgram -> IO [[Word8]]
-clGetProgramBinaries prg = do
-  sizes <- clGetProgramBinarySizes prg
+clGetProgramBinaries :: OpenCLLibrary -> CLProgram -> IO [[Word8]]
+clGetProgramBinaries lib prg = do
+  sizes <- clGetProgramBinarySizes lib prg
   let numElems = length sizes
       size = fromIntegral $ numElems * elemSize
   buffers <- (mapM (mallocArray.fromIntegral) sizes) :: IO [Ptr Word8]
   ret <- withArray buffers $ \(parray :: Ptr (Ptr Word8)) -> do
-    whenSuccess (raw_clGetProgramInfo prg infoid size (castPtr parray) nullPtr)
+    whenSuccess (raw_clGetProgramInfo lib prg infoid size (castPtr parray) nullPtr)
       $ zipWithM peekArray (map fromIntegral sizes) buffers
   mapM_ free buffers
   return ret
@@ -527,9 +495,9 @@ enum CLProgramBuildInfo {
 #endc
 {#enum CLProgramBuildInfo {upcaseFirstLetter} #}
 
-getProgramBuildInfoSize :: CLProgram -> CLDeviceID -> CLProgramInfo_ -> IO CSize
-getProgramBuildInfoSize prg device infoid = alloca $ \(val :: Ptr CSize) -> do
-  whenSuccess (raw_clGetProgramBuildInfo prg device infoid 0 nullPtr val)
+getProgramBuildInfoSize :: OpenCLLibrary -> CLProgram -> CLDeviceID -> CLProgramInfo_ -> IO CSize
+getProgramBuildInfoSize lib prg device infoid = alloca $ \(val :: Ptr CSize) -> do
+  whenSuccess (raw_clGetProgramBuildInfo lib prg device infoid 0 nullPtr val)
     $ peek val
   
 -- | Returns the build status of program for a specific device as given by
@@ -537,10 +505,10 @@ getProgramBuildInfoSize prg device infoid = alloca $ \(val :: Ptr CSize) -> do
 --
 -- This function execute OpenCL clGetProgramBuildInfo with
 -- 'CL_PROGRAM_BUILD_STATUS'.
-clGetProgramBuildStatus :: CLProgram -> CLDeviceID -> IO CLBuildStatus
-clGetProgramBuildStatus prg device =
+clGetProgramBuildStatus :: OpenCLLibrary -> CLProgram -> CLDeviceID -> IO CLBuildStatus
+clGetProgramBuildStatus lib prg device =
     wrapGetInfo (\(dat :: Ptr CLBuildStatus_) ->
-        raw_clGetProgramBuildInfo prg device infoid size (castPtr dat)) getEnumCL
+        raw_clGetProgramBuildInfo lib prg device infoid size (castPtr dat)) getEnumCL
     where 
       infoid = getCLValue CL_PROGRAM_BUILD_STATUS
       size = fromIntegral $ sizeOf (0::CLBuildStatus_)
@@ -551,11 +519,11 @@ clGetProgramBuildStatus prg device =
 --
 -- This function execute OpenCL clGetProgramBuildInfo with
 -- 'CL_PROGRAM_BUILD_OPTIONS'.
-clGetProgramBuildOptions :: CLProgram -> CLDeviceID -> IO String
-clGetProgramBuildOptions prg device = do
-  n <- getProgramBuildInfoSize prg device infoid
+clGetProgramBuildOptions :: OpenCLLibrary -> CLProgram -> CLDeviceID -> IO String
+clGetProgramBuildOptions lib prg device = do
+  n <- getProgramBuildInfoSize lib prg device infoid
   allocaArray (fromIntegral n) $ \(buff :: CString) -> do
-    whenSuccess (raw_clGetProgramBuildInfo prg device infoid n (castPtr buff) nullPtr)
+    whenSuccess (raw_clGetProgramBuildInfo lib prg device infoid n (castPtr buff) nullPtr)
       $ peekCString buff
     where 
       infoid = getCLValue CL_PROGRAM_BUILD_OPTIONS
@@ -565,11 +533,11 @@ clGetProgramBuildOptions prg device = do
 --
 -- This function execute OpenCL clGetProgramBuildInfo with
 -- 'CL_PROGRAM_BUILD_LOG'.
-clGetProgramBuildLog :: CLProgram -> CLDeviceID -> IO String
-clGetProgramBuildLog prg device = do
-  n <- getProgramBuildInfoSize prg device infoid
+clGetProgramBuildLog :: OpenCLLibrary -> CLProgram -> CLDeviceID -> IO String
+clGetProgramBuildLog lib prg device = do
+  n <- getProgramBuildInfoSize lib prg device infoid
   allocaArray (fromIntegral n) $ \(buff :: CString) -> do
-    whenSuccess (raw_clGetProgramBuildInfo prg device infoid n (castPtr buff) nullPtr)
+    whenSuccess (raw_clGetProgramBuildInfo lib prg device infoid n (castPtr buff) nullPtr)
       $ peekCString buff
     where 
       infoid = getCLValue CL_PROGRAM_BUILD_LOG
@@ -600,9 +568,9 @@ built.
  * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
 by the OpenCL implementation on the host.  
 -}
-clCreateKernel :: CLProgram -> String -> IO CLKernel
-clCreateKernel prg name = withCString name $ \cname -> wrapPError $ \perr -> do
-  raw_clCreateKernel prg cname perr
+clCreateKernel :: OpenCLLibrary -> CLProgram -> String -> IO CLKernel
+clCreateKernel lib prg name = withCString name $ \cname -> wrapPError $ \perr -> do
+  raw_clCreateKernel lib prg cname perr
 
 {-| Creates kernel objects for all kernel functions in a program object. Kernel
 objects are not created for any __kernel functions in program that do not have
@@ -628,28 +596,28 @@ successfully built executable for any device in program and throws
 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required by
 the OpenCL implementation on the host.
 -}
-clCreateKernelsInProgram :: CLProgram -> IO [CLKernel]
-clCreateKernelsInProgram prg = do
+clCreateKernelsInProgram :: OpenCLLibrary -> CLProgram -> IO [CLKernel]
+clCreateKernelsInProgram lib prg = do
   n <- alloca $ \pn -> do
-    whenSuccess (raw_clCreateKernelsInProgram prg 0 nullPtr pn)
+    whenSuccess (raw_clCreateKernelsInProgram lib prg 0 nullPtr pn)
       $ peek pn  
   allocaArray (fromIntegral n) $ \pks -> do
-    whenSuccess (raw_clCreateKernelsInProgram prg n pks nullPtr)
+    whenSuccess (raw_clCreateKernelsInProgram lib prg n pks nullPtr)
       $ peekArray (fromIntegral n) pks
 
 -- | Increments the program program reference count. 'clRetainKernel' returns
 -- 'True' if the function is executed successfully. 'clCreateKernel' or
 -- 'clCreateKernelsInProgram' do an implicit retain.
-clRetainKernel :: CLKernel -> IO Bool
-clRetainKernel krn = wrapCheckSuccess $ raw_clRetainKernel krn
+clRetainKernel :: OpenCLLibrary -> CLKernel -> IO Bool
+clRetainKernel lib krn = wrapCheckSuccess $ raw_clRetainKernel lib krn
 
 -- | Decrements the kernel reference count. The kernel object is deleted once
 -- the number of instances that are retained to kernel become zero and the
 -- kernel object is no longer needed by any enqueued commands that use
 -- kernel. 'clReleaseKernel' returns 'True' if the function is executed
 -- successfully.
-clReleaseKernel :: CLKernel -> IO Bool
-clReleaseKernel krn = wrapCheckSuccess $ raw_clReleaseKernel krn
+clReleaseKernel :: OpenCLLibrary -> CLKernel -> IO Bool
+clReleaseKernel lib krn = wrapCheckSuccess $ raw_clReleaseKernel lib krn
 
 {-| Used to set the argument value for a specific argument of a kernel.
 
@@ -686,15 +654,15 @@ object and arg_size != sizeof(cl_mem) or if arg_size is zero and the argument is
 declared with the __local qualifier or if the argument is a sampler and arg_size
 != sizeof(cl_sampler).  
 -}
-clSetKernelArg :: Integral a => CLKernel -> CLuint -> a -> Ptr b -> IO ()
-clSetKernelArg krn idx sz pval = do
-  whenSuccess (raw_clSetKernelArg krn idx (fromIntegral sz) (castPtr pval))
+clSetKernelArg :: Integral a => OpenCLLibrary -> CLKernel -> CLuint -> a -> Ptr b -> IO ()
+clSetKernelArg lib krn idx sz pval = do
+  whenSuccess (raw_clSetKernelArg lib krn idx (fromIntegral sz) (castPtr pval))
     $ return ()
 
 -- | Wrap function of `clSetKernelArg` with Storable data.
-clSetKernelArgSto :: Storable a => CLKernel -> CLuint -> a -> IO ()
-clSetKernelArgSto krn idx val = with val $ \pval -> do
-  whenSuccess (raw_clSetKernelArg krn idx (fromIntegral . sizeOf $ val) (castPtr pval))
+clSetKernelArgSto :: Storable a => OpenCLLibrary -> CLKernel -> CLuint -> a -> IO ()
+clSetKernelArgSto lib krn idx val = with val $ \pval -> do
+  whenSuccess (raw_clSetKernelArg lib krn idx (fromIntegral . sizeOf $ val) (castPtr pval))
     $ return ()
 
 #c
@@ -708,19 +676,19 @@ enum CLKernelInfo {
 #endc
 {#enum CLKernelInfo {upcaseFirstLetter} #}
 
-getKernelInfoSize :: CLKernel -> CLKernelInfo_ -> IO CSize
-getKernelInfoSize krn infoid = alloca $ \(val :: Ptr CSize) -> do
-  whenSuccess (raw_clGetKernelInfo krn infoid 0 nullPtr val)
+getKernelInfoSize :: OpenCLLibrary -> CLKernel -> CLKernelInfo_ -> IO CSize
+getKernelInfoSize lib krn infoid = alloca $ \(val :: Ptr CSize) -> do
+  whenSuccess (raw_clGetKernelInfo lib krn infoid 0 nullPtr val)
     $ peek val
   
 -- | Return the kernel function name.
 --
 -- This function execute OpenCL clGetKernelInfo with 'CL_KERNEL_FUNCTION_NAME'.
-clGetKernelFunctionName :: CLKernel -> IO String
-clGetKernelFunctionName krn = do
-  n <- getKernelInfoSize krn infoid
+clGetKernelFunctionName :: OpenCLLibrary -> CLKernel -> IO String
+clGetKernelFunctionName lib krn = do
+  n <- getKernelInfoSize lib krn infoid
   allocaArray (fromIntegral n) $ \(buff :: CString) -> do
-    whenSuccess (raw_clGetKernelInfo krn infoid n (castPtr buff) nullPtr)
+    whenSuccess (raw_clGetKernelInfo lib krn infoid n (castPtr buff) nullPtr)
       $ peekCString buff
     where 
       infoid = getCLValue CL_KERNEL_FUNCTION_NAME
@@ -728,10 +696,10 @@ clGetKernelFunctionName krn = do
 -- | Return the number of arguments to kernel.
 --
 -- This function execute OpenCL clGetKernelInfo with 'CL_KERNEL_NUM_ARGS'.
-clGetKernelNumArgs :: CLKernel -> IO CLuint
-clGetKernelNumArgs krn =
+clGetKernelNumArgs :: OpenCLLibrary -> CLKernel -> IO CLuint
+clGetKernelNumArgs lib krn =
     wrapGetInfo (\(dat :: Ptr CLuint) ->
-        raw_clGetKernelInfo krn infoid size (castPtr dat)) id
+        raw_clGetKernelInfo lib krn infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_KERNEL_NUM_ARGS
       size = fromIntegral $ sizeOf (0::CLuint)
@@ -742,10 +710,10 @@ clGetKernelNumArgs krn =
 --
 -- This function execute OpenCL clGetKernelInfo with
 -- 'CL_KERNEL_REFERENCE_COUNT'.
-clGetKernelReferenceCount :: CLKernel -> IO CLuint
-clGetKernelReferenceCount krn =
+clGetKernelReferenceCount :: OpenCLLibrary -> CLKernel -> IO CLuint
+clGetKernelReferenceCount lib krn =
     wrapGetInfo (\(dat :: Ptr CLuint) ->
-        raw_clGetKernelInfo krn infoid size (castPtr dat)) id
+        raw_clGetKernelInfo lib krn infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_KERNEL_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0::CLuint)
@@ -753,10 +721,10 @@ clGetKernelReferenceCount krn =
 -- | Return the context associated with kernel.
 --
 -- This function execute OpenCL clGetKernelInfo with 'CL_KERNEL_CONTEXT'.
-clGetKernelContext :: CLKernel -> IO CLContext
-clGetKernelContext krn =
+clGetKernelContext :: OpenCLLibrary -> CLKernel -> IO CLContext
+clGetKernelContext lib krn =
     wrapGetInfo (\(dat :: Ptr CLContext) ->
-        raw_clGetKernelInfo krn infoid size (castPtr dat)) id
+        raw_clGetKernelInfo lib krn infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_KERNEL_CONTEXT
       size = fromIntegral $ sizeOf (nullPtr::CLContext)
@@ -764,10 +732,10 @@ clGetKernelContext krn =
 -- | Return the program object associated with kernel.
 --
 -- This function execute OpenCL clGetKernelInfo with 'CL_KERNEL_PROGRAM'.
-clGetKernelProgram :: CLKernel -> IO CLProgram
-clGetKernelProgram krn =
+clGetKernelProgram :: OpenCLLibrary -> CLKernel -> IO CLProgram
+clGetKernelProgram lib krn =
     wrapGetInfo (\(dat :: Ptr CLProgram) ->
-        raw_clGetKernelInfo krn infoid size (castPtr dat)) id
+        raw_clGetKernelInfo lib krn infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_KERNEL_PROGRAM
       size = fromIntegral $ sizeOf (nullPtr::CLProgram)
@@ -790,10 +758,10 @@ enum CLKernelGroupInfo {
 --
 -- This function execute OpenCL clGetKernelWorkGroupInfo with
 -- 'CL_KERNEL_WORK_GROUP_SIZE'.
-clGetKernelWorkGroupSize :: CLKernel -> CLDeviceID -> IO CSize
-clGetKernelWorkGroupSize krn device =
+clGetKernelWorkGroupSize :: OpenCLLibrary -> CLKernel -> CLDeviceID -> IO CSize
+clGetKernelWorkGroupSize lib krn device =
     wrapGetInfo (\(dat :: Ptr CSize) ->
-        raw_clGetKernelWorkGroupInfo krn device infoid size (castPtr dat)) id
+        raw_clGetKernelWorkGroupInfo lib krn device infoid size (castPtr dat)) id
     where
       infoid = getCLValue CL_KERNEL_WORK_GROUP_SIZE
       size = fromIntegral $ sizeOf (0::CSize)
@@ -805,10 +773,10 @@ clGetKernelWorkGroupSize krn device =
 --
 -- This function execute OpenCL clGetKernelWorkGroupInfo with
 -- 'CL_KERNEL_COMPILE_WORK_GROUP_SIZE'.
-clGetKernelCompileWorkGroupSize :: CLKernel -> CLDeviceID -> IO [CSize]
-clGetKernelCompileWorkGroupSize krn device = do
+clGetKernelCompileWorkGroupSize :: OpenCLLibrary -> CLKernel -> CLDeviceID -> IO [CSize]
+clGetKernelCompileWorkGroupSize lib krn device = do
   allocaArray num $ \(buff :: Ptr CSize) -> do
-    whenSuccess (raw_clGetKernelWorkGroupInfo krn device infoid size (castPtr buff) nullPtr)
+    whenSuccess (raw_clGetKernelWorkGroupInfo lib krn device infoid size (castPtr buff) nullPtr)
       $ peekArray num buff
     where 
       infoid = getCLValue CL_KERNEL_COMPILE_WORK_GROUP_SIZE
@@ -830,10 +798,10 @@ clGetKernelCompileWorkGroupSize krn device = do
 --
 -- This function execute OpenCL clGetKernelWorkGroupInfo with
 -- 'CL_KERNEL_LOCAL_MEM_SIZE'.
-clGetKernelLocalMemSize :: CLKernel -> CLDeviceID -> IO CLulong
-clGetKernelLocalMemSize krn device =
+clGetKernelLocalMemSize :: OpenCLLibrary -> CLKernel -> CLDeviceID -> IO CLulong
+clGetKernelLocalMemSize lib krn device =
     wrapGetInfo (\(dat :: Ptr CLulong) ->
-        raw_clGetKernelWorkGroupInfo krn device infoid size (castPtr dat)) id
+        raw_clGetKernelWorkGroupInfo lib krn device infoid size (castPtr dat)) id
     where
       infoid = getCLValue CL_KERNEL_LOCAL_MEM_SIZE
       size = fromIntegral $ sizeOf (0::CLulong)

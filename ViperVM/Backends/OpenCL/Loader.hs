@@ -13,6 +13,7 @@ import Foreign.C.Types
 import Foreign.C.String
 import Data.Maybe (fromMaybe)
 import Data.Map
+import Data.Word
 import Data.Traversable
 
 import ViperVM.Backends.OpenCL.Types
@@ -151,6 +152,23 @@ type GetEventInfoFun = CLEvent -> CLEventInfo_ -> CSize -> Ptr () -> Ptr CSize -
 type RetainEventFun = CLEvent -> IO CLint 
 type ReleaseEventFun = CLEvent -> IO CLint 
 type GetEventProfilingInfoFun = CLEvent -> CLProfilingInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+-- Program
+type CreateProgramWithSourceFun = CLContext -> CLuint -> Ptr CString -> Ptr CSize -> Ptr CLint -> IO CLProgram
+type CreateProgramWithBinaryFun = CLContext -> CLuint -> Ptr CLDeviceID -> Ptr CSize -> Ptr (Ptr Word8) -> Ptr CLint -> Ptr CLint -> IO CLProgram
+type RetainProgramFun = CLProgram -> IO CLint
+type ReleaseProgramFun = CLProgram -> IO CLint
+type BuildProgramFun = CLProgram -> CLuint -> Ptr CLDeviceID -> CString -> FunPtr BuildCallback -> Ptr () -> IO CLint
+type UnloadCompilerFun = IO CLint
+type GetProgramInfoFun = CLProgram -> CLProgramInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+type GetProgramBuildInfoFun = CLProgram -> CLDeviceID -> CLProgramBuildInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+type CreateKernelFun = CLProgram -> CString -> Ptr CLint -> IO CLKernel 
+type CreateKernelsInProgramFun = CLProgram -> CLuint -> Ptr CLKernel -> Ptr CLuint -> IO CLint 
+type RetainKernelFun = CLKernel -> IO CLint 
+type ReleaseKernelFun = CLKernel -> IO CLint 
+type SetKernelArgFun = CLKernel -> CLuint -> CSize -> Ptr () -> IO CLint
+type GetKernelInfoFun = CLKernel -> CLKernelInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+type GetKernelWorkGroupInfoFun = CLKernel -> CLDeviceID -> CLKernelWorkGroupInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+
 
 
 
@@ -211,7 +229,23 @@ data OpenCLLibrary = OpenCLLibrary {
   raw_clGetEventInfo          :: GetEventInfoFun,
   raw_clRetainEvent           :: RetainEventFun,
   raw_clReleaseEvent          :: ReleaseEventFun,
-  raw_clGetEventProfilingInfo :: GetEventProfilingInfoFun
+  raw_clGetEventProfilingInfo :: GetEventProfilingInfoFun,
+  -- Program
+  raw_clCreateProgramWithSource :: CreateProgramWithSourceFun,
+  raw_clCreateProgramWithBinary :: CreateProgramWithBinaryFun,
+  raw_clRetainProgram           :: RetainProgramFun,
+  raw_clReleaseProgram          :: ReleaseProgramFun,
+  raw_clBuildProgram            :: BuildProgramFun,
+  raw_clUnloadCompiler          :: UnloadCompilerFun,
+  raw_clGetProgramInfo          :: GetProgramInfoFun,
+  raw_clGetProgramBuildInfo     :: GetProgramBuildInfoFun,
+  raw_clCreateKernel            :: CreateKernelFun,
+  raw_clCreateKernelsInProgram  :: CreateKernelsInProgramFun,
+  raw_clRetainKernel            :: RetainKernelFun,
+  raw_clReleaseKernel           :: ReleaseKernelFun,
+  raw_clSetKernelArg            :: SetKernelArgFun,
+  raw_clGetKernelInfo           :: GetKernelInfoFun,
+  raw_clGetKernelWorkGroupInfo  :: GetKernelWorkGroupInfoFun
 }
 
 foreign import CALLCONV "dynamic" mkGetPlatformIDsFun :: FunPtr GetPlatformIDsFun -> GetPlatformIDsFun
@@ -269,6 +303,22 @@ foreign import CALLCONV "dynamic" mkGetEventInfoFun :: FunPtr GetEventInfoFun ->
 foreign import CALLCONV "dynamic" mkRetainEventFun :: FunPtr RetainEventFun -> RetainEventFun
 foreign import CALLCONV "dynamic" mkReleaseEventFun :: FunPtr ReleaseEventFun -> ReleaseEventFun
 foreign import CALLCONV "dynamic" mkGetEventProfilingInfoFun :: FunPtr GetEventProfilingInfoFun -> GetEventProfilingInfoFun
+-- Program
+foreign import CALLCONV "dynamic" mkCreateProgramWithSourceFun :: FunPtr CreateProgramWithSourceFun -> CreateProgramWithSourceFun
+foreign import CALLCONV "dynamic" mkCreateProgramWithBinaryFun :: FunPtr CreateProgramWithBinaryFun -> CreateProgramWithBinaryFun
+foreign import CALLCONV "dynamic" mkRetainProgramFun :: FunPtr RetainProgramFun -> RetainProgramFun
+foreign import CALLCONV "dynamic" mkReleaseProgramFun :: FunPtr ReleaseProgramFun -> ReleaseProgramFun
+foreign import CALLCONV "dynamic" mkBuildProgramFun :: FunPtr BuildProgramFun -> BuildProgramFun
+foreign import CALLCONV "dynamic" mkUnloadCompilerFun :: FunPtr UnloadCompilerFun -> UnloadCompilerFun
+foreign import CALLCONV "dynamic" mkGetProgramInfoFun :: FunPtr GetProgramInfoFun -> GetProgramInfoFun
+foreign import CALLCONV "dynamic" mkGetProgramBuildInfoFun :: FunPtr GetProgramBuildInfoFun -> GetProgramBuildInfoFun
+foreign import CALLCONV "dynamic" mkCreateKernelFun :: FunPtr CreateKernelFun -> CreateKernelFun
+foreign import CALLCONV "dynamic" mkCreateKernelsInProgramFun :: FunPtr CreateKernelsInProgramFun -> CreateKernelsInProgramFun
+foreign import CALLCONV "dynamic" mkRetainKernelFun :: FunPtr RetainKernelFun -> RetainKernelFun
+foreign import CALLCONV "dynamic" mkReleaseKernelFun :: FunPtr ReleaseKernelFun -> ReleaseKernelFun
+foreign import CALLCONV "dynamic" mkSetKernelArgFun :: FunPtr SetKernelArgFun -> SetKernelArgFun
+foreign import CALLCONV "dynamic" mkGetKernelInfoFun :: FunPtr GetKernelInfoFun -> GetKernelInfoFun
+foreign import CALLCONV "dynamic" mkGetKernelWorkGroupInfoFun :: FunPtr GetKernelWorkGroupInfoFun -> GetKernelWorkGroupInfoFun
 
 -- | dlsym without exception (may return nullFunPtr)
 mydlsym :: DL -> String -> IO (FunPtr a)
@@ -352,6 +402,22 @@ loadOpenCL lib = do
     raw_clGetEventInfo          = mkGetEventInfoFun $ v_1_0 "clGetEventInfo",
     raw_clRetainEvent           = mkRetainEventFun $ v_1_0 "clRetainEvent",
     raw_clReleaseEvent          = mkReleaseEventFun $ v_1_0 "clReleaseEvent",
-    raw_clGetEventProfilingInfo = mkGetEventProfilingInfoFun $ v_1_0 "clGetEventProfilingInfo"
+    raw_clGetEventProfilingInfo = mkGetEventProfilingInfoFun $ v_1_0 "clGetEventProfilingInfo",
+    -- Program
+    raw_clCreateProgramWithSource = mkCreateProgramWithSourceFun $ v_1_0 "clCreateProgramWithSource",
+    raw_clCreateProgramWithBinary = mkCreateProgramWithBinaryFun $ v_1_0 "clCreateProgramWithBinary",
+    raw_clRetainProgram           = mkRetainProgramFun $ v_1_0 "clRetainProgram",
+    raw_clReleaseProgram          = mkReleaseProgramFun $ v_1_0 "clReleaseProgram",
+    raw_clBuildProgram            = mkBuildProgramFun $ v_1_0 "clBuildProgram",
+    raw_clUnloadCompiler          = mkUnloadCompilerFun $ v_1_0 "clUnloadCompiler",
+    raw_clGetProgramInfo          = mkGetProgramInfoFun $ v_1_0 "clGetProgramInfo",
+    raw_clGetProgramBuildInfo     = mkGetProgramBuildInfoFun $ v_1_0 "clGetProgramBuildInfo",
+    raw_clCreateKernel            = mkCreateKernelFun $ v_1_0 "clCreateKernel",
+    raw_clCreateKernelsInProgram  = mkCreateKernelsInProgramFun $ v_1_0 "clCreateKernelsInProgram",
+    raw_clRetainKernel            = mkRetainKernelFun $ v_1_0 "clRetainKernel",
+    raw_clReleaseKernel           = mkReleaseKernelFun $ v_1_0 "clReleaseKernel",
+    raw_clSetKernelArg            = mkSetKernelArgFun $ v_1_0 "clSetKernelArg",
+    raw_clGetKernelInfo           = mkGetKernelInfoFun $ v_1_0 "clGetKernelInfo",
+    raw_clGetKernelWorkGroupInfo  = mkGetKernelWorkGroupInfoFun $ v_1_0 "clGetKernelWorkGroupInfo"
   }
 

@@ -48,7 +48,7 @@ module ViperVM.Backends.OpenCL.Types(
   CLCommandQueueProperty(..), CLCommandType(..),  CLCommandExecutionStatus(..), 
   CLProfilingInfo(..), CLPlatformInfo(..), CLMemFlag(..), CLMemObjectType(..),
   CLBuildStatus(..), CLAddressingMode(..), CLFilterMode(..), CLMapFlag(..),
-  ContextCallback, NativeKernelCallback,
+  ContextCallback, NativeKernelCallback, BuildCallback,
   -- * Functions
   wrapPError, wrapCheckSuccess, wrapGetInfo, whenSuccess, getCLValue, wrapContextCallback,
   wrapNativeKernelCallback, withMaybeArray,
@@ -824,13 +824,14 @@ type NativeKernelCallback = Ptr () -> IO ()
 foreign import CALLCONV "wrapper" wrapNativeKernelCallback :: 
   NativeKernelCallback -> IO (FunPtr NativeKernelCallback)
 
+type BuildCallback = CLProgram -> Ptr () -> IO ()
+
+-- -----------------------------------------------------------------------------
 
 withMaybeArray :: Storable a => [a] -> (Ptr a -> IO b) -> IO b
 withMaybeArray [] = ($ nullPtr)
 withMaybeArray xs = withArray xs
 
-
--- -----------------------------------------------------------------------------
 getCLValue :: (Enum a, Integral b) => a -> b
 getCLValue = fromIntegral . fromEnum
 
