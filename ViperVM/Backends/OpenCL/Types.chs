@@ -48,9 +48,10 @@ module ViperVM.Backends.OpenCL.Types(
   CLCommandQueueProperty(..), CLCommandType(..),  CLCommandExecutionStatus(..), 
   CLProfilingInfo(..), CLPlatformInfo(..), CLMemFlag(..), CLMemObjectType(..),
   CLBuildStatus(..), CLAddressingMode(..), CLFilterMode(..), CLMapFlag(..),
-  ContextCallback,
+  ContextCallback, NativeKernelCallback,
   -- * Functions
   wrapPError, wrapCheckSuccess, wrapGetInfo, whenSuccess, getCLValue, wrapContextCallback,
+  wrapNativeKernelCallback, withMaybeArray,
   throwCLError, getEnumCL, bitmaskToFlags, getCommandExecutionStatus, 
   bitmaskToDeviceTypes, bitmaskFromFlags, bitmaskToCommandQueueProperties, 
   bitmaskToFPConfig, bitmaskToExecCapability, bitmaskToMemFlags )
@@ -59,7 +60,7 @@ module ViperVM.Backends.OpenCL.Types(
 -- -----------------------------------------------------------------------------
 import Foreign
 import Foreign.C.Types
-import Foreign.C.String( CString, peekCString )
+import Foreign.C.String( CString )
 import Data.List( foldl' )
 import Data.Typeable( Typeable(..) )
 import Control.Applicative( (<$>) , (<*>))
@@ -818,6 +819,15 @@ instance Storable CLImageFormat where
 type ContextCallback = CString -> Ptr () -> CSize -> Ptr () -> IO ()
 foreign import CALLCONV "wrapper" wrapContextCallback :: 
   ContextCallback -> IO (FunPtr ContextCallback)
+
+type NativeKernelCallback = Ptr () -> IO ()
+foreign import CALLCONV "wrapper" wrapNativeKernelCallback :: 
+  NativeKernelCallback -> IO (FunPtr NativeKernelCallback)
+
+
+withMaybeArray :: Storable a => [a] -> (Ptr a -> IO b) -> IO b
+withMaybeArray [] = ($ nullPtr)
+withMaybeArray xs = withArray xs
 
 
 -- -----------------------------------------------------------------------------

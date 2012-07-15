@@ -121,6 +121,31 @@ type CreateContextFromTypeFun = Ptr CLContextProperty_ -> CLDeviceType_ -> FunPt
 type RetainContextFun = CLContext -> IO CLint
 type ReleaseContextFun = CLContext -> IO CLint
 type GetContextInfoFun = CLContext -> CLContextInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+-- CommandQueue
+type CreateCommandQueueFun = CLContext -> CLDeviceID -> CLCommandQueueProperty_ -> Ptr CLint -> IO CLCommandQueue
+type RetainCommandQueueFun = CLCommandQueue -> IO CLint
+type ReleaseCommandQueueFun = CLCommandQueue -> IO CLint
+type GetCommandQueueInfoFun = CLCommandQueue -> CLCommandQueueInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+type SetCommandQueuePropertyFun = CLCommandQueue -> CLCommandQueueProperty_ -> CLbool -> Ptr CLCommandQueueProperty_ -> IO CLint
+type EnqueueReadBufferFun = CLCommandQueue -> CLMem -> CLbool -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueWriteBufferFun = CLCommandQueue -> CLMem -> CLbool -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueReadImageFun = CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueWriteImageFun = CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueCopyImageFun = CLCommandQueue -> CLMem -> CLMem -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueCopyImageToBufferFun = CLCommandQueue -> CLMem -> CLMem -> Ptr CSize -> Ptr CSize -> CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueCopyBufferToImageFun = CLCommandQueue -> CLMem -> CLMem -> CSize -> Ptr CSize -> Ptr CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueMapBufferFun = CLCommandQueue -> CLMem -> CLbool -> CLMapFlags_ -> CSize -> CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> Ptr CLint -> IO (Ptr ())
+type EnqueueMapImageFun = CLCommandQueue -> CLMem -> CLbool -> CLMapFlags_ -> Ptr CSize -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> Ptr CLint -> IO (Ptr ())
+type EnqueueUnmapMemObjectFun = CLCommandQueue -> CLMem -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueNDRangeKernelFun = CLCommandQueue -> CLKernel -> CLuint -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueNativeKernelFun = CLCommandQueue ->  FunPtr NativeKernelCallback -> Ptr () -> CSize -> CLuint -> Ptr CLMem -> Ptr (Ptr ()) -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueTaskFun = CLCommandQueue -> CLKernel -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint
+type EnqueueMarkerFun = CLCommandQueue -> Ptr CLEvent -> IO CLint 
+type EnqueueWaitForEventsFun = CLCommandQueue -> CLuint -> Ptr CLEvent -> IO CLint
+type EnqueueBarrierFun = CLCommandQueue -> IO CLint 
+type FlushFun = CLCommandQueue -> IO CLint
+type FinishFun = CLCommandQueue -> IO CLint
+
 
 
 data OpenCLLibrary = OpenCLLibrary {
@@ -149,7 +174,31 @@ data OpenCLLibrary = OpenCLLibrary {
   raw_clCreateContextFromType :: CreateContextFromTypeFun,
   raw_clRetainContext     :: RetainContextFun,
   raw_clReleaseContext    :: ReleaseContextFun,
-  raw_clGetContextInfo    :: GetContextInfoFun
+  raw_clGetContextInfo    :: GetContextInfoFun,
+  -- CommandQueue
+  raw_clCreateCommandQueue :: CreateCommandQueueFun,
+  raw_clRetainCommandQueue :: RetainCommandQueueFun,
+  raw_clReleaseCommandQueue :: ReleaseCommandQueueFun,
+  raw_clGetCommandQueueInfo :: GetCommandQueueInfoFun,
+  raw_clSetCommandQueueProperty :: SetCommandQueuePropertyFun,
+  raw_clEnqueueReadBuffer :: EnqueueReadBufferFun,
+  raw_clEnqueueWriteBuffer :: EnqueueWriteBufferFun,
+  raw_clEnqueueReadImage :: EnqueueReadImageFun,
+  raw_clEnqueueWriteImage :: EnqueueWriteImageFun,
+  raw_clEnqueueCopyImage :: EnqueueCopyImageFun,
+  raw_clEnqueueCopyImageToBuffer :: EnqueueCopyImageToBufferFun,
+  raw_clEnqueueCopyBufferToImage :: EnqueueCopyBufferToImageFun,
+  raw_clEnqueueMapBuffer :: EnqueueMapBufferFun,
+  raw_clEnqueueMapImage :: EnqueueMapImageFun,
+  raw_clEnqueueUnmapMemObject :: EnqueueUnmapMemObjectFun,
+  raw_clEnqueueNDRangeKernel :: EnqueueNDRangeKernelFun,
+  raw_clEnqueueNativeKernel :: EnqueueNativeKernelFun,
+  raw_clEnqueueTask :: EnqueueTaskFun,
+  raw_clEnqueueMarker :: EnqueueMarkerFun,
+  raw_clEnqueueWaitForEvents :: EnqueueWaitForEventsFun,
+  raw_clEnqueueBarrier :: EnqueueBarrierFun,
+  raw_clFlush :: FlushFun,
+  raw_clFinish :: FinishFun
 }
 
 foreign import CALLCONV "dynamic" mkGetPlatformIDsFun :: FunPtr GetPlatformIDsFun -> GetPlatformIDsFun
@@ -177,6 +226,30 @@ foreign import CALLCONV "dynamic" mkCreateContextFromTypeFun :: FunPtr CreateCon
 foreign import CALLCONV "dynamic" mkRetainContextFun :: FunPtr RetainContextFun -> RetainContextFun
 foreign import CALLCONV "dynamic" mkReleaseContextFun :: FunPtr ReleaseContextFun -> ReleaseContextFun
 foreign import CALLCONV "dynamic" mkGetContextInfoFun :: FunPtr GetContextInfoFun -> GetContextInfoFun
+-- CommandQueue
+foreign import CALLCONV "dynamic" mkCreateCommandQueueFun :: FunPtr CreateCommandQueueFun -> CreateCommandQueueFun
+foreign import CALLCONV "dynamic" mkRetainCommandQueueFun :: FunPtr RetainCommandQueueFun -> RetainCommandQueueFun
+foreign import CALLCONV "dynamic" mkReleaseCommandQueueFun :: FunPtr ReleaseCommandQueueFun -> ReleaseCommandQueueFun
+foreign import CALLCONV "dynamic" mkGetCommandQueueInfoFun :: FunPtr GetCommandQueueInfoFun -> GetCommandQueueInfoFun
+foreign import CALLCONV "dynamic" mkSetCommandQueuePropertyFun :: FunPtr SetCommandQueuePropertyFun -> SetCommandQueuePropertyFun
+foreign import CALLCONV "dynamic" mkEnqueueReadBufferFun :: FunPtr EnqueueReadBufferFun -> EnqueueReadBufferFun
+foreign import CALLCONV "dynamic" mkEnqueueWriteBufferFun :: FunPtr EnqueueWriteBufferFun -> EnqueueWriteBufferFun
+foreign import CALLCONV "dynamic" mkEnqueueReadImageFun :: FunPtr EnqueueReadImageFun -> EnqueueReadImageFun
+foreign import CALLCONV "dynamic" mkEnqueueWriteImageFun :: FunPtr EnqueueWriteImageFun -> EnqueueWriteImageFun
+foreign import CALLCONV "dynamic" mkEnqueueCopyImageFun :: FunPtr EnqueueCopyImageFun -> EnqueueCopyImageFun
+foreign import CALLCONV "dynamic" mkEnqueueCopyImageToBufferFun :: FunPtr EnqueueCopyImageToBufferFun -> EnqueueCopyImageToBufferFun
+foreign import CALLCONV "dynamic" mkEnqueueCopyBufferToImageFun :: FunPtr EnqueueCopyBufferToImageFun -> EnqueueCopyBufferToImageFun
+foreign import CALLCONV "dynamic" mkEnqueueMapBufferFun :: FunPtr EnqueueMapBufferFun -> EnqueueMapBufferFun
+foreign import CALLCONV "dynamic" mkEnqueueMapImageFun :: FunPtr EnqueueMapImageFun -> EnqueueMapImageFun
+foreign import CALLCONV "dynamic" mkEnqueueUnmapMemObjectFun :: FunPtr EnqueueUnmapMemObjectFun -> EnqueueUnmapMemObjectFun
+foreign import CALLCONV "dynamic" mkEnqueueNDRangeKernelFun :: FunPtr EnqueueNDRangeKernelFun -> EnqueueNDRangeKernelFun
+foreign import CALLCONV "dynamic" mkEnqueueNativeKernelFun :: FunPtr EnqueueNativeKernelFun -> EnqueueNativeKernelFun
+foreign import CALLCONV "dynamic" mkEnqueueTaskFun :: FunPtr EnqueueTaskFun -> EnqueueTaskFun
+foreign import CALLCONV "dynamic" mkEnqueueMarkerFun :: FunPtr EnqueueMarkerFun -> EnqueueMarkerFun
+foreign import CALLCONV "dynamic" mkEnqueueWaitForEventsFun :: FunPtr EnqueueWaitForEventsFun -> EnqueueWaitForEventsFun
+foreign import CALLCONV "dynamic" mkEnqueueBarrierFun :: FunPtr EnqueueBarrierFun -> EnqueueBarrierFun
+foreign import CALLCONV "dynamic" mkFlushFun :: FunPtr FlushFun -> FlushFun
+foreign import CALLCONV "dynamic" mkFinishFun :: FunPtr FinishFun -> FinishFun
 
 -- | dlsym without exception (may return nullFunPtr)
 mydlsym :: DL -> String -> IO (FunPtr a)
@@ -230,6 +303,30 @@ loadOpenCL lib = do
     raw_clCreateContextFromType = mkCreateContextFromTypeFun $ v_1_0 "clCreateContextFromType",
     raw_clRetainContext     = mkRetainContextFun $ v_1_0 "clRetainContext",
     raw_clReleaseContext    = mkReleaseContextFun $ v_1_0 "clReleaseContext",
-    raw_clGetContextInfo    = mkGetContextInfoFun $ v_1_0 "clGetContextInfo"
+    raw_clGetContextInfo    = mkGetContextInfoFun $ v_1_0 "clGetContextInfo",
+    -- CommandQueue
+    raw_clCreateCommandQueue  = mkCreateCommandQueueFun $ v_1_0 "clCreateCommandQueue",
+    raw_clRetainCommandQueue  = mkRetainCommandQueueFun $ v_1_0 "clRetainCommandQueue",
+    raw_clReleaseCommandQueue = mkReleaseCommandQueueFun $ v_1_0 "clReleaseCommandQueue",
+    raw_clGetCommandQueueInfo = mkGetCommandQueueInfoFun $ v_1_0 "clGetCommandQueueInfo",
+    raw_clSetCommandQueueProperty = mkSetCommandQueuePropertyFun $ v_1_0 "clSetCommandQueueProperty",
+    raw_clEnqueueReadBuffer   = mkEnqueueReadBufferFun $ v_1_0 "clEnqueueReadBuffer",
+    raw_clEnqueueWriteBuffer  = mkEnqueueWriteBufferFun $ v_1_0 "clEnqueueWriteBuffer",
+    raw_clEnqueueReadImage    = mkEnqueueReadImageFun $ v_1_0 "clEnqueueReadImage",
+    raw_clEnqueueWriteImage   = mkEnqueueWriteImageFun $ v_1_0 "clEnqueueWriteImage",
+    raw_clEnqueueCopyImage    = mkEnqueueCopyImageFun $ v_1_0 "clEnqueueCopyImage",
+    raw_clEnqueueCopyImageToBuffer = mkEnqueueCopyImageToBufferFun $ v_1_0 "clEnqueueCopyImageToBuffer",
+    raw_clEnqueueCopyBufferToImage = mkEnqueueCopyBufferToImageFun $ v_1_0 "clEnqueueCopyBufferToImage",
+    raw_clEnqueueMapBuffer    = mkEnqueueMapBufferFun $ v_1_0 "clEnqueueMapBuffer",
+    raw_clEnqueueMapImage     = mkEnqueueMapImageFun $ v_1_0 "clEnqueueMapImage",
+    raw_clEnqueueUnmapMemObject = mkEnqueueUnmapMemObjectFun $ v_1_0 "clEnqueueUnmapMemObject",
+    raw_clEnqueueNDRangeKernel = mkEnqueueNDRangeKernelFun $ v_1_0 "clEnqueueNDRangeKernel",
+    raw_clEnqueueNativeKernel = mkEnqueueNativeKernelFun $ v_1_0 "clEnqueueNativeKernel",
+    raw_clEnqueueTask         = mkEnqueueTaskFun $ v_1_0 "clEnqueueTask",
+    raw_clEnqueueMarker       = mkEnqueueMarkerFun $ v_1_0 "clEnqueueMarker",
+    raw_clEnqueueWaitForEvents = mkEnqueueWaitForEventsFun $ v_1_0 "clEnqueueWaitForEvents",
+    raw_clEnqueueBarrier      = mkEnqueueBarrierFun $ v_1_0 "clEnqueueBarrier",
+    raw_clFlush               = mkFlushFun $ v_1_0 "clFlush",
+    raw_clFinish              = mkFinishFun $ v_1_0 "clFinish"
   }
 

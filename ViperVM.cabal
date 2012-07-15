@@ -23,6 +23,7 @@ library
     ViperVM.Backends.OpenCL.Context
     ViperVM.Backends.OpenCL.Loader
     ViperVM.Backends.OpenCL.Memory
+    ViperVM.Backends.OpenCL.CommandQueue
 
   -- other-modules:       
   build-depends:       base ==4.5.*, unix ==2.5.*, containers ==0.4.*
