@@ -29,7 +29,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, ForeignFunctionInterface, CPP #-}
 module ViperVM.Backends.OpenCL.Types( 
   -- * Symple CL Types
   CLbool, CLint, CLuint, CLulong, CLProgram, CLEvent, CLMem, CLPlatformID, 
@@ -48,8 +48,9 @@ module ViperVM.Backends.OpenCL.Types(
   CLCommandQueueProperty(..), CLCommandType(..),  CLCommandExecutionStatus(..), 
   CLProfilingInfo(..), CLPlatformInfo(..), CLMemFlag(..), CLMemObjectType(..),
   CLBuildStatus(..), CLAddressingMode(..), CLFilterMode(..), CLMapFlag(..),
+  ContextCallback,
   -- * Functions
-  wrapPError, wrapCheckSuccess, wrapGetInfo, whenSuccess, getCLValue, 
+  wrapPError, wrapCheckSuccess, wrapGetInfo, whenSuccess, getCLValue, wrapContextCallback,
   throwCLError, getEnumCL, bitmaskToFlags, getCommandExecutionStatus, 
   bitmaskToDeviceTypes, bitmaskFromFlags, bitmaskToCommandQueueProperties, 
   bitmaskToFPConfig, bitmaskToExecCapability, bitmaskToMemFlags )
@@ -58,6 +59,7 @@ module ViperVM.Backends.OpenCL.Types(
 -- -----------------------------------------------------------------------------
 import Foreign
 import Foreign.C.Types
+import Foreign.C.String( CString, peekCString )
 import Data.List( foldl' )
 import Data.Typeable( Typeable(..) )
 import Control.Applicative( (<$>) , (<*>))
@@ -811,6 +813,11 @@ instance Storable CLImageFormat where
   poke p (CLImageFormat a b) = do
     {#set cl_image_format.image_channel_order #} p (getCLValue a)
     {#set cl_image_format.image_channel_data_type #} p (getCLValue b)
+
+
+type ContextCallback = CString -> Ptr () -> CSize -> Ptr () -> IO ()
+foreign import CALLCONV "wrapper" wrapContextCallback :: 
+  ContextCallback -> IO (FunPtr ContextCallback)
 
 
 -- -----------------------------------------------------------------------------

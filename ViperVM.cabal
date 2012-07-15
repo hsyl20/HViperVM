@@ -20,6 +20,7 @@ library
     ViperVM.Backends.OpenCL
     ViperVM.Backends.OpenCL.Types
     ViperVM.Backends.OpenCL.Query
+    ViperVM.Backends.OpenCL.Context
     ViperVM.Backends.OpenCL.Loader
     ViperVM.Backends.OpenCL.Memory
 

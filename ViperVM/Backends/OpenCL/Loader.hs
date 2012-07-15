@@ -99,6 +99,7 @@ type GetPlatformIDsFun = CLuint -> Ptr CLPlatformID -> Ptr CLuint -> IO CLint
 type GetPlatformInfoFun = CLPlatformID -> CLPlatformInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
 type GetDeviceIDsFun = CLPlatformID -> CLDeviceType_ -> CLuint -> Ptr CLDeviceID -> Ptr CLuint -> IO CLint
 type GetDeviceInfoFun = CLDeviceID -> CLDeviceInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+-- Memory
 type CreateBufferFun = CLContext -> CLMemFlags_ -> CSize -> Ptr () -> Ptr CLint -> IO CLMem
 type CreateImage2DFun = CLContext -> CLMemFlags_ -> CLImageFormat_p -> CSize -> CSize -> CSize -> Ptr () -> Ptr CLint -> IO CLMem
 type CreateImage3DFun = CLContext -> CLMemFlags_-> CLImageFormat_p -> CSize -> CSize -> CSize -> CSize -> CSize -> Ptr () -> Ptr CLint -> IO CLMem
@@ -114,6 +115,12 @@ type CreateSamplerFun = CLContext -> CLbool -> CLAddressingMode_ -> CLFilterMode
 type RetainSamplerFun = CLSampler -> IO CLint
 type ReleaseSamplerFun = CLSampler -> IO CLint
 type GetSamplerInfoFun = CLSampler -> CLSamplerInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
+-- Context
+type CreateContextFun = Ptr CLContextProperty_ -> CLuint -> Ptr CLDeviceID -> FunPtr ContextCallback -> Ptr () -> Ptr CLint -> IO CLContext
+type CreateContextFromTypeFun = Ptr CLContextProperty_ -> CLDeviceType_ -> FunPtr ContextCallback -> Ptr () -> Ptr CLint -> IO CLContext
+type RetainContextFun = CLContext -> IO CLint
+type ReleaseContextFun = CLContext -> IO CLint
+type GetContextInfoFun = CLContext -> CLContextInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
 
 
 data OpenCLLibrary = OpenCLLibrary {
@@ -122,6 +129,7 @@ data OpenCLLibrary = OpenCLLibrary {
   raw_clGetPlatformInfo   :: GetPlatformInfoFun,
   raw_clGetDeviceIDs      :: GetDeviceIDsFun,
   raw_clGetDeviceInfo     :: GetDeviceInfoFun,
+  -- Memory
   raw_clCreateBuffer      :: CreateBufferFun,
   raw_clCreateImage2D     :: CreateImage2DFun,
   raw_clCreateImage3D     :: CreateImage3DFun,
@@ -135,13 +143,20 @@ data OpenCLLibrary = OpenCLLibrary {
   raw_clCreateSampler     :: CreateSamplerFun,
   raw_clRetainSampler     :: RetainSamplerFun,
   raw_clReleaseSampler    :: ReleaseSamplerFun,
-  raw_clGetSamplerInfo    :: GetSamplerInfoFun
+  raw_clGetSamplerInfo    :: GetSamplerInfoFun,
+  -- Context
+  raw_clCreateContext     :: CreateContextFun,
+  raw_clCreateContextFromType :: CreateContextFromTypeFun,
+  raw_clRetainContext     :: RetainContextFun,
+  raw_clReleaseContext    :: ReleaseContextFun,
+  raw_clGetContextInfo    :: GetContextInfoFun
 }
 
 foreign import CALLCONV "dynamic" mkGetPlatformIDsFun :: FunPtr GetPlatformIDsFun -> GetPlatformIDsFun
 foreign import CALLCONV "dynamic" mkGetPlatformInfoFun :: FunPtr GetPlatformInfoFun -> GetPlatformInfoFun
 foreign import CALLCONV "dynamic" mkGetDeviceIDsFun :: FunPtr GetDeviceIDsFun -> GetDeviceIDsFun
 foreign import CALLCONV "dynamic" mkGetDeviceInfoFun :: FunPtr GetDeviceInfoFun -> GetDeviceInfoFun
+-- Memory
 foreign import CALLCONV "dynamic" mkCreateBufferFun :: FunPtr CreateBufferFun -> CreateBufferFun
 foreign import CALLCONV "dynamic" mkCreateImage2DFun :: FunPtr CreateImage2DFun -> CreateImage2DFun
 foreign import CALLCONV "dynamic" mkCreateImage3DFun :: FunPtr CreateImage3DFun -> CreateImage3DFun
@@ -156,6 +171,12 @@ foreign import CALLCONV "dynamic" mkCreateSamplerFun :: FunPtr CreateSamplerFun 
 foreign import CALLCONV "dynamic" mkRetainSamplerFun :: FunPtr RetainSamplerFun -> RetainSamplerFun
 foreign import CALLCONV "dynamic" mkReleaseSamplerFun :: FunPtr ReleaseSamplerFun -> ReleaseSamplerFun
 foreign import CALLCONV "dynamic" mkGetSamplerInfoFun :: FunPtr GetSamplerInfoFun -> GetSamplerInfoFun
+-- Context
+foreign import CALLCONV "dynamic" mkCreateContextFun :: FunPtr CreateContextFun -> CreateContextFun
+foreign import CALLCONV "dynamic" mkCreateContextFromTypeFun :: FunPtr CreateContextFromTypeFun -> CreateContextFromTypeFun
+foreign import CALLCONV "dynamic" mkRetainContextFun :: FunPtr RetainContextFun -> RetainContextFun
+foreign import CALLCONV "dynamic" mkReleaseContextFun :: FunPtr ReleaseContextFun -> ReleaseContextFun
+foreign import CALLCONV "dynamic" mkGetContextInfoFun :: FunPtr GetContextInfoFun -> GetContextInfoFun
 
 -- | dlsym without exception (may return nullFunPtr)
 mydlsym :: DL -> String -> IO (FunPtr a)
@@ -189,6 +210,7 @@ loadOpenCL lib = do
     raw_clGetPlatformInfo   = mkGetPlatformInfoFun $ v_1_0 "clGetPlatformInfo",
     raw_clGetDeviceIDs      = mkGetDeviceIDsFun $ v_1_0 "clGetDeviceIDs",
     raw_clGetDeviceInfo     = mkGetDeviceInfoFun $ v_1_0 "clGetDeviceInfo",
+    -- Memory
     raw_clCreateBuffer      = mkCreateBufferFun $ v_1_0 "clCreateBuffer",
     raw_clCreateImage2D     = mkCreateImage2DFun $ v_1_0 "clCreateImage2D",
     raw_clCreateImage3D     = mkCreateImage3DFun $ v_1_0 "clCreateImage3D",
@@ -202,6 +224,12 @@ loadOpenCL lib = do
     raw_clCreateSampler     = mkCreateSamplerFun $ v_1_0 "clCreateSampler",
     raw_clRetainSampler     = mkRetainSamplerFun $ v_1_0 "clRetainSampler",
     raw_clReleaseSampler    = mkReleaseSamplerFun $ v_1_0 "clReleaseSampler",
-    raw_clGetSamplerInfo    = mkGetSamplerInfoFun $ v_1_0 "clGetSamplerInfo"
+    raw_clGetSamplerInfo    = mkGetSamplerInfoFun $ v_1_0 "clGetSamplerInfo",
+    -- Context
+    raw_clCreateContext     = mkCreateContextFun $ v_1_0 "clCreateContext",
+    raw_clCreateContextFromType = mkCreateContextFromTypeFun $ v_1_0 "clCreateContextFromType",
+    raw_clRetainContext     = mkRetainContextFun $ v_1_0 "clRetainContext",
+    raw_clReleaseContext    = mkReleaseContextFun $ v_1_0 "clReleaseContext",
+    raw_clGetContextInfo    = mkGetContextInfoFun $ v_1_0 "clGetContextInfo"
   }
 

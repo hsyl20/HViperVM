@@ -30,7 +30,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
 {-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, CPP #-}
-module Control.Parallel.OpenCL.Context(
+module ViperVM.Backends.OpenCL.Context(
   -- * Types
   CLContext, CLContextProperty(..),
   -- * Context Functions
@@ -40,15 +40,16 @@ module Control.Parallel.OpenCL.Context(
 
 -- -----------------------------------------------------------------------------
 import Foreign( 
-  Ptr, FunPtr, nullPtr, castPtr, alloca, allocaArray, peek, peekArray, 
+  Ptr, nullPtr, castPtr, alloca, allocaArray, peek, peekArray, 
   ptrToIntPtr, intPtrToPtr, withArray )
-import Foreign.C.Types( CSize )
-import Foreign.C.String( CString, peekCString )
+import Foreign.C.Types( CSize(..) )
+import Foreign.C.String( peekCString )
 import Foreign.Storable( sizeOf )
-import Control.Parallel.OpenCL.Types( 
-  CLuint, CLint, CLDeviceType_, CLContextInfo_, CLContextProperty_, CLDeviceID, 
+import ViperVM.Backends.OpenCL.Loader
+import ViperVM.Backends.OpenCL.Types( 
+  CLuint, CLContextInfo_, CLContextProperty_, CLDeviceID, 
   CLContext, CLDeviceType, CLPlatformID, bitmaskFromFlags, getCLValue, getEnumCL,
-  whenSuccess, wrapCheckSuccess, wrapPError, wrapGetInfo )
+  whenSuccess, wrapCheckSuccess, wrapPError, wrapGetInfo, wrapContextCallback, ContextCallback )
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -56,23 +57,6 @@ import Control.Parallel.OpenCL.Types(
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
 #endif
-
--- -----------------------------------------------------------------------------
-type ContextCallback = CString -> Ptr () -> CSize -> Ptr () -> IO ()
-foreign import CALLCONV "wrapper" wrapContextCallback :: 
-  ContextCallback -> IO (FunPtr ContextCallback)
-foreign import CALLCONV "clCreateContext" raw_clCreateContext ::
-  Ptr CLContextProperty_ -> CLuint -> Ptr CLDeviceID -> FunPtr ContextCallback -> 
-  Ptr () -> Ptr CLint -> IO CLContext
-foreign import CALLCONV "clCreateContextFromType" raw_clCreateContextFromType :: 
-  Ptr CLContextProperty_ -> CLDeviceType_ -> FunPtr ContextCallback -> 
-  Ptr () -> Ptr CLint -> IO CLContext
-foreign import CALLCONV "clRetainContext" raw_clRetainContext :: 
-  CLContext -> IO CLint
-foreign import CALLCONV "clReleaseContext" raw_clReleaseContext :: 
-  CLContext -> IO CLint
-foreign import CALLCONV "clGetContextInfo" raw_clGetContextInfo :: 
-  CLContext -> CLContextInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint
 
 -- -----------------------------------------------------------------------------
 #c
@@ -155,35 +139,35 @@ mkContextCallback f msg _ _ _ = peekCString msg >>= f
 -- the OpenCL runtime for managing objects such as command-queues, memory, 
 -- program and kernel objects and for executing kernels on one or more devices 
 -- specified in the context.
-clCreateContext :: [CLContextProperty] -> [CLDeviceID] -> (String -> IO ()) 
+clCreateContext :: OpenCLLibrary -> [CLContextProperty] -> [CLDeviceID] -> (String -> IO ()) 
                    -> IO CLContext
-clCreateContext [] devs f = withArray devs $ \pdevs ->
+clCreateContext lib [] devs f = withArray devs $ \pdevs ->
   wrapPError $ \perr -> do
     fptr <- wrapContextCallback $ mkContextCallback f
-    raw_clCreateContext nullPtr cndevs pdevs fptr nullPtr perr
+    raw_clCreateContext lib nullPtr cndevs pdevs fptr nullPtr perr
     where
       cndevs = fromIntegral . length $ devs
-clCreateContext props devs f = withArray devs $ \pdevs ->
+clCreateContext lib props devs f = withArray devs $ \pdevs ->
   wrapPError $ \perr -> do
     fptr <- wrapContextCallback $ mkContextCallback f
     withArray (packContextProperties props) $ \pprops ->
-      raw_clCreateContext pprops cndevs pdevs fptr nullPtr perr    
+      raw_clCreateContext lib pprops cndevs pdevs fptr nullPtr perr    
     where
       cndevs = fromIntegral . length $ devs
 
 -- | Create an OpenCL context from a device type that identifies the specific 
 -- device(s) to use.
-clCreateContextFromType :: [CLContextProperty] -> [CLDeviceType] 
+clCreateContextFromType :: OpenCLLibrary -> [CLContextProperty] -> [CLDeviceType] 
                            -> (String -> IO ()) -> IO CLContext
-clCreateContextFromType [] xs f = wrapPError $ \perr -> do
+clCreateContextFromType lib [] xs f = wrapPError $ \perr -> do
   fptr <- wrapContextCallback $ mkContextCallback f
-  raw_clCreateContextFromType nullPtr types fptr nullPtr perr
+  raw_clCreateContextFromType lib nullPtr types fptr nullPtr perr
     where
       types = bitmaskFromFlags xs
-clCreateContextFromType props xs f = wrapPError $ \perr -> do
+clCreateContextFromType lib props xs f = wrapPError $ \perr -> do
   fptr <- wrapContextCallback $ mkContextCallback f
   withArray (packContextProperties props) $ \pprops -> 
-    raw_clCreateContextFromType pprops types fptr nullPtr perr
+    raw_clCreateContextFromType lib pprops types fptr nullPtr perr
     where
       types = bitmaskFromFlags xs
 
@@ -196,8 +180,8 @@ clCreateContextFromType props xs f = wrapPError $ \perr -> do
 -- problem of a context being used by a library no longer being valid.
 -- Returns 'True' if the function is executed successfully, or 'False' if 
 -- context is not a valid OpenCL context.
-clRetainContext :: CLContext -> IO Bool
-clRetainContext ctx = wrapCheckSuccess $ raw_clRetainContext ctx 
+clRetainContext :: OpenCLLibrary -> CLContext -> IO Bool
+clRetainContext lib ctx = wrapCheckSuccess $ raw_clRetainContext lib ctx 
 
 -- | Decrement the context reference count.
 -- After the context reference count becomes zero and all the objects attached 
@@ -205,12 +189,12 @@ clRetainContext ctx = wrapCheckSuccess $ raw_clRetainContext ctx
 -- context is deleted.
 -- Returns 'True' if the function is executed successfully, or 'False' if 
 -- context is not a valid OpenCL context.
-clReleaseContext :: CLContext -> IO Bool
-clReleaseContext ctx = wrapCheckSuccess $ raw_clReleaseContext ctx 
+clReleaseContext :: OpenCLLibrary -> CLContext -> IO Bool
+clReleaseContext lib ctx = wrapCheckSuccess $ raw_clReleaseContext lib ctx 
 
-getContextInfoSize :: CLContext -> CLContextInfo_ -> IO CSize
-getContextInfoSize ctx infoid = alloca $ \(value_size :: Ptr CSize) -> do
-  whenSuccess (raw_clGetContextInfo ctx infoid 0 nullPtr value_size)
+getContextInfoSize :: OpenCLLibrary -> CLContext -> CLContextInfo_ -> IO CSize
+getContextInfoSize lib ctx infoid = alloca $ \(value_size :: Ptr CSize) -> do
+  whenSuccess (raw_clGetContextInfo lib ctx infoid 0 nullPtr value_size)
     $ peek value_size
 
 #c
@@ -227,10 +211,10 @@ enum CLContextInfo {
 -- applications. This feature is provided for identifying memory leaks.
 --
 -- This function execute OpenCL clGetContextInfo with 'CL_CONTEXT_REFERENCE_COUNT'.
-clGetContextReferenceCount :: CLContext -> IO CLuint
-clGetContextReferenceCount ctx =
+clGetContextReferenceCount :: OpenCLLibrary -> CLContext -> IO CLuint
+clGetContextReferenceCount lib ctx =
     wrapGetInfo (\(dat :: Ptr CLuint) ->
-        raw_clGetContextInfo ctx infoid size (castPtr dat)) id
+        raw_clGetContextInfo lib ctx infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_CONTEXT_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0::CLuint)
@@ -238,27 +222,27 @@ clGetContextReferenceCount ctx =
 -- | Return the list of devices in context.
 --
 -- This function execute OpenCL clGetContextInfo with 'CL_CONTEXT_DEVICES'.
-clGetContextDevices :: CLContext -> IO [CLDeviceID]
-clGetContextDevices ctx = do
-  size <- getContextInfoSize ctx infoid
+clGetContextDevices :: OpenCLLibrary -> CLContext -> IO [CLDeviceID]
+clGetContextDevices lib ctx = do
+  size <- getContextInfoSize lib ctx infoid
   let n = (fromIntegral size) `div` elemSize 
     
   allocaArray n $ \(buff :: Ptr CLDeviceID) -> do
-    whenSuccess (raw_clGetContextInfo ctx infoid size (castPtr buff) nullPtr)
+    whenSuccess (raw_clGetContextInfo lib ctx infoid size (castPtr buff) nullPtr)
       $ peekArray n buff
     where
       infoid = getCLValue CL_CONTEXT_DEVICES
       elemSize = sizeOf (nullPtr :: CLDeviceID)
 
-clGetContextProperties :: CLContext -> IO [CLContextProperty]
-clGetContextProperties ctx = do
-  size <- getContextInfoSize ctx infoid
+clGetContextProperties :: OpenCLLibrary -> CLContext -> IO [CLContextProperty]
+clGetContextProperties lib ctx = do
+  size <- getContextInfoSize lib ctx infoid
   let n = (fromIntegral size) `div` elemSize 
     
   if n == 0 
     then return []
     else allocaArray n $ \(buff :: Ptr CLContextProperty_) ->
-      whenSuccess (raw_clGetContextInfo ctx infoid size (castPtr buff) nullPtr)
+      whenSuccess (raw_clGetContextInfo lib ctx infoid size (castPtr buff) nullPtr)
         $ fmap unpackContextProperties $ peekArray n buff
     where
       infoid = getCLValue CL_CONTEXT_PROPERTIES
