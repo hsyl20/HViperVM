@@ -108,8 +108,8 @@ getPlatformInfoSize lib platform infoid = alloca $ \(value_size :: Ptr CSize) ->
   
 -- | Get specific information about the OpenCL platform. It returns Nothing if
 -- platform is not a valid platform.
-clGetPlatformInfo :: OpenCLLibrary -> CLPlatformID -> CLPlatformInfo -> IO String
-clGetPlatformInfo lib platform infoid = do
+clGetPlatformInfo :: OpenCLLibrary -> CLPlatformInfo -> CLPlatformID -> IO String
+clGetPlatformInfo lib infoid platform = do
   sval <- getPlatformInfoSize lib platform infocl
   allocaArray (fromIntegral sval) $ \(buff :: CString) -> do
     whenSuccess (raw_clGetPlatformInfo lib platform infocl sval (castPtr buff) nullPtr)
@@ -127,8 +127,8 @@ getNumDevices lib platform dtype = alloca $ \(num_devices :: Ptr CLuint) -> do
 -- the function is executed successfully. Otherwise it returns the empty list 
 -- if platform is not a valid platform or no OpenCL devices that matched 
 -- device_type were found.
-clGetDeviceIDs :: OpenCLLibrary -> CLPlatformID -> CLDeviceType -> IO [CLDeviceID]
-clGetDeviceIDs lib platform dtype = do
+clGetDeviceIDs :: OpenCLLibrary -> CLDeviceType -> CLPlatformID -> IO [CLDeviceID]
+clGetDeviceIDs lib dtype platform = do
   ndevs <- getNumDevices lib platform dval
   allocaArray (fromIntegral ndevs) $ \(devs :: Ptr CLDeviceID) -> do
     whenSuccess (raw_clGetDeviceIDs lib platform dval ndevs devs nullPtr)

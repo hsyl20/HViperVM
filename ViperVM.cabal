@@ -27,8 +27,20 @@ library
     ViperVM.Backends.OpenCL.Event
     ViperVM.Backends.OpenCL.Program
 
+    ViperVM.Scheduler
+    ViperVM.Data
+    ViperVM.Platform
+
   -- other-modules:       
-  build-depends:       base ==4.5.*, unix ==2.5.*, containers ==0.4.*
+  build-depends:       
+    base ==4.5.*,
+    unix ==2.5.*,
+    containers ==0.4.*,
+    transformers ==0.2.*,
+    mtl ==2.0.*,
+    data-lens-template ==2.1.*,
+    data-lens == 2.10.*
+
   build-tools:         c2hs
   ghc-options:         -Wall
 
