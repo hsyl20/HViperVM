@@ -246,7 +246,13 @@ data OpenCLLibrary = OpenCLLibrary {
   raw_clSetKernelArg            :: SetKernelArgFun,
   raw_clGetKernelInfo           :: GetKernelInfoFun,
   raw_clGetKernelWorkGroupInfo  :: GetKernelWorkGroupInfoFun
-}
+} 
+
+instance Eq OpenCLLibrary where
+  (==) a b = (==) (packDL $ libHandle a) (packDL $ libHandle b)
+
+instance Ord OpenCLLibrary where
+  compare a b = compare (packDL $ libHandle a) (packDL $ libHandle b)
 
 foreign import CALLCONV "dynamic" mkGetPlatformIDsFun :: FunPtr GetPlatformIDsFun -> GetPlatformIDsFun
 foreign import CALLCONV "dynamic" mkGetPlatformInfoFun :: FunPtr GetPlatformInfoFun -> GetPlatformInfoFun

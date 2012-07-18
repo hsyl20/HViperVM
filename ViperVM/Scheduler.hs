@@ -4,6 +4,7 @@ module ViperVM.Scheduler where
 
 import ViperVM.Platform
 import ViperVM.Buffer
+import ViperVM.Transfer
 
 import Control.Concurrent.Chan
 import Control.Monad.State
@@ -17,7 +18,9 @@ data Message = TaskSubmit () | TaskComplete () | TransferComplete ()
 
 data SchedState = SchedState {
   _platform :: Platform,
-  _buffers :: Map Memory [Buffer]
+  _buffers :: Map Memory [Buffer],
+  _activeTransfers :: [Transfer],
+  _linkChans :: Map Link (Chan Transfer)
 }
 
 $( makeLens ''SchedState ) 
@@ -54,4 +57,16 @@ unregisterBuffer buf = modify (buffers ^%= modBuffer)
     mem = getBufferMemory buf
     modBuffer :: Map Memory [Buffer] -> Map Memory [Buffer]
     modBuffer = alter (fmap $ List.delete buf) mem
+
+-- | Start a new asynchronous transfer
+submitTransfer :: Transfer -> StateT SchedState IO ()
+submitTransfer transfer@(Transfer link _ _) = do
+  lift $ if not (checkTransfer transfer) then error "Invalid transfer" else return ()
+  registerActiveTransfer transfer
+  ch <- gets $ \x -> (linkChans ^$ x) ! link
+  lift $ writeChan ch transfer
+
+-- | Register an active transfer
+registerActiveTransfer :: Transfer -> StateT SchedState IO ()
+registerActiveTransfer transfer = modify(activeTransfers ^%= (++) [transfer])
 

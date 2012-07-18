@@ -30,6 +30,7 @@ library
     ViperVM.Platform
     ViperVM.Buffer
     ViperVM.View
+    ViperVM.Transfer
     ViperVM.Scheduler
     ViperVM.Data
 
