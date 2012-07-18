@@ -27,9 +27,11 @@ library
     ViperVM.Backends.OpenCL.Event
     ViperVM.Backends.OpenCL.Program
 
+    ViperVM.Platform
+    ViperVM.Buffer
+    ViperVM.View
     ViperVM.Scheduler
     ViperVM.Data
-    ViperVM.Platform
 
   -- other-modules:       
   build-depends:       
