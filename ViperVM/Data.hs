@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
-
 module ViperVM.Data where
 
 import Data.Word
@@ -7,15 +5,12 @@ import ViperVM.View
 
 data Primitive = PrimFloat | PrimDouble
 
-class DataInstance i d | i -> d where
-  instanceId :: i -> Word
-  getData :: i -> d
+primitiveSize :: Primitive -> Word64
+primitiveSize PrimFloat = 4
+primitiveSize PrimDouble = 8
 
+data VectorDesc = VectorDesc Primitive Word64
 
-type DataId = Word
+data DataInstance = Vector VectorDesc View
 
-class Data a where
-  dataId :: a -> DataId
-
-data VectorDesc = VectorDesc Primitive Word
-
+newtype Data = Data Word deriving (Eq,Ord)
