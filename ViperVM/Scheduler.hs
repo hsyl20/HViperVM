@@ -5,6 +5,8 @@ module ViperVM.Scheduler where
 import ViperVM.Platform
 import ViperVM.Buffer
 import ViperVM.Transfer
+import ViperVM.Task
+import ViperVM.Data
 
 import Control.Concurrent.Chan
 import Control.Monad.State
@@ -14,20 +16,45 @@ import qualified Data.List as List
 import Data.Lens.Lazy
 import Data.Lens.Template
 
-data Message = TaskSubmit () | TaskComplete () | TransferComplete ()
+data Message = TaskSubmit Task | 
+               KernelComplete Kernel | 
+               TransferComplete Transfer |
+               DataRelease Data
 
 data SchedState = SchedState {
   _platform :: Platform,
   _buffers :: Map Memory [Buffer],
   _activeTransfers :: [Transfer],
-  _linkChans :: Map Link (Chan Transfer)
+  _linkChans :: Map Link (Chan Transfer),
+  _datas :: [Data]
 }
 
 $( makeLens ''SchedState ) 
 
+-- | Launch the scheduler on the given platform. Communication is done through the channel
 scheduler :: Chan Message -> Platform -> StateT SchedState IO ()
 scheduler ch p = do
+  msg <- lift $ readChan ch
+  case msg of
+    TaskSubmit t -> taskSubmit t
+    KernelComplete k -> kernelComplete k
+    TransferComplete t -> transferComplete t
+    DataRelease d -> dataRelease d
   scheduler ch p
+
+  where
+
+  taskSubmit :: Task -> StateT SchedState IO ()
+  taskSubmit t = undefined
+
+  kernelComplete :: Kernel -> StateT SchedState IO ()
+  kernelComplete k = undefined
+
+  transferComplete :: Transfer -> StateT SchedState IO ()
+  transferComplete t = undefined
+
+  dataRelease :: Data -> StateT SchedState IO ()
+  dataRelease d = undefined
 
 -- | Create a buffer
 createBuffer :: Memory -> Word64 -> StateT SchedState IO Buffer

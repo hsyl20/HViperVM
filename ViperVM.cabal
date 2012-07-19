@@ -33,6 +33,7 @@ library
     ViperVM.Transfer
     ViperVM.Scheduler
     ViperVM.Data
+    ViperVM.Task
 
   -- other-modules:       
   build-depends:       
