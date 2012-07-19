@@ -1,16 +1,13 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-} 
-
 module ViperVM.Platform where
 
 import ViperVM.Backends.OpenCL
 import Data.Traversable
 import Data.Functor
-import Data.Lens.Template
 
 data Platform = Platform {
-  _memories :: [Memory],
-  _links :: [Link],
-  _processors :: [Processor]
+  memories :: [Memory],
+  links :: [Link],
+  processors :: [Processor]
 }
 
 data Memory = CLMemory OpenCLLibrary CLContext CLDeviceID | HostMemory
@@ -28,8 +25,6 @@ instance Ord Memory where
   compare HostMemory _ = GT
   compare _ HostMemory = LT
 
-$( makeLens ''Platform ) 
-
 -- | Initialize platform
 initPlatform :: String -> IO Platform
 initPlatform cllib = do
@@ -44,3 +39,15 @@ initPlatform cllib = do
   let mems = fmap (\(CLProcessor _ ctx dev) -> CLMemory lib ctx dev) procs
   let ls = zipWith (\mem cq -> CLLink lib cq HostMemory mem) mems queues
   return $ Platform mems ls procs
+
+
+procInfo :: Processor -> IO String
+procInfo (CLProcessor lib _ dev) = do
+  name <- clGetDeviceName lib dev
+  vendor <- clGetDeviceVendor lib dev
+  return $ "[OpenCL] " ++ name ++ " (" ++ vendor ++ ")"
+
+platformInfo :: Platform -> IO String
+platformInfo pf = do
+  procs <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse procInfo (processors pf)
+  return ("Processors:\n" ++ procs)
