@@ -4,6 +4,7 @@ import ViperVM.Platform
 import ViperVM.Backends.OpenCL.Types
 
 import Data.Word
+import Control.Monad ( void )
 import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import ViperVM.Backends.OpenCL
@@ -31,7 +32,7 @@ allocBuffer mem@(CLMemory lib ctx dev) sz = do
 -- | Release a buffer
 freeBuffer :: Buffer -> IO ()
 freeBuffer (HostBuffer _ ptr) = free ptr
-freeBuffer (CLBuffer lib _ m) = clReleaseMemObject lib m >> return ()
+freeBuffer (CLBuffer lib _ m) = void $ clReleaseMemObject lib m
 
 -- | Return memory containing the buffer
 getBufferMemory :: Buffer -> Memory

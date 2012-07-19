@@ -66,7 +66,7 @@ initSchedState :: Platform -> IO (SchedState,Chan Message)
 initSchedState pf = do
   ch <- newChan
   lkChans <- fromList <$> liftA2 zip (return $ links pf) (replicateM (length $ links pf) newChan)
-  st <- return SchedState {
+  let st = SchedState {
     _channel = ch,
     _platform = pf,
     _buffers = empty,
@@ -104,7 +104,7 @@ scheduler = do
 
   mapVector :: VectorDesc -> Ptr () -> MVar Data -> StateT SchedState IO ()
   mapVector desc@(VectorDesc prim n) ptr r = do
-    let sz = n * (primitiveSize prim)
+    let sz = n * primitiveSize prim
     buf <- lift . return $ HostBuffer sz ptr
     registerBuffer HostMemory buf
     let view = View1D buf 0 sz
@@ -163,7 +163,7 @@ unregisterBuffer buf = modify (buffers ^%= modBuffer)
 -- | Start a new asynchronous transfer
 submitTransfer :: Transfer -> StateT SchedState IO ()
 submitTransfer transfer@(Transfer link _ _) = do
-  lift $ if not (checkTransfer transfer) then error "Invalid transfer" else return ()
+  lift $ unless (checkTransfer transfer) $ error "Invalid transfer"
   registerActiveTransfer transfer
   ch <- gets $ \x -> (linkChans ^$ x) ! link
   lift $ writeChan ch transfer
