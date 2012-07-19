@@ -1,6 +1,9 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts #-} 
 
-module ViperVM.Scheduler where
+module ViperVM.Scheduler (
+  startScheduler,
+  stopScheduler
+  ) where
 
 import ViperVM.Platform
 import ViperVM.Buffer
@@ -38,14 +41,20 @@ data SchedState = SchedState {
 
 $( makeLens ''SchedState ) 
 
+data Scheduler = Scheduler (Chan Message)
+
 -- | Starts the scheduler on the given platform
-startScheduler :: Platform -> IO (Chan Message)
+startScheduler :: Platform -> IO Scheduler
 startScheduler pf = do
   (st,ch) <- initSchedState pf
   _ <- forkIO $ do
     _ <- execStateT scheduler st
     return ()
-  return ch
+  return $ Scheduler ch
+
+-- | Stop the given scheduler
+stopScheduler :: Scheduler -> IO ()
+stopScheduler (Scheduler ch) = writeChan ch Quit 
 
 -- | True if message is Quit
 isQuit :: Message -> Bool
