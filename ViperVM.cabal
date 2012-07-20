@@ -33,6 +33,7 @@ library
     ViperVM.Transfer
     ViperVM.Data
     ViperVM.Task
+    ViperVM.Kernel
     ViperVM.Runtime
 
     ViperVM.Library.MatAdd

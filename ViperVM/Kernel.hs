@@ -27,11 +27,17 @@ supportConstraint :: KernelConstraint -> Processor -> IO Bool
 supportConstraint DoublePrecisionSupportRequired (CLProcessor lib _ dev) =
   liftM (not . null) $ clGetDeviceDoubleFPConfig lib dev
 
+isOpenCLProcessor :: Processor -> Bool
+isOpenCLProcessor (CLProcessor {}) = True
+isOpenCLProcessor _ = False
+
 -- | Try to compile kernel for the given processors
 compileKernels :: Kernel -> [Processor] -> IO [Maybe CompiledKernel]
 compileKernels ker@(CLKernel name constraints options src) procs = do
+  -- Exclude non-OpenCL processors
+  let clProcs = filter isOpenCLProcessor procs
   -- Exclude devices that do not support constraints
-  validProcs <- filterM (supportConstraints constraints) procs
+  validProcs <- filterM (supportConstraints constraints) clProcs
   -- Group devices that are in the same context to compile in one pass
   let groups = groupBy eqProc $ sortBy compareProc validProcs
   let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap extractDev x)) $ groups

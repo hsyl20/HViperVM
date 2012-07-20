@@ -12,7 +12,7 @@ data Platform = Platform {
 
 data Memory = CLMemory OpenCLLibrary CLContext CLDeviceID | HostMemory
 data Link = CLLink OpenCLLibrary CLCommandQueue Memory Memory deriving (Eq,Ord)
-data Processor = CLProcessor OpenCLLibrary CLContext CLDeviceID
+data Processor = CLProcessor OpenCLLibrary CLContext CLDeviceID | HostProcessor
 
 instance Eq Memory where
   (==) HostMemory HostMemory = True
