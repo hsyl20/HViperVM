@@ -2,25 +2,38 @@ module ViperVM.Kernel where
 
 import qualified ViperVM.Backends.OpenCL.Types as CL
 import ViperVM.Backends.OpenCL.Program
+import ViperVM.Backends.OpenCL.Query
 import ViperVM.Platform ( Processor(..) )
 
 import Data.List (sortBy, groupBy )
-import Data.Traversable
-import Control.Monad ( liftM )
+import Data.Traversable (traverse)
+import Control.Monad ( liftM,filterM )
 
 type KernelName = String
 type KernelSource = String
 type Options = String
-data KernelConstraint = DoubleRequired
+data KernelConstraint = DoublePrecisionSupportRequired
 
 data Kernel = CLKernel KernelName [KernelConstraint] Options KernelSource 
 
 data CompiledKernel = CLCompiledKernel Kernel CL.CLKernel
 
+-- | Indicate if a processor supports given constraints
+supportConstraints :: [KernelConstraint] -> Processor -> IO Bool
+supportConstraints cs p = liftM and $ mapM (flip supportConstraint p) cs
+
+-- | Indicate if a processor supports a given constraint
+supportConstraint :: KernelConstraint -> Processor -> IO Bool
+supportConstraint DoublePrecisionSupportRequired (CLProcessor lib _ dev) =
+  liftM (not . null) $ clGetDeviceDoubleFPConfig lib dev
+
+-- | Try to compile kernel for the given processors
 compileKernels :: Kernel -> [Processor] -> IO [Maybe CompiledKernel]
 compileKernels ker@(CLKernel name constraints options src) procs = do
+  -- Exclude devices that do not support constraints
+  validProcs <- filterM (supportConstraints constraints) procs
   -- Group devices that are in the same context to compile in one pass
-  let groups = groupBy eqProc $ sortBy compareProc procs
+  let groups = groupBy eqProc $ sortBy compareProc validProcs
   let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap extractDev x)) $ groups
   programs <- traverse createProgram devGroups
   status <- liftM concat $ traverse (buildProgram options) $ zip devGroups programs
