@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts #-} 
 
-module ViperVM.Scheduler (
-  startScheduler,
-  stopScheduler,
+module ViperVM.Runtime (
+  startRuntime,
+  stopRuntime,
   mapVector
   ) where
 
@@ -31,7 +31,7 @@ data Message = TaskSubmit Task |
                DataRelease Data |
                Quit
 
-data SchedState = SchedState {
+data RuntimeState = RuntimeState {
   _channel :: Chan Message,
   _platform :: Platform,
   _buffers :: Map Memory [Buffer],
@@ -41,26 +41,28 @@ data SchedState = SchedState {
   _dataCounter :: Word
 }
 
-$( makeLens ''SchedState ) 
+$( makeLens ''RuntimeState ) 
 
-data Scheduler = Scheduler (Chan Message)
+type R a = StateT RuntimeState IO a
+
+data Runtime = Runtime (Chan Message)
 
 -- | Starts the scheduler on the given platform
-startScheduler :: Platform -> IO Scheduler
-startScheduler pf = do
-  (st,ch) <- initSchedState pf
+startRuntime :: Platform -> IO Runtime
+startRuntime pf = do
+  (st,ch) <- initRuntimeState pf
   _ <- forkIO $ do
     _ <- execStateT scheduler st
     return ()
-  return $ Scheduler ch
+  return $ Runtime ch
 
 -- | Stop the given scheduler
-stopScheduler :: Scheduler -> IO ()
-stopScheduler (Scheduler ch) = writeChan ch Quit 
+stopRuntime :: Runtime -> IO ()
+stopRuntime (Runtime ch) = writeChan ch Quit 
 
 -- | Map a Vector
-mapVector :: Scheduler -> VectorDesc -> Ptr () -> IO Data
-mapVector (Scheduler ch) desc ptr = do
+mapVector :: Runtime -> VectorDesc -> Ptr () -> IO Data
+mapVector (Runtime ch) desc ptr = do
   v <- newEmptyMVar
   writeChan ch $ MapVector desc ptr v
   takeMVar v
@@ -71,11 +73,11 @@ isQuit Quit = True
 isQuit _ = False
 
 -- | Initialize scheduler state
-initSchedState :: Platform -> IO (SchedState,Chan Message)
-initSchedState pf = do
+initRuntimeState :: Platform -> IO (RuntimeState,Chan Message)
+initRuntimeState pf = do
   ch <- newChan
   lkChans <- fromList <$> liftA2 zip (return $ links pf) (replicateM (length $ links pf) newChan)
-  let st = SchedState {
+  let st = RuntimeState {
     _channel = ch,
     _platform = pf,
     _buffers = empty,
@@ -87,7 +89,7 @@ initSchedState pf = do
   return (st,ch)
 
 -- | Launch the scheduler on the given platform. Communication is done through the channel
-scheduler :: StateT SchedState IO ()
+scheduler :: R ()
 scheduler = do
   ch <- gets (channel ^$)
   msg <- lift $ readChan ch
@@ -102,16 +104,16 @@ scheduler = do
 
   where
 
-  taskSubmit :: Task -> StateT SchedState IO ()
+  taskSubmit :: Task -> R ()
   taskSubmit t = undefined
 
-  kernelComplete :: Kernel -> StateT SchedState IO ()
+  kernelComplete :: Kernel -> R ()
   kernelComplete k = undefined
 
-  transferComplete :: Transfer -> StateT SchedState IO ()
+  transferComplete :: Transfer -> R ()
   transferComplete t = undefined
 
-  mapVectorInternal :: VectorDesc -> Ptr () -> MVar Data -> StateT SchedState IO ()
+  mapVectorInternal :: VectorDesc -> Ptr () -> MVar Data -> R ()
   mapVectorInternal desc@(VectorDesc prim n) ptr r = do
     let sz = n * primitiveSize prim
     buf <- lift . return $ HostBuffer sz ptr
@@ -122,18 +124,18 @@ scheduler = do
     registerDataInstance d di
     lift $ putMVar r d
 
-  dataRelease :: Data -> StateT SchedState IO ()
+  dataRelease :: Data -> R ()
   dataRelease d = undefined
 
 -- | Return a new data identifier
-newData :: StateT SchedState IO Data
+newData :: R Data
 newData = do
   d <- gets (dataCounter ^$)
   modify (dataCounter ^%= (+) 1)
   lift $ return (Data d)
 
 -- | Register a data with an initial instance
-registerDataInstance :: Data -> DataInstance -> StateT SchedState IO ()
+registerDataInstance :: Data -> DataInstance -> R ()
 registerDataInstance d di = modify (datas ^%= modDatas)
   where
     modDatas = alter f d
@@ -141,20 +143,20 @@ registerDataInstance d di = modify (datas ^%= modDatas)
     f Nothing  = Just [di]
 
 -- | Create a buffer
-createBuffer :: Memory -> Word64 -> StateT SchedState IO Buffer
+createBuffer :: Memory -> Word64 -> R Buffer
 createBuffer mem sz = do
   buf <- lift $ allocBuffer mem sz
   registerBuffer mem buf
   lift $ return buf
 
 -- | Release a buffer
-releaseBuffer :: Buffer -> StateT SchedState IO ()
+releaseBuffer :: Buffer -> R ()
 releaseBuffer buf = do
   unregisterBuffer buf
   lift $ freeBuffer buf
 
 -- | Register a new buffer
-registerBuffer :: Memory -> Buffer -> StateT SchedState IO ()
+registerBuffer :: Memory -> Buffer -> R ()
 registerBuffer mem buf = modify (buffers ^%= modBuffer)
   where
     modBuffer = alter f mem
@@ -162,7 +164,7 @@ registerBuffer mem buf = modify (buffers ^%= modBuffer)
     f Nothing  = Just [buf]
 
 -- | Unregister a buffer
-unregisterBuffer :: Buffer -> StateT SchedState IO ()
+unregisterBuffer :: Buffer -> R ()
 unregisterBuffer buf = modify (buffers ^%= modBuffer)
   where
     mem = getBufferMemory buf
@@ -170,7 +172,7 @@ unregisterBuffer buf = modify (buffers ^%= modBuffer)
     modBuffer = alter (fmap $ List.delete buf) mem
 
 -- | Start a new asynchronous transfer
-submitTransfer :: Transfer -> StateT SchedState IO ()
+submitTransfer :: Transfer -> R ()
 submitTransfer transfer@(Transfer link _ _) = do
   lift $ unless (checkTransfer transfer) $ error "Invalid transfer"
   registerActiveTransfer transfer
@@ -178,6 +180,6 @@ submitTransfer transfer@(Transfer link _ _) = do
   lift $ writeChan ch transfer
 
 -- | Register an active transfer
-registerActiveTransfer :: Transfer -> StateT SchedState IO ()
+registerActiveTransfer :: Transfer -> R ()
 registerActiveTransfer transfer = modify(activeTransfers ^%= (++) [transfer])
 

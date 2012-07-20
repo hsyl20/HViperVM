@@ -31,9 +31,9 @@ library
     ViperVM.Buffer
     ViperVM.View
     ViperVM.Transfer
-    ViperVM.Scheduler
     ViperVM.Data
     ViperVM.Task
+    ViperVM.Runtime
 
     ViperVM.Library.MatAdd
 
