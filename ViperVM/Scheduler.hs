@@ -2,7 +2,8 @@
 
 module ViperVM.Scheduler (
   startScheduler,
-  stopScheduler
+  stopScheduler,
+  mapVector
   ) where
 
 import ViperVM.Platform
@@ -56,6 +57,13 @@ startScheduler pf = do
 stopScheduler :: Scheduler -> IO ()
 stopScheduler (Scheduler ch) = writeChan ch Quit 
 
+-- | Map a Vector
+mapVector :: Scheduler -> VectorDesc -> Ptr () -> IO Data
+mapVector (Scheduler ch) desc ptr = do
+  v <- newEmptyMVar
+  writeChan ch $ MapVector desc ptr v
+  takeMVar v
+
 -- | True if message is Quit
 isQuit :: Message -> Bool
 isQuit Quit = True
@@ -86,7 +94,7 @@ scheduler = do
     TaskSubmit t -> taskSubmit t
     KernelComplete k -> kernelComplete k
     TransferComplete t -> transferComplete t
-    MapVector desc ptr r -> mapVector desc ptr r
+    MapVector desc ptr r -> mapVectorInternal desc ptr r
     DataRelease d -> dataRelease d
     Quit -> lift $ return ()
   unless (isQuit msg) scheduler
@@ -102,8 +110,8 @@ scheduler = do
   transferComplete :: Transfer -> StateT SchedState IO ()
   transferComplete t = undefined
 
-  mapVector :: VectorDesc -> Ptr () -> MVar Data -> StateT SchedState IO ()
-  mapVector desc@(VectorDesc prim n) ptr r = do
+  mapVectorInternal :: VectorDesc -> Ptr () -> MVar Data -> StateT SchedState IO ()
+  mapVectorInternal desc@(VectorDesc prim n) ptr r = do
     let sz = n * primitiveSize prim
     buf <- lift . return $ HostBuffer sz ptr
     registerBuffer HostMemory buf
