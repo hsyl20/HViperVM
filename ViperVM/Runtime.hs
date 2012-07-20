@@ -47,16 +47,16 @@ type R a = StateT RuntimeState IO a
 
 data Runtime = Runtime (Chan Message)
 
--- | Starts the scheduler on the given platform
+-- | Starts the runtime on the given platform
 startRuntime :: Platform -> IO Runtime
 startRuntime pf = do
   (st,ch) <- initRuntimeState pf
   _ <- forkIO $ do
-    _ <- execStateT scheduler st
+    _ <- execStateT runtime st
     return ()
   return $ Runtime ch
 
--- | Stop the given scheduler
+-- | Stop the given runtime
 stopRuntime :: Runtime -> IO ()
 stopRuntime (Runtime ch) = writeChan ch Quit 
 
@@ -72,7 +72,7 @@ isQuit :: Message -> Bool
 isQuit Quit = True
 isQuit _ = False
 
--- | Initialize scheduler state
+-- | Initialize runtime state
 initRuntimeState :: Platform -> IO (RuntimeState,Chan Message)
 initRuntimeState pf = do
   ch <- newChan
@@ -88,9 +88,9 @@ initRuntimeState pf = do
   }
   return (st,ch)
 
--- | Launch the scheduler on the given platform. Communication is done through the channel
-scheduler :: R ()
-scheduler = do
+-- | Launch the runtime on the given platform. Communication is done through the channel
+runtime :: R ()
+runtime = do
   ch <- gets (channel ^$)
   msg <- lift $ readChan ch
   case msg of
@@ -100,7 +100,7 @@ scheduler = do
     MapVector desc ptr r -> mapVectorInternal desc ptr r
     DataRelease d -> dataRelease d
     Quit -> lift $ return ()
-  unless (isQuit msg) scheduler
+  unless (isQuit msg) runtime
 
   where
 
