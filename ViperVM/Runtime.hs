@@ -24,6 +24,8 @@ import Data.Lens.Lazy
 import Data.Lens.Template
 import Foreign.Ptr
 
+-- | Messages that the runtime can handle.
+-- Do not use them directly as helpers functions are provided
 data Message = TaskSubmit Task | 
                KernelComplete Kernel | 
                TransferComplete Transfer |
@@ -31,14 +33,15 @@ data Message = TaskSubmit Task |
                DataRelease Data |
                Quit
 
+-- | State of the runtime system
 data RuntimeState = RuntimeState {
-  _channel :: Chan Message,
-  _platform :: Platform,
-  _buffers :: Map Memory [Buffer],
-  _activeTransfers :: [Transfer],
-  _linkChans :: Map Link (Chan Transfer),
-  _datas :: Map Data [DataInstance],
-  _dataCounter :: Word
+  _channel :: Chan Message,                 -- ^ Channel to communicate with the runtime
+  _platform :: Platform,                    -- ^ Platform used by the runtime
+  _buffers :: Map Memory [Buffer],          -- ^ Buffers in each memory
+  _activeTransfers :: [Transfer],           -- ^ Current data transfers
+  _linkChans :: Map Link (Chan Transfer),   -- ^ Channels to communicate with link threads
+  _datas :: Map Data [DataInstance],        -- ^ Registered data
+  _dataCounter :: Word                      -- ^ Data counter (used to set data ID)
 }
 
 $( makeLens ''RuntimeState ) 

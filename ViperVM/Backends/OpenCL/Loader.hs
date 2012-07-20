@@ -2,7 +2,7 @@
 
 module ViperVM.Backends.OpenCL.Loader (
   OpenCLLibrary(..),
-  loadOpenCL,
+  loadOpenCL
 ) where
 
 import Prelude hiding (catch)
@@ -172,7 +172,7 @@ type GetKernelWorkGroupInfoFun = CLKernel -> CLDeviceID -> CLKernelWorkGroupInfo
 
 
 
-
+-- | OpenCL Library module object
 data OpenCLLibrary = OpenCLLibrary {
   libHandle :: DL,
   raw_clGetPlatformIDs    :: GetPlatformIDsFun,
@@ -246,7 +246,7 @@ data OpenCLLibrary = OpenCLLibrary {
   raw_clSetKernelArg            :: SetKernelArgFun,
   raw_clGetKernelInfo           :: GetKernelInfoFun,
   raw_clGetKernelWorkGroupInfo  :: GetKernelWorkGroupInfoFun
-} 
+}
 
 instance Eq OpenCLLibrary where
   (==) a b = (==) (packDL $ libHandle a) (packDL $ libHandle b)
