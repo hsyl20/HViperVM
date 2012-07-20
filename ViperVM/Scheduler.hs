@@ -12,6 +12,7 @@ import ViperVM.Transfer
 import ViperVM.Task
 import ViperVM.Data
 import ViperVM.View
+import ViperVM.Kernel
 
 import Control.Concurrent
 import Control.Applicative ( (<$>), liftA2 )

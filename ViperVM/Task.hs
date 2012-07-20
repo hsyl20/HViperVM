@@ -1,8 +1,5 @@
 module ViperVM.Task where
 
-import ViperVM.Backends.OpenCL.Types
-import ViperVM.Data
-
-data Kernel = CLKer CLKernel
+import ViperVM.Kernel
 
 data Task = Task Kernel

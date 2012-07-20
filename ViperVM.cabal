@@ -35,6 +35,8 @@ library
     ViperVM.Data
     ViperVM.Task
 
+    ViperVM.Library.MatAdd
+
   -- other-modules:       
   build-depends:       
     base ==4.5.*,
