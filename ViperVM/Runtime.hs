@@ -42,7 +42,7 @@ mapVectorSync r desc ptr = waitEvent =<< mapVector r desc ptr
 
 -- | Stop the given runtime
 stopRuntime :: Runtime -> IO (Event ())
-stopRuntime r = sendRuntimeCmd r $ Quit 
+stopRuntime r = sendRuntimeCmd r Quit 
 
 -- | Synchronous version of stopRuntime
 stopRuntimeSync :: Runtime -> IO ()

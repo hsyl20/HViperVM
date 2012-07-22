@@ -151,7 +151,7 @@ submitTransfer :: Transfer -> R ()
 submitTransfer transfer@(Transfer link _ _) = do
   lift $ unless (checkTransfer transfer) $ error "Invalid transfer"
   registerActiveTransfer transfer
-  ch <- gets $ \x -> (linkChannels x) ! link
+  ch <- gets $ \x -> linkChannels x ! link
   lift $ writeChan ch transfer
 
 -- | Register an active transfer

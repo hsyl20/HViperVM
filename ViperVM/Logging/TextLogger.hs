@@ -22,8 +22,7 @@ newTextLogger :: Handle -> IO Logger
 newTextLogger hdl = do
   ch <- newChan
   void $ forkIO $ textLoggerLoop $ TextLogger hdl ch
-  let logger msg = writeChan ch msg
-  return logger
+  return (writeChan ch)
 
 isStop :: LogMessage -> Bool
 isStop (StopLogger {}) = True

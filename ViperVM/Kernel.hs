@@ -23,7 +23,7 @@ instance Show Kernel where
 
 -- | Indicate if a processor supports given constraints
 supportConstraints :: [KernelConstraint] -> Processor -> IO Bool
-supportConstraints cs p = liftM and $ mapM (flip supportConstraint p) cs
+supportConstraints cs p = liftM and $ mapM (`supportConstraint` p) cs
 
 -- | Indicate if a processor supports a given constraint
 supportConstraint :: KernelConstraint -> Processor -> IO Bool
@@ -44,7 +44,7 @@ compileKernels ker@(CLKernel name constraints options src) procs = do
   validProcs <- filterM (supportConstraints constraints) clProcs
   -- Group devices that are in the same context to compile in one pass
   let groups = groupBy eqProc $ sortBy compareProc validProcs
-  let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap extractDev x)) $ groups
+  let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap extractDev x)) groups
   programs <- traverse createProgram devGroups
   status <- liftM concat $ traverse (buildProgram options) $ zip devGroups programs
   kernels <- liftM concat $ traverse createKernel $ zip devGroups programs
@@ -56,7 +56,7 @@ compileKernels ker@(CLKernel name constraints options src) procs = do
     procKey _ = undefined
 
     compareProc a b = compare (procKey a) (procKey b)
-    eqProc a b = (procKey a) == (procKey b)
+    eqProc a b = procKey a == procKey b
 
     extractDev (CLProcessor _ _ dev) = dev
     extractDev _ = undefined 

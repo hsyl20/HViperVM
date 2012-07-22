@@ -11,7 +11,7 @@ import System.Posix.DynamicLinker
 import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe,isNothing)
 import Data.Map
 import Data.Word
 import Data.Traversable
@@ -328,9 +328,7 @@ foreign import CALLCONV "dynamic" mkGetKernelWorkGroupInfoFun :: FunPtr GetKerne
 
 -- | dlsym without exception (may return nullFunPtr)
 mydlsym :: DL -> String -> IO (FunPtr a)
-mydlsym source symbol = do
-  withCAString symbol $ \ s -> do
-    c_dlsym (packDL source) s
+mydlsym source symbol = withCAString symbol $ c_dlsym (packDL source)
 
 -- | Load the given list of symbols from the given library handle
 loadSymbols :: DL -> [String] -> IO (Map String (FunPtr a))
@@ -347,7 +345,7 @@ loadOpenCL lib = do
   let notFound a = error ("Mandatory OpenCL function \"" ++ a ++ "\" not found")
   let pick a = fmap castFunPtr $ Data.Map.lookup a symPtrs
   let unsafePick a = fromMaybe nullFunPtr $ pick a
-  let mandatory a = if (pick a == Nothing) then notFound a else unsafePick a
+  let mandatory a = if isNothing (pick a) then notFound a else unsafePick a
 
   let v_1_0 = mandatory
   let v_1_0_gl = unsafePick

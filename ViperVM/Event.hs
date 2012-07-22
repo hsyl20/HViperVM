@@ -11,7 +11,7 @@ waitEvent :: Event a -> IO a
 waitEvent = readMVar
 
 setEvent :: Event a -> a -> IO ()
-setEvent event value = putMVar event value
+setEvent = putMVar
 
 withNewEvent :: (Event a -> IO ()) -> IO (Event a)
 withNewEvent f = do
