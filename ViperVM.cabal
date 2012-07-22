@@ -40,6 +40,10 @@ library
     ViperVM.RuntimeInternal
 
     ViperVM.Scheduling.Default
+    ViperVM.Scheduling.Composed
+    ViperVM.Scheduling.StartStop
+    ViperVM.Scheduling.KernelManager
+    ViperVM.Scheduling.DataManager
 
     ViperVM.Logging.Logger
     ViperVM.Logging.NullLogger

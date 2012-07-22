@@ -4,7 +4,7 @@ module ViperVM.RuntimeInternal (
   -- Types
   Scheduler, Runtime(..), Message (..),
   -- Methods
-  startRuntime, 
+  startRuntime, voidR,
   logInfo, logWarning,logError,
   registerBuffer, registerDataInstance, newData,
   shutdownLogger,
@@ -67,7 +67,6 @@ $( makeLens ''RuntimeState )
 isQuit :: Message -> Bool
 isQuit (Quit _) = True
 isQuit _ = False
-
 
 -- | Starts the runtime on the given platform
 startRuntime :: Platform -> Logger -> Scheduler -> IO Runtime
@@ -203,3 +202,5 @@ shutdownLogger = do
     l $ StopLogger e
     waitEvent e
   
+voidR :: R ()
+voidR = lift $ return ()
