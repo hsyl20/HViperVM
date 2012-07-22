@@ -1,7 +1,6 @@
 import ViperVM
 import ViperVM.Platform
 import ViperVM.Runtime
-import ViperVM.Data.Vector
 import ViperVM.Data
 import ViperVM.Kernel
 import ViperVM.Scheduling.Default
@@ -22,27 +21,20 @@ main = do
 
   putStrLn "Querying platform infos..."
   platform <- initPlatform cllib
-  putStrLn =<< platformInfo platform
+  putStr =<< platformInfo platform
 
   let n = 1024
   v1ptr <- mallocBytes (fromIntegral $ n*4)
   v2ptr <- mallocBytes (fromIntegral $ n*4)
 
-  putStrLn "Compiling OpenCL Matrix addition kernel for the platform"
-  compiled <- compileKernels matrixAddCL (processors platform)
-  let cca = fmap (\c -> if isJust c then "  - Compiled successfully for " else "  - Compilation failed for ") compiled
-  ccb <- traverse procInfo (processors platform)
-  traverse putStrLn $ zipWith (++) cca ccb
-  putStrLn ""
-
-  putStrLn "Starting the runtime..."
   logger <- newTextLogger stdout
   runtime <- startRuntime platform logger defaultScheduler
 
-  v1 <- mapVector runtime (VectorDesc PrimFloat n) v1ptr
-  v2 <- mapVector runtime (VectorDesc PrimFloat n) v2ptr
+  v1 <- mapVectorSync runtime (VectorDesc PrimFloat n) v1ptr
+  v2 <- mapVectorSync runtime (VectorDesc PrimFloat n) v2ptr
 
-  putStrLn "Stopping the runtime..."
-  stopRuntime runtime
+  compiled <- registerKernelSync runtime matrixAddCL
+
+  stopRuntimeSync runtime
 
   putStrLn "Done."

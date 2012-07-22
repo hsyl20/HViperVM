@@ -35,9 +35,9 @@ library
     ViperVM.Task
     ViperVM.Kernel
     ViperVM.KernelSet
+    ViperVM.Event
     ViperVM.Runtime
-
-    ViperVM.Data.Vector
+    ViperVM.RuntimeInternal
 
     ViperVM.Scheduling.Default
 

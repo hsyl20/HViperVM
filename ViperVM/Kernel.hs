@@ -19,7 +19,7 @@ data Kernel = CLKernel KernelName [KernelConstraint] Options KernelSource
 data CompiledKernel = CLCompiledKernel Kernel CL.CLKernel
 
 instance Show Kernel where
-  show (CLKernel name _ _ _) = "OpenCL's " ++ name ++ " kernel"
+  show (CLKernel name _ _ _) = "OpenCL \"" ++ name ++ "\" kernel"
 
 -- | Indicate if a processor supports given constraints
 supportConstraints :: [KernelConstraint] -> Processor -> IO Bool

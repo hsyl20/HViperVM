@@ -6,13 +6,20 @@ import ViperVM.Platform
 import ViperVM.Buffer
 import ViperVM.Data
 import ViperVM.View
-import ViperVM.Runtime
+import ViperVM.Event
+import ViperVM.RuntimeInternal
 
 import Control.Monad.State
 import Control.Concurrent
 import Text.Printf
 
 defaultScheduler :: Scheduler
+
+defaultScheduler (Quit ev) = do
+  logInfo "Stopping the runtime..."
+  logInfo "This log will now be closed"
+  shutdownLogger
+  lift $ setEvent ev ()
 
 defaultScheduler (MapVector desc@(VectorDesc prim n) ptr r) = do
   let sz = n * primitiveSize prim
@@ -24,5 +31,10 @@ defaultScheduler (MapVector desc@(VectorDesc prim n) ptr r) = do
   d <- newData
   registerDataInstance d di
   lift $ putMVar r d
+
+defaultScheduler (RegisterKernel k v) = do
+  ck <- compileKernelR k
+  lift $ putMVar v ck
+  return ()
 
 defaultScheduler _ = undefined
