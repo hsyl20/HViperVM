@@ -18,6 +18,9 @@ data Kernel = CLKernel KernelName [KernelConstraint] Options KernelSource
 
 data CompiledKernel = CLCompiledKernel Kernel CL.CLKernel
 
+instance Show Kernel where
+  show (CLKernel name _ _ _) = "OpenCL's " ++ name ++ " kernel"
+
 -- | Indicate if a processor supports given constraints
 supportConstraints :: [KernelConstraint] -> Processor -> IO Bool
 supportConstraints cs p = liftM and $ mapM (flip supportConstraint p) cs
@@ -26,6 +29,7 @@ supportConstraints cs p = liftM and $ mapM (flip supportConstraint p) cs
 supportConstraint :: KernelConstraint -> Processor -> IO Bool
 supportConstraint DoublePrecisionSupportRequired (CLProcessor lib _ dev) =
   liftM (not . null) $ clGetDeviceDoubleFPConfig lib dev
+supportConstraint DoublePrecisionSupportRequired HostProcessor = return True
 
 isOpenCLProcessor :: Processor -> Bool
 isOpenCLProcessor (CLProcessor {}) = True
@@ -49,10 +53,17 @@ compileKernels ker@(CLKernel name constraints options src) procs = do
   
   where
     procKey (CLProcessor lib ctx _) = (lib,ctx)
+    procKey _ = undefined
+
     compareProc a b = compare (procKey a) (procKey b)
     eqProc a b = (procKey a) == (procKey b)
+
     extractDev (CLProcessor _ _ dev) = dev
+    extractDev _ = undefined 
+
     extractLibCtx (CLProcessor lib ctx _) = (lib,ctx)
+    extractLibCtx _ = undefined
+
     createProgram ((lib,ctx),_) = clCreateProgramWithSource lib ctx src
     buildProgram opts (((lib,_),devs),prog) = do
       clBuildProgram lib prog devs opts

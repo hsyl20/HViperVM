@@ -1,28 +1,32 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts #-} 
 
 module ViperVM.Runtime (
-  startRuntime,
-  stopRuntime,
-  mapVector
+  -- Types
+  R, Scheduler, Runtime(..), Message (..),
+  -- Methods
+  startRuntime, stopRuntime,
+  logInfo, logWarning,
+  registerBuffer, registerDataInstance, newData,
   ) where
+
+import Control.Applicative ( (<$>), liftA2 )
+import Control.Concurrent.Chan
+import Control.Concurrent
+import Control.Monad.State
+import Data.Lens.Lazy
+import Data.Lens.Template
+import qualified Data.List as List
+import Data.Map
+import Data.Word
+import Foreign.Ptr
 
 import ViperVM.Platform
 import ViperVM.Buffer
 import ViperVM.Transfer
 import ViperVM.Task
 import ViperVM.Data
-import ViperVM.View
 import ViperVM.Kernel
-
-import Control.Concurrent
-import Control.Applicative ( (<$>), liftA2 )
-import Control.Monad.State
-import Data.Map
-import Data.Word
-import qualified Data.List as List
-import Data.Lens.Lazy
-import Data.Lens.Template
-import Foreign.Ptr
+import ViperVM.Logging.Logger
 
 -- | Messages that the runtime can handle.
 -- Do not use them directly as helpers functions are provided
@@ -33,102 +37,71 @@ data Message = TaskSubmit Task |
                DataRelease Data |
                Quit
 
+
 -- | State of the runtime system
 data RuntimeState = RuntimeState {
-  _channel :: Chan Message,                 -- ^ Channel to communicate with the runtime
-  _platform :: Platform,                    -- ^ Platform used by the runtime
+  channel :: Chan Message,                  -- ^ Channel to communicate with the runtime
+  platform :: Platform,                     -- ^ Platform used by the runtime
+  logger :: Logger,                         -- ^ Logging method
+  scheduler :: Scheduler,                   -- ^ Scheduler
+  linkChannels :: Map Link (Chan Transfer), -- ^ Channels to communicate with link threads
+  -- Lenses
   _buffers :: Map Memory [Buffer],          -- ^ Buffers in each memory
   _activeTransfers :: [Transfer],           -- ^ Current data transfers
-  _linkChans :: Map Link (Chan Transfer),   -- ^ Channels to communicate with link threads
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataCounter :: Word                      -- ^ Data counter (used to set data ID)
 }
 
-$( makeLens ''RuntimeState ) 
+type R = StateT RuntimeState IO
+type Scheduler = Message -> R ()
 
-type R a = StateT RuntimeState IO a
+newtype Runtime = Runtime (Chan Message)
 
-data Runtime = Runtime (Chan Message)
-
--- | Starts the runtime on the given platform
-startRuntime :: Platform -> IO Runtime
-startRuntime pf = do
-  (st,ch) <- initRuntimeState pf
-  _ <- forkIO $ do
-    _ <- execStateT runtime st
-    return ()
-  return $ Runtime ch
-
--- | Stop the given runtime
-stopRuntime :: Runtime -> IO ()
-stopRuntime (Runtime ch) = writeChan ch Quit 
-
--- | Map a Vector
-mapVector :: Runtime -> VectorDesc -> Ptr () -> IO Data
-mapVector (Runtime ch) desc ptr = do
-  v <- newEmptyMVar
-  writeChan ch $ MapVector desc ptr v
-  takeMVar v
+$( makeLens ''RuntimeState )
 
 -- | True if message is Quit
 isQuit :: Message -> Bool
 isQuit Quit = True
 isQuit _ = False
 
--- | Initialize runtime state
-initRuntimeState :: Platform -> IO (RuntimeState,Chan Message)
-initRuntimeState pf = do
+
+-- | Starts the runtime on the given platform
+startRuntime :: Platform -> Logger -> Scheduler -> IO Runtime
+startRuntime pf l s = do
   ch <- newChan
+  -- Create one chan per link
   lkChans <- fromList <$> liftA2 zip (return $ links pf) (replicateM (length $ links pf) newChan)
   let st = RuntimeState {
-    _channel = ch,
-    _platform = pf,
+    channel = ch,
+    platform = pf,
+    logger = l,
+    scheduler = s,
+    linkChannels = lkChans,
     _buffers = empty,
     _activeTransfers = [],
-    _linkChans = lkChans,
     _datas = empty,
     _dataCounter = 0
   }
-  return (st,ch)
+  void $ forkIO $ do
+    void $ execStateT runtime st
+    return ()
+  return $ Runtime ch
 
--- | Launch the runtime on the given platform. Communication is done through the channel
+-- | Main runtime loop
 runtime :: R ()
 runtime = do
-  ch <- gets (channel ^$)
+  ch <- gets channel
   msg <- lift $ readChan ch
-  case msg of
-    TaskSubmit t -> taskSubmit t
-    KernelComplete k -> kernelComplete k
-    TransferComplete t -> transferComplete t
-    MapVector desc ptr r -> mapVectorInternal desc ptr r
-    DataRelease d -> dataRelease d
-    Quit -> lift $ return ()
-  unless (isQuit msg) runtime
 
-  where
+  unless (isQuit msg) $ do
+    s <- gets scheduler
+    s msg
+    runtime
 
-  taskSubmit :: Task -> R ()
-  taskSubmit t = undefined
 
-  kernelComplete :: Kernel -> R ()
-  kernelComplete k = undefined
-
-  transferComplete :: Transfer -> R ()
-  transferComplete t = undefined
-
-  mapVectorInternal :: VectorDesc -> Ptr () -> MVar Data -> R ()
-  mapVectorInternal desc@(VectorDesc prim n) ptr r = do
-    let sz = n * primitiveSize prim
-    buf <- lift . return $ HostBuffer sz ptr
-    registerBuffer HostMemory buf
-    let view = View1D buf 0 sz
-    let di = Vector desc view
-    d <- newData
-    registerDataInstance d di
-    lift $ putMVar r d
-
-  dataRelease :: Data -> R ()
-  dataRelease d = undefined
+-- | Stop the given runtime
+stopRuntime :: Runtime -> IO ()
+stopRuntime (Runtime ch) = writeChan ch Quit 
 
 -- | Return a new data identifier
 newData :: R Data
@@ -179,10 +152,20 @@ submitTransfer :: Transfer -> R ()
 submitTransfer transfer@(Transfer link _ _) = do
   lift $ unless (checkTransfer transfer) $ error "Invalid transfer"
   registerActiveTransfer transfer
-  ch <- gets $ \x -> (linkChans ^$ x) ! link
+  ch <- gets $ \x -> (linkChannels x) ! link
   lift $ writeChan ch transfer
 
 -- | Register an active transfer
 registerActiveTransfer :: Transfer -> R ()
 registerActiveTransfer transfer = modify(activeTransfers ^%= (++) [transfer])
 
+logWarning :: String -> R ()
+logWarning = logCustom "Warning" 
+
+logInfo :: String -> R ()
+logInfo = logCustom "Info" 
+
+logCustom :: String -> String -> R ()
+logCustom header s = do
+  l <- gets logger
+  lift $ l $ Custom $ header ++ ": " ++ s

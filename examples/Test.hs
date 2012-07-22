@@ -1,8 +1,13 @@
 import ViperVM
 import ViperVM.Platform
 import ViperVM.Runtime
+import ViperVM.Data.Vector
 import ViperVM.Data
 import ViperVM.Kernel
+import ViperVM.Scheduling.Default
+
+import System.IO (stdout)
+import ViperVM.Logging.TextLogger
 
 import ViperVM.Library.MatAdd
 
@@ -31,7 +36,8 @@ main = do
   putStrLn ""
 
   putStrLn "Starting the runtime..."
-  runtime <- startRuntime platform
+  logger <- newTextLogger stdout
+  runtime <- startRuntime platform logger defaultScheduler
 
   v1 <- mapVector runtime (VectorDesc PrimFloat n) v1ptr
   v2 <- mapVector runtime (VectorDesc PrimFloat n) v2ptr

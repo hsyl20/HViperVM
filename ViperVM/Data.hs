@@ -5,6 +5,10 @@ import ViperVM.View
 
 data Primitive = PrimFloat | PrimDouble
 
+instance Show Primitive where
+  show PrimFloat = "Float"
+  show PrimDouble = "Double"
+
 primitiveSize :: Primitive -> Word64
 primitiveSize PrimFloat = 4
 primitiveSize PrimDouble = 8

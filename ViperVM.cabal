@@ -34,7 +34,16 @@ library
     ViperVM.Data
     ViperVM.Task
     ViperVM.Kernel
+    ViperVM.KernelSet
     ViperVM.Runtime
+
+    ViperVM.Data.Vector
+
+    ViperVM.Scheduling.Default
+
+    ViperVM.Logging.Logger
+    ViperVM.Logging.NullLogger
+    ViperVM.Logging.TextLogger
 
     ViperVM.Library.MatAdd
 
