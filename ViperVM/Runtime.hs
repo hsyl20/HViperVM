@@ -1,10 +1,7 @@
 module ViperVM.Runtime (
-  startRuntime, 
-  stopRuntime, stopRuntimeSync,
-  registerKernel, registerKernelSync,
-  mapVector, mapVectorSync,
+  startRuntime, stopRuntime, registerKernel, mapVector,
   -- Events
-  waitEvent,
+  waitEvent,sync
   ) where
 
 import ViperVM.RuntimeInternal
@@ -23,27 +20,19 @@ sendRuntimeCmd (Runtime ch) msg = do
   writeChan ch (msg v)
   return v
 
+-- | Execute synchronously a function returning an event
+sync :: IO (Event a) -> IO a
+sync f = waitEvent =<< f
+
 -- | Register a kernel in the runtime system
 registerKernel :: Runtime -> Kernel -> IO (Event [Maybe CompiledKernel])
 registerKernel r k = sendRuntimeCmd r $ RegisterKernel k
-
--- | Synchronous version of registerKernel
-registerKernelSync :: Runtime -> Kernel -> IO [Maybe CompiledKernel]
-registerKernelSync r k = waitEvent =<< registerKernel r k
 
 -- | Map a Vector of host memory into runtime managed memory
 -- You mustn't use mapped host memory
 mapVector :: Runtime -> VectorDesc -> Ptr () -> IO (Event Data)
 mapVector r desc ptr = sendRuntimeCmd r $ MapVector desc ptr
 
--- | Synchronous version of mapVector
-mapVectorSync :: Runtime -> VectorDesc -> Ptr () -> IO Data
-mapVectorSync r desc ptr = waitEvent =<< mapVector r desc ptr
-
 -- | Stop the given runtime
 stopRuntime :: Runtime -> IO (Event ())
 stopRuntime r = sendRuntimeCmd r Quit 
-
--- | Synchronous version of stopRuntime
-stopRuntimeSync :: Runtime -> IO ()
-stopRuntimeSync r = waitEvent =<< stopRuntime r
