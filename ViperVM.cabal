@@ -59,7 +59,8 @@ library
     transformers ==0.*,
     mtl ==2.*,
     data-lens-template ==2.1.*,
-    data-lens == 2.10.*
+    data-lens == 2.10.*,
+    dynamic-linker-template ==0.1.*
 
   build-tools:         c2hs
   ghc-options:         -Wall
