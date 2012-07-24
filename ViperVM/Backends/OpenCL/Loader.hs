@@ -101,7 +101,7 @@ instance Ord OpenCLLibrary where
 myMod :: String -> String
 myMod = fromJust . stripPrefix "raw_"
 
-$(makeDynamicLinker ''OpenCLLibrary CCall 'myMod)
+$(makeDynamicLinker ''OpenCLLibrary CallConv 'myMod)
 
 loadOpenCL :: String -> IO OpenCLLibrary
 loadOpenCL lib = loadOpenCLLibrary lib [RTLD_NOW,RTLD_LOCAL]

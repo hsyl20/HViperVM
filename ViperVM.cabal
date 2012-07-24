@@ -66,11 +66,11 @@ library
   ghc-options:         -Wall
 
   if os(linux)
-    cpp-options: -DCALLCONV=ccall -Iinclude
+    cpp-options: -DCALLCONV=ccall -DCallConv=CCall -Iinclude
 
   if os(darwin)
-    cpp-options: -DCALLCONV=ccall
+    cpp-options: -DCALLCONV=ccall -DCallConv=CCall
     cc-options: "-U__BLOCKS__"
 
   if os(windows)
-    cpp-options: -DCALLCONV=stdcall
+    cpp-options: -DCALLCONV=stdcall -DCallConv=StdCall
