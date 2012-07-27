@@ -14,7 +14,12 @@ type KernelSource = String
 type Options = String
 data KernelConstraint = DoublePrecisionSupportRequired
 
-data Kernel = CLKernel KernelName [KernelConstraint] Options KernelSource 
+data Kernel = CLKernel {
+  kernelName :: KernelName,
+  constraints :: [KernelConstraint],
+  options :: Options,
+  source :: KernelSource
+}
 
 data CompiledKernel = CLCompiledKernel Kernel CL.CLKernel
 

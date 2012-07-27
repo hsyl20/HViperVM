@@ -13,8 +13,14 @@ primitiveSize :: Primitive -> Word64
 primitiveSize PrimFloat = 4
 primitiveSize PrimDouble = 8
 
-data VectorDesc = VectorDesc Primitive Word64
+data DataDesc = VectorDesc Primitive Word64
+data DataInstance = Vector View
 
-data DataInstance = Vector VectorDesc View
+type DataID = Word
+data Data = Data DataID DataDesc
 
-newtype Data = Data Word deriving (Eq,Ord)
+instance Eq Data where
+  (==) (Data id1 _) (Data id2 _) = id1 == id2
+
+instance Ord Data where
+  compare (Data id1 _) (Data id2 _) = compare id1 id2

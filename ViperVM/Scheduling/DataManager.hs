@@ -10,7 +10,6 @@ import ViperVM.Data
 
 import Text.Printf
 
-import Control.Concurrent
 import Control.Monad.State
 
 dataManagerScheduler :: Scheduler 
@@ -21,9 +20,14 @@ dataManagerScheduler (MapVector desc@(VectorDesc prim n) ptr r) = do
   buf <- lift . return $ HostBuffer sz ptr
   registerBuffer HostMemory buf
   let view = View1D buf 0 sz
-  let di = Vector desc view
-  d <- newData
+  let di = Vector view
+  d <- newData desc
   registerDataInstance d di
-  lift $ putMVar r d
+  setEventR r d
+
+dataManagerScheduler (CreateVector desc@(VectorDesc prim n) r) = do
+  logInfo $ printf "Creating a new %s vector of %d elements" (show prim) n
+  d <- newData desc
+  setEventR r d
 
 dataManagerScheduler _ = voidR

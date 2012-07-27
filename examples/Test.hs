@@ -30,8 +30,9 @@ main = do
   logger <- newTextLogger stdout
   runtime <- startRuntime platform logger defaultScheduler
 
-  v1 <- sync $ mapVector runtime (VectorDesc PrimFloat n) v1ptr
-  v2 <- sync $ mapVector runtime (VectorDesc PrimFloat n) v2ptr
+  v1 <- sync $ mapVector runtime PrimFloat n v1ptr
+  v2 <- sync $ mapVector runtime PrimFloat n v2ptr
+  v3 <- sync $ createVector runtime PrimFloat n
 
   compiled <- sync $ registerKernel runtime matrixAddCL
 

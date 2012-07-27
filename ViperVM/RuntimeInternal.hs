@@ -9,6 +9,7 @@ module ViperVM.RuntimeInternal (
   registerBuffer, registerDataInstance, newData,
   shutdownLogger,
   compileKernelR,
+  setEventR
   ) where
 
 import Control.Applicative ( (<$>), liftA2 )
@@ -36,11 +37,11 @@ import ViperVM.Logging.Logger
 data Message = TaskSubmit Task | 
                KernelComplete Kernel | 
                TransferComplete Transfer |
-               MapVector VectorDesc (Ptr ()) (Event Data) |
+               CreateVector DataDesc (Event Data) |
+               MapVector DataDesc (Ptr ()) (Event Data) |
                DataRelease Data |
                RegisterKernel Kernel (MVar [Maybe CompiledKernel]) |
                Quit (Event ())
-
 
 -- | State of the runtime system
 data RuntimeState = RuntimeState {
@@ -103,11 +104,11 @@ runtimeLoop = do
 
 
 -- | Return a new data identifier
-newData :: R Data
-newData = do
+newData :: DataDesc -> R Data
+newData desc = do
   d <- gets (dataCounter ^$)
   modify (dataCounter ^%= (+) 1)
-  lift $ return (Data d)
+  lift $ return (Data d desc)
 
 -- | Register a data with an initial instance
 registerDataInstance :: Data -> DataInstance -> R ()
@@ -202,5 +203,15 @@ shutdownLogger = do
     l $ StopLogger e
     waitEvent e
   
+-- | "Do nothing" in the R monad
 voidR :: R ()
 voidR = lift $ return ()
+
+-- | Schedule the execution of a given compiled kernel on the specified processor
+-- Kernel parameters (i.e. data instances) must be stored in appropriate memories
+runCompiledKernelOn :: Processor -> CompiledKernel -> [DataInstance] -> R (Event [DataInstance])
+runCompiledKernelOn proc k params = undefined
+  
+-- Set an event in the R monad
+setEventR :: Event a -> a -> R ()
+setEventR ev v = lift $ setEvent ev v
