@@ -1,5 +1,5 @@
 module ViperVM.Runtime (
-  startRuntime, stopRuntime, registerKernel, 
+  startRuntime, stopRuntime,
   mapVector,createVector,
   submitTask,
   -- Events
@@ -8,7 +8,6 @@ module ViperVM.Runtime (
 
 import ViperVM.Data
 import ViperVM.Event
-import ViperVM.Kernel
 import ViperVM.RuntimeInternal
 import ViperVM.Task
 
@@ -26,10 +25,6 @@ sendRuntimeCmd (Runtime ch) msg = do
 -- | Execute synchronously a function returning an event
 sync :: IO (Event a) -> IO a
 sync f = waitEvent =<< f
-
--- | Register a kernel in the runtime system
-registerKernel :: Runtime -> Kernel -> IO (Event [Maybe CompiledKernel])
-registerKernel r k = sendRuntimeCmd r $ RegisterKernel k
 
 -- | Map a Vector of host memory into runtime managed memory
 -- You mustn't use mapped host memory

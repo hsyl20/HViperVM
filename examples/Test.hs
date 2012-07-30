@@ -7,7 +7,7 @@ import System.IO (stdout)
 import ViperVM
 import ViperVM.Data
 import ViperVM.Kernel
-import ViperVM.Library.MatAdd
+import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Logging.TextLogger
 import ViperVM.Platform
 import ViperVM.Runtime
@@ -26,7 +26,8 @@ main = do
   v2ptr <- mallocBytes (fromIntegral $ n*4)
 
   logger <- newTextLogger stdout
-  runtime <- startRuntime platform logger defaultScheduler
+  scheduler <- defaultScheduler logger
+  runtime <- startRuntime platform logger scheduler
 
   v1 <- sync $ mapVector runtime PrimFloat n v1ptr
   v2 <- sync $ mapVector runtime PrimFloat n v2ptr

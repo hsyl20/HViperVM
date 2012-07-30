@@ -3,17 +3,20 @@ module ViperVM.Scheduling.Default (
   ) where
 
 import ViperVM.RuntimeInternal
+import ViperVM.Logging.Logger
+import ViperVM.Compiler
 import ViperVM.Scheduling.Composed
-import ViperVM.Scheduling.StartStop
 import ViperVM.Scheduling.DataManager
 import ViperVM.Scheduling.TaskManager
-import ViperVM.Scheduling.KernelManager
+import ViperVM.Scheduling.EagerKernelCompiler
 
-defaultScheduler :: Scheduler
+defaultScheduler :: Logger -> IO Scheduler
 
-defaultScheduler = composedScheduler [
-  startStopScheduler,
-  dataManagerScheduler,
-  taskManagerScheduler,
-  kernelManagerScheduler]
+defaultScheduler logger = do
+  compiler <- initSingleCompiler logger
+
+  return $ composedScheduler [
+    eagerKernelCompiler compiler,
+    dataManagerScheduler,
+    taskManagerScheduler]
   

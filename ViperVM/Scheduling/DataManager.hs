@@ -16,7 +16,7 @@ dataManagerScheduler :: Scheduler
 
 dataManagerScheduler (MapVector desc@(VectorDesc prim n) ptr r) = do
   let sz = n * primitiveSize prim
-  logInfo $ printf "Mapping %s vector of %d elements at address %s" (show prim) n (show ptr)
+  logInfoR $ printf "Mapping %s vector of %d elements at address %s" (show prim) n (show ptr)
   buf <- lift . return $ HostBuffer sz ptr
   registerBuffer HostMemory buf
   let view = View1D buf 0 sz
@@ -26,7 +26,7 @@ dataManagerScheduler (MapVector desc@(VectorDesc prim n) ptr r) = do
   setEventR r d
 
 dataManagerScheduler (CreateVector desc@(VectorDesc prim n) r) = do
-  logInfo $ printf "Creating a new %s vector of %d elements" (show prim) n
+  logInfoR $ printf "Creating a new %s vector of %d elements" (show prim) n
   d <- newData desc
   setEventR r d
 

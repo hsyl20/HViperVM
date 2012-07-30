@@ -5,17 +5,16 @@ module ViperVM.RuntimeInternal (
   Scheduler, Runtime(..), Message (..),
   -- Methods
   startRuntime, voidR,
-  logInfo, logWarning, logError,
+  logCustomR, logInfoR, logWarningR, logErrorR,
   registerBuffer, registerDataInstance, newData,
   shutdownLogger,
-  compileKernelR,
   setEventR,
-  addPendingTask
+  addPendingTask,
+  getProcessorsR, getLoggerR, getChannelR, postMessageR
   ) where
 
 import Control.Applicative ( (<$>), liftA2 )
 import Control.Concurrent
-import Control.Concurrent.Chan
 import Control.Monad.State
 import Data.Lens.Lazy
 import Data.Lens.Template
@@ -37,11 +36,11 @@ import ViperVM.Transfer
 -- Do not use them directly as helpers functions are provided
 data Message = SubmitTask Task (Event ()) | 
                KernelComplete Kernel | 
+               KernelCompiled Kernel [Processor] [Maybe CompiledKernel] |
                TransferComplete Transfer |
                CreateVector DataDesc (Event Data) |
                MapVector DataDesc (Ptr ()) (Event Data) |
                DataRelease Data |
-               RegisterKernel Kernel (MVar [Maybe CompiledKernel]) |
                Quit (Event ())
 
 -- | State of the runtime system
@@ -56,7 +55,9 @@ data RuntimeState = RuntimeState {
   _activeTransfers :: [Transfer],           -- ^ Current data transfers
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
-  _pendingTasks :: [(Task,Event ())]         -- ^ Task that are to be scheduled
+  _compiledKernels :: Map Kernel CompiledKernel, -- ^ Compiled kernel cache
+  _pendingTasks :: [(Task,Event ())],       -- ^ Task that are to be scheduled
+  _compilingTasks :: [(Task,Event ())]      -- ^ Task whose kernels are being compiled
 }
 
 type R = StateT RuntimeState IO
@@ -86,15 +87,24 @@ startRuntime pf l s = do
     _buffers = empty,
     _activeTransfers = [],
     _datas = empty,
-    _dataCounter = 0
+    _dataCounter = 0,
+    _compiledKernels = empty,
+    _pendingTasks = [],
+    _compilingTasks = []
   }
   void $ forkIO $ do
-    void $ execStateT (logInfo "Runtime started." >> runtimeLoop) st
-    return ()
+    logInfo l "Runtime started"
+    msg <- evalStateT runtimeLoop st
+    logInfo l "Stopping the runtime..."
+    logInfo l "This log will now be closed"
+    shutdownLogger l
+    -- Signal that runtime is stopped to the application
+    let (Quit ev) = msg
+    setEvent ev ()
   return $ Runtime ch
 
 -- | Main runtime loop
-runtimeLoop :: R ()
+runtimeLoop :: R Message
 runtimeLoop = do
   ch <- gets channel
   msg <- lift $ readChan ch
@@ -102,7 +112,8 @@ runtimeLoop = do
   sched <- gets scheduler
   sched msg
 
-  unless (isQuit msg) runtimeLoop
+  if isQuit msg then return msg else runtimeLoop
+
 
 
 -- | Return a new data identifier
@@ -161,49 +172,55 @@ submitTransfer transfer@(Transfer link _ _) = do
 registerActiveTransfer :: Transfer -> R ()
 registerActiveTransfer transfer = modify(activeTransfers ^%= (++) [transfer])
 
--- | Write a message in the log
-logMsg :: LogMessage -> R ()
-logMsg msg = do
-  l <- gets logger
-  lift $ l msg
-
 -- | Write a custom string message in the log
-logCustom :: String -> String -> R ()
-logCustom header s = logMsg $ Custom $ header ++ ": " ++ s
+logCustomR :: String -> String -> R ()
+logCustomR header s = do
+  l <- gets logger
+  lift $ logCustom l header s
 
 -- | Write a custom error message in the log
-logError :: String -> R ()
-logError = logCustom "Error" 
+logErrorR :: String -> R ()
+logErrorR s = do
+  l <- gets logger
+  lift $ logError l s
 
 -- | Write a custom warning message in the log
-logWarning :: String -> R ()
-logWarning = logCustom "Warning" 
+logWarningR :: String -> R ()
+logWarningR s = do
+  l <- gets logger
+  lift $ logWarning l s
 
 -- | Write a custom info message in the log
-logInfo :: String -> R ()
-logInfo = logCustom "Info" 
+logInfoR :: String -> R ()
+logInfoR s = do
+  l <- gets logger
+  lift $ logInfo l s
 
--- | Compile a kernel for every compatible processor in the platform
-compileKernelR :: Kernel -> R [Maybe CompiledKernel]
-compileKernelR k = do
+getProcessorsR :: R [Processor]
+getProcessorsR = do
   pf <- gets platform
-  let procs = processors pf
-  (ck,ta) <- timeActionR $ compileKernels k procs
-  let msg = KernelCompilation k procs ck ta
-  logMsg msg
-  return ck
+  return (processors pf)
+
+getLoggerR :: R Logger
+getLoggerR = gets logger
+
+getChannelR :: R (Chan Message)
+getChannelR = gets channel
+
+postMessageR :: Message -> R ()
+postMessageR msg = do
+  ch <- getChannelR
+  lift $ writeChan ch msg
 
 -- | Execute an action and return its start and end times
 timeActionR :: IO a -> R (a,TimedAction)
 timeActionR = lift . timeAction
 
 -- | Shutdown the logger
-shutdownLogger :: R ()
-shutdownLogger = do
-  l <- gets logger
-  void $ lift $ withNewEvent $ \e -> do
-    l $ StopLogger e
-    waitEvent e
+shutdownLogger :: Logger -> IO ()
+shutdownLogger l = void $ withNewEvent $ \e -> do
+  l $ StopLogger e
+  waitEvent e
   
 -- | "Do nothing" in the R monad
 voidR :: R ()

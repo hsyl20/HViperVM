@@ -37,3 +37,19 @@ data LogMessage = StopLogger (Event ()) |
                   KernelCompilation Kernel [Processor] [Maybe CompiledKernel] TimedAction
 
 type Logger = LogMessage -> IO ()
+
+-- | Write a custom string message in the log
+logCustom :: Logger -> String -> String -> IO ()
+logCustom logger header s = logger $ Custom $ header ++ ": " ++ s
+
+-- | Write a custom error message in the log
+logError :: Logger -> String -> IO ()
+logError logger = logCustom logger "Error" 
+
+-- | Write a custom warning message in the log
+logWarning :: Logger -> String -> IO ()
+logWarning logger = logCustom logger "Warning" 
+
+-- | Write a custom info message in the log
+logInfo :: Logger -> String -> IO ()
+logInfo logger = logCustom logger "Info" 

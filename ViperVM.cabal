@@ -28,6 +28,7 @@ library
     ViperVM.Backends.OpenCL.Types
 
     ViperVM.Buffer
+    ViperVM.Compiler
     ViperVM.Data
     ViperVM.Event
     ViperVM.Kernel
@@ -43,15 +44,14 @@ library
     ViperVM.Scheduling.Composed
     ViperVM.Scheduling.DataManager
     ViperVM.Scheduling.Default
-    ViperVM.Scheduling.KernelManager
-    ViperVM.Scheduling.StartStop
+    ViperVM.Scheduling.EagerKernelCompiler
     ViperVM.Scheduling.TaskManager
 
     ViperVM.Logging.Logger
     ViperVM.Logging.NullLogger
     ViperVM.Logging.TextLogger
 
-    ViperVM.Library.MatAdd
+    ViperVM.Library.FloatMatrixAdd
 
   -- other-modules:       
   build-depends:       

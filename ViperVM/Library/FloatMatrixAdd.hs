@@ -1,4 +1,4 @@
-module ViperVM.Library.MatAdd (
+module ViperVM.Library.FloatMatrixAdd (
   floatMatrixAdd,
   floatMatrixAddCL
   ) where
@@ -8,8 +8,8 @@ import ViperVM.KernelInterface
 import ViperVM.KernelSet
 
 floatMatrixAddCL :: Kernel
-floatMatrixAddCL = CLKernel "matrixAdd" [] "" "\
-  \__kernel void matrixAdd(const int width, const int height,\
+floatMatrixAddCL = CLKernel "floatMatrixAdd" [] "" "\
+  \__kernel void floatMatrixAdd(const int width, const int height,\
   \                        __global float* A, __global float* B, __global float* C) {\
   \  int gx = get_global_id(0);\
   \  int gy = get_global_id(1);\
