@@ -14,6 +14,7 @@ type KernelSource = String
 type Options = String
 data KernelConstraint = DoublePrecisionSupportRequired
 
+-- | A kernel
 data Kernel = CLKernel {
   kernelName :: KernelName,
   constraints :: [KernelConstraint],
@@ -42,16 +43,16 @@ isOpenCLProcessor _ = False
 
 -- | Try to compile kernel for the given processors
 compileKernels :: Kernel -> [Processor] -> IO [Maybe CompiledKernel]
-compileKernels ker@(CLKernel name constraints options src) procs = do
+compileKernels ker@(CLKernel name consts opts src) procs = do
   -- Exclude non-OpenCL processors
   let clProcs = filter isOpenCLProcessor procs
   -- Exclude devices that do not support constraints
-  validProcs <- filterM (supportConstraints constraints) clProcs
+  validProcs <- filterM (supportConstraints consts) clProcs
   -- Group devices that are in the same context to compile in one pass
   let groups = groupBy eqProc $ sortBy compareProc validProcs
   let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap extractDev x)) groups
   programs <- traverse createProgram devGroups
-  status <- liftM concat $ traverse (buildProgram options) $ zip devGroups programs
+  status <- liftM concat $ traverse buildProgram $ zip devGroups programs
   kernels <- liftM concat $ traverse createKernel $ zip devGroups programs
   let r = zipWith (\(x,a) (_,b) -> (x,(a,b))) status kernels
   return $ fmap (returnIfValid r . extractDev) procs
@@ -70,7 +71,7 @@ compileKernels ker@(CLKernel name constraints options src) procs = do
     extractLibCtx _ = undefined
 
     createProgram ((lib,ctx),_) = clCreateProgramWithSource lib ctx src
-    buildProgram opts (((lib,_),devs),prog) = do
+    buildProgram (((lib,_),devs),prog) = do
       clBuildProgram lib prog devs opts
       status <- traverse (clGetProgramBuildStatus lib prog) devs :: IO [CLBuildStatus]
       return $ zip devs status

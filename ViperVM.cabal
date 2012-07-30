@@ -18,30 +18,33 @@ library
   exposed-modules:     
     ViperVM
     ViperVM.Backends.OpenCL
-    ViperVM.Backends.OpenCL.Types
-    ViperVM.Backends.OpenCL.Query
+    ViperVM.Backends.OpenCL.CommandQueue
     ViperVM.Backends.OpenCL.Context
+    ViperVM.Backends.OpenCL.Event
     ViperVM.Backends.OpenCL.Loader
     ViperVM.Backends.OpenCL.Memory
-    ViperVM.Backends.OpenCL.CommandQueue
-    ViperVM.Backends.OpenCL.Event
     ViperVM.Backends.OpenCL.Program
+    ViperVM.Backends.OpenCL.Query
+    ViperVM.Backends.OpenCL.Types
 
-    ViperVM.Platform
     ViperVM.Buffer
-    ViperVM.View
-    ViperVM.Transfer
     ViperVM.Data
-    ViperVM.Kernel
     ViperVM.Event
+    ViperVM.Kernel
+    ViperVM.KernelInterface
+    ViperVM.KernelSet
+    ViperVM.Platform
     ViperVM.Runtime
     ViperVM.RuntimeInternal
+    ViperVM.Task
+    ViperVM.Transfer
+    ViperVM.View
 
-    ViperVM.Scheduling.Default
     ViperVM.Scheduling.Composed
-    ViperVM.Scheduling.StartStop
-    ViperVM.Scheduling.KernelManager
     ViperVM.Scheduling.DataManager
+    ViperVM.Scheduling.Default
+    ViperVM.Scheduling.KernelManager
+    ViperVM.Scheduling.StartStop
     ViperVM.Scheduling.TaskManager
 
     ViperVM.Logging.Logger

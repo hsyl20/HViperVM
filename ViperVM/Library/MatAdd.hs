@@ -1,9 +1,14 @@
-module ViperVM.Library.MatAdd where
+module ViperVM.Library.MatAdd (
+  floatMatrixAdd,
+  floatMatrixAddCL
+  ) where
 
 import ViperVM.Kernel
+import ViperVM.KernelInterface
+import ViperVM.KernelSet
 
-matrixAddCL :: Kernel
-matrixAddCL = CLKernel "matrixAdd" [] "" "\
+floatMatrixAddCL :: Kernel
+floatMatrixAddCL = CLKernel "matrixAdd" [] "" "\
   \__kernel void matrixAdd(const int width, const int height,\
   \                        __global float* A, __global float* B, __global float* C) {\
   \  int gx = get_global_id(0);\
@@ -15,5 +20,11 @@ matrixAddCL = CLKernel "matrixAdd" [] "" "\
   \\
   \}"
 
-matAdd :: [Kernel]
-matAdd = [matrixAddCL]
+
+floatMatrixAddInterface :: KernelInterface
+floatMatrixAddInterface = KernelInterface {
+  modes = [ReadOnly,ReadOnly,ReadWrite]
+}
+
+floatMatrixAdd :: KernelSet
+floatMatrixAdd = KernelSet floatMatrixAddInterface [floatMatrixAddCL]
