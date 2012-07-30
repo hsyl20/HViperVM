@@ -6,15 +6,15 @@ module ViperVM.Runtime (
   waitEvent,sync
   ) where
 
-import ViperVM.RuntimeInternal
-
 import ViperVM.Data
-import ViperVM.Kernel
 import ViperVM.Event
+import ViperVM.Kernel
+import ViperVM.RuntimeInternal
+import ViperVM.Task
 
-import Foreign.Ptr
 import Control.Concurrent
 import Data.Word
+import Foreign.Ptr
 
 -- | Send a command to the runtime and get an asynchronous response
 sendRuntimeCmd :: Runtime -> (Event a -> Message) -> IO (Event a)
@@ -45,5 +45,5 @@ stopRuntime :: Runtime -> IO (Event ())
 stopRuntime r = sendRuntimeCmd r Quit 
 
 -- | Submit a task to the runtime system
-submitTask :: Runtime -> Kernel -> [Data] -> IO (Event ())
-submitTask r kernel params = sendRuntimeCmd r $ SubmitTask kernel params
+submitTask :: Runtime -> Task -> IO (Event ())
+submitTask r task = sendRuntimeCmd r $ SubmitTask task

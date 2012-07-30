@@ -5,35 +5,37 @@ module ViperVM.RuntimeInternal (
   Scheduler, Runtime(..), Message (..),
   -- Methods
   startRuntime, voidR,
-  logInfo, logWarning,logError,
+  logInfo, logWarning, logError,
   registerBuffer, registerDataInstance, newData,
   shutdownLogger,
   compileKernelR,
-  setEventR
+  setEventR,
+  addPendingTask
   ) where
 
 import Control.Applicative ( (<$>), liftA2 )
-import Control.Concurrent.Chan
 import Control.Concurrent
+import Control.Concurrent.Chan
 import Control.Monad.State
 import Data.Lens.Lazy
 import Data.Lens.Template
-import qualified Data.List as List
 import Data.Map
 import Data.Word
 import Foreign.Ptr
+import qualified Data.List as List
 
-import ViperVM.Platform
 import ViperVM.Buffer
-import ViperVM.Transfer
 import ViperVM.Data
-import ViperVM.Kernel
 import ViperVM.Event
+import ViperVM.Kernel
 import ViperVM.Logging.Logger
+import ViperVM.Platform
+import ViperVM.Task
+import ViperVM.Transfer
 
 -- | Messages that the runtime can handle.
 -- Do not use them directly as helpers functions are provided
-data Message = SubmitTask Kernel [Data] (Event ()) | 
+data Message = SubmitTask Task (Event ()) | 
                KernelComplete Kernel | 
                TransferComplete Transfer |
                CreateVector DataDesc (Event Data) |
@@ -53,8 +55,8 @@ data RuntimeState = RuntimeState {
   _buffers :: Map Memory [Buffer],          -- ^ Buffers in each memory
   _activeTransfers :: [Transfer],           -- ^ Current data transfers
   _datas :: Map Data [DataInstance],        -- ^ Registered data
-  _dataCounter :: Word--,                     -- ^ Data counter (used to set data ID)
---  _toCCTasks :: Map                         -- ^ Tasks waiting for compilation
+  _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
+  _pendingTasks :: [(Task,Event ())]         -- ^ Task that are to be scheduled
 }
 
 type R = StateT RuntimeState IO
@@ -215,3 +217,8 @@ runCompiledKernelOn proc k params = undefined
 -- Set an event in the R monad
 setEventR :: Event a -> a -> R ()
 setEventR ev v = lift $ setEvent ev v
+
+-- Add a pending task
+addPendingTask :: Task -> Event () -> R ()
+addPendingTask task ev = do
+  modify (pendingTasks ^%= (:) (task,ev))

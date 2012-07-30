@@ -1,20 +1,18 @@
+import Control.Monad ( liftM2 )
+import Data.Maybe (isJust)
+import Data.Traversable
+import Foreign.Marshal.Alloc
+import System.IO (stdout)
+
 import ViperVM
-import ViperVM.Platform
-import ViperVM.Runtime
 import ViperVM.Data
 import ViperVM.Kernel
-import ViperVM.Scheduling.Default
-
-import System.IO (stdout)
-import ViperVM.Logging.TextLogger
-
 import ViperVM.Library.MatAdd
-
-import Control.Monad ( liftM2 )
-import Data.Traversable
-import Data.Maybe (isJust)
-
-import Foreign.Marshal.Alloc
+import ViperVM.Logging.TextLogger
+import ViperVM.Platform
+import ViperVM.Runtime
+import ViperVM.Scheduling.Default
+import ViperVM.Task
 
 main = do
   let cllib = "/usr/lib/libOpenCL.so"
@@ -34,7 +32,9 @@ main = do
   v2 <- sync $ mapVector runtime PrimFloat n v2ptr
   v3 <- sync $ createVector runtime PrimFloat n
 
-  compiled <- sync $ registerKernel runtime matrixAddCL
+  let task = Task floatMatrixAdd [v1,v2,v3] []
+
+  submitTask runtime task
 
   sync $ stopRuntime runtime
 
