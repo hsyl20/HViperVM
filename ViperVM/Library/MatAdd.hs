@@ -1,7 +1,6 @@
 module ViperVM.Library.MatAdd where
 
 import ViperVM.Kernel
-import ViperVM.KernelSet
 
 matrixAddCL :: Kernel
 matrixAddCL = CLKernel "matrixAdd" [] "" "\
@@ -16,5 +15,5 @@ matrixAddCL = CLKernel "matrixAdd" [] "" "\
   \\
   \}"
 
-matAdd :: KernelSet
-matAdd = KernelSet [matrixAddCL]
+matAdd :: [Kernel]
+matAdd = [matrixAddCL]

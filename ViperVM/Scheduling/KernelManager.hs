@@ -4,14 +4,10 @@ module ViperVM.Scheduling.KernelManager (
 
 import ViperVM.RuntimeInternal
 
-import Control.Concurrent
-import Control.Monad.State
-
 kernelManagerScheduler :: Scheduler
 
-kernelManagerScheduler (RegisterKernel k v) = do
+kernelManagerScheduler (RegisterKernel k ev) = do
   ck <- compileKernelR k
-  lift $ putMVar v ck
-  return ()
+  setEventR ev ck
 
 kernelManagerScheduler _ = voidR

@@ -26,7 +26,6 @@ import Foreign.Ptr
 import ViperVM.Platform
 import ViperVM.Buffer
 import ViperVM.Transfer
-import ViperVM.Task
 import ViperVM.Data
 import ViperVM.Kernel
 import ViperVM.Event
@@ -34,7 +33,7 @@ import ViperVM.Logging.Logger
 
 -- | Messages that the runtime can handle.
 -- Do not use them directly as helpers functions are provided
-data Message = TaskSubmit Task | 
+data Message = SubmitTask Kernel [Data] (Event ()) | 
                KernelComplete Kernel | 
                TransferComplete Transfer |
                CreateVector DataDesc (Event Data) |
@@ -54,7 +53,8 @@ data RuntimeState = RuntimeState {
   _buffers :: Map Memory [Buffer],          -- ^ Buffers in each memory
   _activeTransfers :: [Transfer],           -- ^ Current data transfers
   _datas :: Map Data [DataInstance],        -- ^ Registered data
-  _dataCounter :: Word                      -- ^ Data counter (used to set data ID)
+  _dataCounter :: Word--,                     -- ^ Data counter (used to set data ID)
+--  _toCCTasks :: Map                         -- ^ Tasks waiting for compilation
 }
 
 type R = StateT RuntimeState IO

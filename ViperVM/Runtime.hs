@@ -1,5 +1,7 @@
 module ViperVM.Runtime (
-  startRuntime, stopRuntime, registerKernel, mapVector,createVector,
+  startRuntime, stopRuntime, registerKernel, 
+  mapVector,createVector,
+  submitTask,
   -- Events
   waitEvent,sync
   ) where
@@ -41,3 +43,7 @@ createVector r prim sz = sendRuntimeCmd r $ CreateVector (VectorDesc prim sz)
 -- | Stop the given runtime
 stopRuntime :: Runtime -> IO (Event ())
 stopRuntime r = sendRuntimeCmd r Quit 
+
+-- | Submit a task to the runtime system
+submitTask :: Runtime -> Kernel -> [Data] -> IO (Event ())
+submitTask r kernel params = sendRuntimeCmd r $ SubmitTask kernel params
