@@ -34,7 +34,7 @@ import ViperVM.Transfer
 
 -- | Messages that the runtime can handle.
 -- Do not use them directly as helpers functions are provided
-data Message = SubmitTask Task (Event ()) | 
+data Message = SubmitTask Task | 
                KernelComplete Kernel | 
                KernelCompiled Kernel [Processor] [Maybe CompiledKernel] |
                TransferComplete Transfer |
@@ -56,8 +56,8 @@ data RuntimeState = RuntimeState {
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
   _compiledKernels :: Map Kernel CompiledKernel, -- ^ Compiled kernel cache
-  _pendingTasks :: [(Task,Event ())],       -- ^ Task that are to be scheduled
-  _compilingTasks :: [(Task,Event ())]      -- ^ Task whose kernels are being compiled
+  _pendingTasks :: [Task],                  -- ^ Task that are to be scheduled
+  _compilingTasks :: [Task]                 -- ^ Task whose kernels are being compiled
 }
 
 type R = StateT RuntimeState IO
@@ -196,17 +196,21 @@ logInfoR s = do
   l <- gets logger
   lift $ logInfo l s
 
+-- | Return processors of the platform
 getProcessorsR :: R [Processor]
 getProcessorsR = do
   pf <- gets platform
   return (processors pf)
 
+-- | Return the logger
 getLoggerR :: R Logger
 getLoggerR = gets logger
 
+-- | Return the message channel
 getChannelR :: R (Chan Message)
 getChannelR = gets channel
 
+-- | Post a message on the message channel
 postMessageR :: Message -> R ()
 postMessageR msg = do
   ch <- getChannelR
@@ -236,6 +240,6 @@ setEventR :: Event a -> a -> R ()
 setEventR ev v = lift $ setEvent ev v
 
 -- Add a pending task
-addPendingTask :: Task -> Event () -> R ()
-addPendingTask task ev = do
-  modify (pendingTasks ^%= (:) (task,ev))
+addPendingTask :: Task -> R ()
+addPendingTask task = do
+  modify (pendingTasks ^%= (:) task)

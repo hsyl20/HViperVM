@@ -33,9 +33,7 @@ main = do
   v2 <- sync $ mapVector runtime PrimFloat n v2ptr
   v3 <- sync $ createVector runtime PrimFloat n
 
-  let task = Task floatMatrixAdd [v1,v2,v3] []
-
-  submitTask runtime task
+  submitTask runtime floatMatrixAdd [v1,v2,v3] []
 
   sync $ stopRuntime runtime
 

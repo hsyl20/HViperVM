@@ -6,7 +6,7 @@ import ViperVM.RuntimeInternal
 
 taskManagerScheduler :: Scheduler
 
-taskManagerScheduler (SubmitTask task r) = do
-  addPendingTask task r
+taskManagerScheduler (SubmitTask task) = do
+  addPendingTask task
 
 taskManagerScheduler _ = voidR

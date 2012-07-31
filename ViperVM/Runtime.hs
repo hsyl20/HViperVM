@@ -9,6 +9,7 @@ module ViperVM.Runtime (
 import ViperVM.Data
 import ViperVM.Event
 import ViperVM.RuntimeInternal
+import ViperVM.KernelSet
 import ViperVM.Task
 
 import Control.Concurrent
@@ -40,5 +41,7 @@ stopRuntime :: Runtime -> IO (Event ())
 stopRuntime r = sendRuntimeCmd r Quit 
 
 -- | Submit a task to the runtime system
-submitTask :: Runtime -> Task -> IO (Event ())
-submitTask r task = sendRuntimeCmd r $ SubmitTask task
+submitTask :: Runtime -> KernelSet -> [Data] -> [Event ()] -> IO (Event ())
+submitTask r ks ds deps = sendRuntimeCmd r $ \ev -> do
+  let task = Task ks ds deps ev
+  SubmitTask task

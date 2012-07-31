@@ -5,4 +5,4 @@ import ViperVM.Event
 import ViperVM.KernelSet
 
 -- | A task
-data Task = Task KernelSet [Data] [Event ()]
+data Task = Task KernelSet [Data] [Event ()] (Event ())
