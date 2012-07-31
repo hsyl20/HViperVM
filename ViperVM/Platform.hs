@@ -10,9 +10,13 @@ data Platform = Platform {
   processors :: [Processor]
 }
 
-data Memory = CLMemory OpenCLLibrary CLContext CLDeviceID | HostMemory
+data Memory = HostMemory
+            | CLMemory OpenCLLibrary CLContext CLDeviceID
+
 data Link = CLLink OpenCLLibrary CLCommandQueue Memory Memory deriving (Eq,Ord)
-data Processor = CLProcessor OpenCLLibrary CLContext CLDeviceID | HostProcessor
+
+data Processor = HostProcessor
+               | CLProcessor OpenCLLibrary CLContext CLDeviceID
 
 instance Eq Memory where
   (==) HostMemory HostMemory = True
@@ -24,6 +28,18 @@ instance Ord Memory where
   compare (CLMemory _ _ m1) (CLMemory _ _ m2) = compare m1 m2
   compare HostMemory _ = GT
   compare _ HostMemory = LT
+
+instance Eq Processor where
+  (==) HostProcessor HostProcessor = True
+  (==) (CLProcessor lib1 _ id1) (CLProcessor lib2 _ id2) = lib1 == lib2 && id1 == id2
+  (==) _ _ = False
+
+instance Ord Processor where
+  compare HostProcessor HostProcessor = EQ
+  compare HostProcessor _ = GT
+  compare _ HostProcessor = LT
+  compare (CLProcessor _ _ id1) (CLProcessor _ _ id2) = compare id1 id2
+
 
 -- | Initialize platform
 initPlatform :: String -> IO Platform
@@ -46,6 +62,8 @@ procInfo (CLProcessor lib _ dev) = do
   name <- clGetDeviceName lib dev
   vendor <- clGetDeviceVendor lib dev
   return $ "[OpenCL] " ++ name ++ " (" ++ vendor ++ ")"
+
+procInfo HostProcessor = return "[Host]"
 
 platformInfo :: Platform -> IO String
 platformInfo pf = do

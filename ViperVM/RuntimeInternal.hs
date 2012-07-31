@@ -9,8 +9,9 @@ module ViperVM.RuntimeInternal (
   registerBuffer, registerDataInstance, newData,
   shutdownLogger,
   setEventR,
-  addPendingTask,
-  getProcessorsR, getLoggerR, getChannelR, postMessageR
+  getProcessorsR, getLoggerR, getChannelR, postMessageR,
+  -- Lenses
+  submittedTasks, compiledKernels
   ) where
 
 import Control.Applicative ( (<$>), liftA2 )
@@ -33,15 +34,15 @@ import ViperVM.Task
 import ViperVM.Transfer
 
 -- | Messages that the runtime can handle.
--- Do not use them directly as helpers functions are provided
-data Message = SubmitTask Task | 
-               KernelComplete Kernel | 
-               KernelCompiled Kernel [Processor] [Maybe CompiledKernel] |
-               TransferComplete Transfer |
-               CreateVector DataDesc (Event Data) |
-               MapVector DataDesc (Ptr ()) (Event Data) |
-               DataRelease Data |
-               Quit (Event ())
+data Message =  SubmitTask Task               -- ^ A task has been submitted by the application
+              | ScheduleTask Task Processor   -- ^ A task has been scheduled on a given processor
+              | KernelComplete Kernel         -- ^ A kernel has completed
+              | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
+              | TransferComplete Transfer     -- ^ A data transfer has completed
+              | CreateVector DataDesc (Event Data) -- ^ A new vector data is to be created
+              | MapVector DataDesc (Ptr ()) (Event Data) -- ^ A vector data is to be created using existing data
+              | DataRelease Data              -- ^ A data is no longer necessary
+              | Quit (Event ())               -- ^ Runtime shutdown is requested
 
 -- | State of the runtime system
 data RuntimeState = RuntimeState {
@@ -55,9 +56,8 @@ data RuntimeState = RuntimeState {
   _activeTransfers :: [Transfer],           -- ^ Current data transfers
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
-  _compiledKernels :: Map Kernel CompiledKernel, -- ^ Compiled kernel cache
-  _pendingTasks :: [Task],                  -- ^ Task that are to be scheduled
-  _compilingTasks :: [Task]                 -- ^ Task whose kernels are being compiled
+  _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
+  _submittedTasks :: [Task]                   -- ^ Task that are to be scheduled
 }
 
 type R = StateT RuntimeState IO
@@ -89,8 +89,7 @@ startRuntime pf l s = do
     _datas = empty,
     _dataCounter = 0,
     _compiledKernels = empty,
-    _pendingTasks = [],
-    _compilingTasks = []
+    _submittedTasks = []
   }
   void $ forkIO $ do
     logInfo l "Runtime started"
@@ -113,7 +112,6 @@ runtimeLoop = do
   sched msg
 
   if isQuit msg then return msg else runtimeLoop
-
 
 
 -- | Return a new data identifier
@@ -238,8 +236,3 @@ runCompiledKernelOn proc k params = undefined
 -- Set an event in the R monad
 setEventR :: Event a -> a -> R ()
 setEventR ev v = lift $ setEvent ev v
-
--- Add a pending task
-addPendingTask :: Task -> R ()
-addPendingTask task = do
-  modify (pendingTasks ^%= (:) task)

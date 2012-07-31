@@ -22,6 +22,12 @@ data Kernel = CLKernel {
   source :: KernelSource
 }
 
+instance Eq Kernel where
+  (==) k1 k2 = source k1 == source k2
+
+instance Ord Kernel where
+  compare k1 k2 = compare (source k1) (source k2)
+
 data CompiledKernel = CLCompiledKernel Kernel CL.CLKernel
 
 instance Show Kernel where

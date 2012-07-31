@@ -3,10 +3,12 @@ module ViperVM.Scheduling.TaskManager (
   ) where
 
 import ViperVM.RuntimeInternal
+import Control.Monad.State
+import Data.Lens.Lazy
 
 taskManagerScheduler :: Scheduler
 
 taskManagerScheduler (SubmitTask task) = do
-  addPendingTask task
+  modify (submittedTasks ^%= (:) task)
 
 taskManagerScheduler _ = voidR
