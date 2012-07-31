@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-} 
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections #-} 
 
 module ViperVM.RuntimeInternal (
   -- Types
@@ -11,7 +11,7 @@ module ViperVM.RuntimeInternal (
   setEventR,
   getProcessorsR, getLoggerR, getChannelR, postMessageR,
   -- Lenses
-  submittedTasks, compiledKernels
+  submittedTasks, compiledKernels, scheduledTasks
   ) where
 
 import Control.Applicative ( (<$>), liftA2 )
@@ -35,7 +35,8 @@ import ViperVM.Transfer
 
 -- | Messages that the runtime can handle.
 data Message =  SubmitTask Task               -- ^ A task has been submitted by the application
-              | ScheduleTask Task Processor   -- ^ A task has been scheduled on a given processor
+              | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
+              | TaskComplete Task             -- ^ A task has completed
               | KernelComplete Kernel         -- ^ A kernel has completed
               | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
               | TransferComplete Transfer     -- ^ A data transfer has completed
@@ -57,7 +58,8 @@ data RuntimeState = RuntimeState {
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
   _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
-  _submittedTasks :: [Task]                   -- ^ Task that are to be scheduled
+  _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
+  _scheduledTasks :: Map Processor [Task]   -- ^ Tasks scheduled on processors (may be executing)
 }
 
 type R = StateT RuntimeState IO
@@ -89,7 +91,8 @@ startRuntime pf l s = do
     _datas = empty,
     _dataCounter = 0,
     _compiledKernels = empty,
-    _submittedTasks = []
+    _submittedTasks = [],
+    _scheduledTasks = fromList $ fmap (,[]) (processors pf)
   }
   void $ forkIO $ do
     logInfo l "Runtime started"

@@ -23,6 +23,7 @@ floatMatrixAddCL = CLKernel "floatMatrixAdd" [] "" "\
 
 floatMatrixAddInterface :: KernelInterface
 floatMatrixAddInterface = KernelInterface {
+  name = "Float Matrix Addition",
   modes = [ReadOnly,ReadOnly,ReadWrite]
 }
 

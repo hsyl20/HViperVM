@@ -45,6 +45,7 @@ library
     ViperVM.Scheduling.DataManager
     ViperVM.Scheduling.Default
     ViperVM.Scheduling.EagerKernelCompiler
+    ViperVM.Scheduling.EagerScheduler
     ViperVM.Scheduling.TaskManager
 
     ViperVM.Logging.Logger

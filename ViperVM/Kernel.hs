@@ -43,6 +43,11 @@ supportConstraint DoublePrecisionSupportRequired (CLProcessor lib _ dev) =
   liftM (not . null) $ clGetDeviceDoubleFPConfig lib dev
 supportConstraint DoublePrecisionSupportRequired HostProcessor = return True
 
+-- | Indicate if a processor can execute a given kernel
+canExecute :: Processor -> Kernel -> IO Bool
+canExecute p@(CLProcessor {}) (CLKernel _ cs _ _)  = supportConstraints cs p
+canExecute _ _ = return False
+
 isOpenCLProcessor :: Processor -> Bool
 isOpenCLProcessor (CLProcessor {}) = True
 isOpenCLProcessor _ = False

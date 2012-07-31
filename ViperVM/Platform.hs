@@ -3,6 +3,7 @@ module ViperVM.Platform where
 import ViperVM.Backends.OpenCL
 import Data.Traversable
 import Data.Functor
+import System.IO.Unsafe
 
 data Platform = Platform {
   memories :: [Memory],
@@ -40,6 +41,8 @@ instance Ord Processor where
   compare _ HostProcessor = LT
   compare (CLProcessor _ _ id1) (CLProcessor _ _ id2) = compare id1 id2
 
+instance Show Processor where
+  show p = unsafePerformIO $ procInfo p
 
 -- | Initialize platform
 initPlatform :: String -> IO Platform
