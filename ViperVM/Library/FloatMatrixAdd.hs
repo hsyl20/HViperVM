@@ -25,7 +25,7 @@ floatMatrixAddCL = CLKernel "floatMatrixAdd" [] "" "\
 floatMatrixAddInterface :: KernelInterface
 floatMatrixAddInterface = KernelInterface {
   name = "Float Matrix Addition",
-  makeParameters = \[a,b] -> [ReadOnly a, ReadOnly b, Allocate (dataDescriptor a)],
+  makeParameters = \[a,b] -> [KPReadOnly a, KPReadOnly b, KPAllocate (dataDescriptor a)],
   makeResult = \[_,_,c] -> [c]
 }
 

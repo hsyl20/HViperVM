@@ -9,17 +9,20 @@ module ViperVM.RuntimeInternal (
   registerBuffer, registerDataInstance, newData,
   shutdownLogger,
   setEventR,
-  getProcessorsR, getLoggerR, getChannelR, postMessageR, paramToData,
+  getProcessorsR, getLoggerR, getChannelR, getDatasR,
+  postMessageR, kpToTp, dataInstanceExistsR, getInstancesR,
   -- Lenses
   submittedTasks, compiledKernels, scheduledTasks
   ) where
 
+import Prelude hiding (lookup)
 import Control.Applicative ( (<$>), liftA2 )
 import Control.Concurrent
 import Control.Monad.State
 import Data.Lens.Lazy
 import Data.Lens.Template
 import Data.Map
+import Data.Maybe (fromMaybe)
 import Data.Word
 import Foreign.Ptr
 import qualified Data.List as List
@@ -213,6 +216,10 @@ getLoggerR = gets logger
 getChannelR :: R (Chan Message)
 getChannelR = gets channel
 
+-- | Return the current datas
+getDatasR :: R (Map Data [DataInstance])
+getDatasR = gets (datas ^$)
+
 -- | Post a message on the message channel
 postMessageR :: Message -> R ()
 postMessageR msg = do
@@ -233,22 +240,29 @@ shutdownLogger l = void $ withNewEvent $ \e -> do
 voidR :: R ()
 voidR = lift $ return ()
 
--- | Schedule the execution of a given compiled kernel on the specified processor
--- Kernel parameters (i.e. data instances) must be stored in appropriate memories
-runCompiledKernelOn :: Processor -> CompiledKernel -> [DataInstance] -> R (Event [DataInstance])
-runCompiledKernelOn proc k params = undefined
-  
 -- Set an event in the R monad
 setEventR :: Event a -> a -> R ()
 setEventR ev v = lift $ setEvent ev v
 
-
--- | Create data handle for a kernel parameter
-paramToData :: Parameter -> R Data
-paramToData (ReadOnly d) = return d
-paramToData (ReadWrite d) = do
+-- | Convert kernel parameter into task parameter, allocating data when necessary
+kpToTp :: KernelParameter -> R TaskParameter
+kpToTp (KPReadOnly d) = return $ (TPReadOnly d)
+kpToTp (KPReadWrite d) = do
   d2 <- newData (dataDescriptor d)
-  return d2
-paramToData (Allocate dd) = do
+  return $ TPReadWrite d d2
+kpToTp (KPAllocate dd) = do
   d2 <- newData dd
-  return d2
+  return $ TPAllocate d2
+
+-- | Return data instances (if any)
+getInstancesR :: Data -> R [DataInstance]
+getInstancesR d = do
+  ds <- getDatasR
+  return $ fromMaybe [] $ lookup d ds
+
+-- | Check for existing instance of a data
+dataInstanceExistsR :: Data -> R Bool
+dataInstanceExistsR d = do
+  ds <- getDatasR
+  let n = fromMaybe 0 $ fmap length $ lookup d ds
+  return $ n /= 0

@@ -18,12 +18,13 @@ taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
   --   - data accessed in read-only mode
   --   - data accessed in read-write mode
   --   - data that must be allocated
-  let params = makeParameters ki ds
+  let kps = makeParameters ki ds
 
-  -- Retrieve or create data for each parameter
-  datas <- traverse paramToData params
+  -- Create task parameters
+  params <- traverse kpToTp kps
 
-  let task = Task ks ds datas
+  let task = Task ks params
+  let datas = map paramToData params
 
   -- Store task in state
   modify (submittedTasks ^%= (:) task)
