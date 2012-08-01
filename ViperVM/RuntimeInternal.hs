@@ -29,21 +29,23 @@ import ViperVM.Data
 import ViperVM.Event
 import ViperVM.Kernel
 import ViperVM.KernelInterface
+import ViperVM.KernelSet
 import ViperVM.Logging.Logger
 import ViperVM.Platform
 import ViperVM.Task
 import ViperVM.Transfer
 
 -- | Messages that the runtime can handle.
-data Message =  SubmitTask Task (Event [Data])-- ^ A task has been submitted by the application
+data Message =  AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has been submitted by the application
+              | AppQuit (Event ())            -- ^ Runtime shutdown is requested
+              | AppMapVector DataDesc (Ptr ()) (Event Data) -- ^ A vector data is to be created using existing data
+              | TaskSubmitted Task            -- ^ A task has been submitted
               | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
               | TaskComplete Task             -- ^ A task has completed
               | KernelComplete Kernel         -- ^ A kernel has completed
               | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
               | TransferComplete Transfer     -- ^ A data transfer has completed
-              | MapVector DataDesc (Ptr ()) (Event Data) -- ^ A vector data is to be created using existing data
               | DataRelease Data              -- ^ A data is no longer necessary
-              | Quit (Event ())               -- ^ Runtime shutdown is requested
 
 -- | State of the runtime system
 data RuntimeState = RuntimeState {
@@ -58,7 +60,7 @@ data RuntimeState = RuntimeState {
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
   _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
-  _submittedTasks :: [(Task,[Data])],       -- ^ Tasks that are to be scheduled
+  _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
   _scheduledTasks :: Map Processor [Task]   -- ^ Tasks scheduled on processors (may be executing)
 }
 
@@ -71,7 +73,7 @@ $( makeLens ''RuntimeState )
 
 -- | True if message is Quit
 isQuit :: Message -> Bool
-isQuit (Quit _) = True
+isQuit (AppQuit _) = True
 isQuit _ = False
 
 -- | Starts the runtime on the given platform
@@ -101,7 +103,7 @@ startRuntime pf l s = do
     logInfo l "This log will now be closed"
     shutdownLogger l
     -- Signal that runtime is stopped to the application
-    let (Quit ev) = msg
+    let (AppQuit ev) = msg
     setEvent ev ()
   return $ Runtime ch
 

@@ -14,7 +14,7 @@ import Control.Monad.State
 
 dataManagerScheduler :: Scheduler 
 
-dataManagerScheduler (MapVector desc@(VectorDesc prim n) ptr r) = do
+dataManagerScheduler (AppMapVector desc@(VectorDesc prim n) ptr r) = do
   let sz = n * primitiveSize prim
   logInfoR $ printf "Mapping %s vector of %d elements at address %s" (show prim) n (show ptr)
   buf <- lift . return $ HostBuffer sz ptr

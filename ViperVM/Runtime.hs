@@ -10,7 +10,6 @@ import ViperVM.Data
 import ViperVM.Event
 import ViperVM.RuntimeInternal
 import ViperVM.KernelSet
-import ViperVM.Task
 
 import Control.Concurrent
 import Data.Word
@@ -30,12 +29,12 @@ sync f = waitEvent =<< f
 -- | Map a Vector of host memory into runtime managed memory
 -- You mustn't use mapped host memory
 mapVector :: Runtime -> Primitive -> Word64 -> Ptr () -> IO (Event Data)
-mapVector r prim sz ptr = sendRuntimeCmd r $ MapVector (VectorDesc prim sz) ptr
+mapVector r prim sz ptr = sendRuntimeCmd r $ AppMapVector (VectorDesc prim sz) ptr
 
 -- | Stop the given runtime
 stopRuntime :: Runtime -> IO (Event ())
-stopRuntime r = sendRuntimeCmd r Quit 
+stopRuntime r = sendRuntimeCmd r AppQuit 
 
 -- | Submit a task to the runtime system
 submitTask :: Runtime -> KernelSet -> [Data] -> IO (Event [Data])
-submitTask r ks ds = sendRuntimeCmd r $ SubmitTask (Task ks ds)
+submitTask r ks ds = sendRuntimeCmd r $ AppTaskSubmit ks ds

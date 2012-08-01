@@ -12,10 +12,8 @@ import ViperVM.Task
 
 taskManagerScheduler :: Scheduler
 
-taskManagerScheduler (SubmitTask task r) = do
+taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
   
-  let Task (KernelSet ki _) ds = task
-
   -- Make kernel parameters from inputs:
   --   - data accessed in read-only mode
   --   - data accessed in read-write mode
@@ -25,8 +23,13 @@ taskManagerScheduler (SubmitTask task r) = do
   -- Retrieve or create data for each parameter
   datas <- traverse paramToData params
 
-  -- Store task and data in state
-  modify (submittedTasks ^%= (:) (task,datas))
+  let task = Task ks ds datas
+
+  -- Store task in state
+  modify (submittedTasks ^%= (:) task)
+
+  -- Indicate that a task has been submitted
+  postMessageR $ TaskSubmitted task
 
   -- Return result data
   let result = makeResult ki datas

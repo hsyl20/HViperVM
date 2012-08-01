@@ -17,8 +17,8 @@ import Text.Printf
 -- | Schedule task on the processor able to handle it which has the smallesst number of assigned tasks
 eagerScheduler :: Scheduler
 
-eagerScheduler (SubmitTask task _) = do
-  let Task (KernelSet _ ks) _ = task
+eagerScheduler (TaskSubmitted task) = do
+  let KernelSet _ ks = kernelSet task
 
   procTasks <- gets (scheduledTasks ^$)
 

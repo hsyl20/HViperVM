@@ -23,8 +23,8 @@ import Data.Lens.Lazy
 -- provided compiler
 eagerKernelCompiler :: Compiler -> Scheduler
 
-eagerKernelCompiler compiler (SubmitTask task _) = do
-  let Task (KernelSet _ ks) _ = task
+eagerKernelCompiler compiler (TaskSubmitted task) = do
+  let KernelSet _ ks = kernelSet task
   procs <- getProcessorsR
   channel <- getChannelR
 
@@ -47,7 +47,7 @@ eagerKernelCompiler _ (KernelCompiled k procs cks) = do
   modify (compiledKernels ^%= insert k new)
 
 
-eagerKernelCompiler compiler (Quit _) = do
+eagerKernelCompiler compiler (AppQuit _) = do
   logInfoR "Waiting for compilations to terminate..."
   v <- lift $ newEmptyMVar
   lift $ shutdown compiler (putMVar v ())
