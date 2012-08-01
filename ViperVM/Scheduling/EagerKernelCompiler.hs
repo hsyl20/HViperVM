@@ -23,8 +23,8 @@ import Data.Lens.Lazy
 -- provided compiler
 eagerKernelCompiler :: Compiler -> Scheduler
 
-eagerKernelCompiler compiler (SubmitTask task) = do
-  let Task (KernelSet _ ks) _ _ _ = task
+eagerKernelCompiler compiler (SubmitTask task _) = do
+  let Task (KernelSet _ ks) _ = task
   procs <- getProcessorsR
   channel <- getChannelR
 

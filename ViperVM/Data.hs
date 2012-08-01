@@ -24,3 +24,6 @@ instance Eq Data where
 
 instance Ord Data where
   compare (Data id1 _) (Data id2 _) = compare id1 id2
+
+dataDescriptor :: Data -> DataDesc
+dataDescriptor (Data _ desc) = desc

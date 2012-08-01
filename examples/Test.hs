@@ -29,11 +29,10 @@ main = do
   scheduler <- defaultScheduler logger
   runtime <- startRuntime platform logger scheduler
 
-  v1 <- sync $ mapVector runtime PrimFloat n v1ptr
-  v2 <- sync $ mapVector runtime PrimFloat n v2ptr
-  v3 <- sync $ createVector runtime PrimFloat n
+  a <- sync $ mapVector runtime PrimFloat n v1ptr
+  b <- sync $ mapVector runtime PrimFloat n v2ptr
 
-  submitTask runtime floatMatrixAdd [v1,v2,v3] []
+  [c] <- sync $ submitTask runtime floatMatrixAdd [a,b]
 
   sync $ stopRuntime runtime
 

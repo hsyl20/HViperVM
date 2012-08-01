@@ -25,9 +25,4 @@ dataManagerScheduler (MapVector desc@(VectorDesc prim n) ptr r) = do
   registerDataInstance d di
   setEventR r d
 
-dataManagerScheduler (CreateVector desc@(VectorDesc prim n) r) = do
-  logInfoR $ printf "Creating a new %s vector of %d elements" (show prim) n
-  d <- newData desc
-  setEventR r d
-
 dataManagerScheduler _ = voidR

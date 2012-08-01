@@ -7,4 +7,4 @@ import ViperVM.Kernel
 data KernelSet = KernelSet KernelInterface [Kernel]
 
 instance Show KernelSet where
-  show (KernelSet (KernelInterface n _) _) = n
+  show (KernelSet (KernelInterface n _ _) _) = n

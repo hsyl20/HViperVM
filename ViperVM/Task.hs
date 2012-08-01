@@ -5,7 +5,7 @@ import ViperVM.Event
 import ViperVM.KernelSet
 
 -- | A task
-data Task = Task KernelSet [Data] [Event ()] (Event ())
+data Task = Task KernelSet [Data]
 
 instance Show Task where
-  show (Task ks _ _ _) = show ks
+  show (Task ks _) = show ks

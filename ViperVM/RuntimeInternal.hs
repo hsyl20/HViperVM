@@ -9,7 +9,7 @@ module ViperVM.RuntimeInternal (
   registerBuffer, registerDataInstance, newData,
   shutdownLogger,
   setEventR,
-  getProcessorsR, getLoggerR, getChannelR, postMessageR,
+  getProcessorsR, getLoggerR, getChannelR, postMessageR, paramToData,
   -- Lenses
   submittedTasks, compiledKernels, scheduledTasks
   ) where
@@ -28,19 +28,19 @@ import ViperVM.Buffer
 import ViperVM.Data
 import ViperVM.Event
 import ViperVM.Kernel
+import ViperVM.KernelInterface
 import ViperVM.Logging.Logger
 import ViperVM.Platform
 import ViperVM.Task
 import ViperVM.Transfer
 
 -- | Messages that the runtime can handle.
-data Message =  SubmitTask Task               -- ^ A task has been submitted by the application
+data Message =  SubmitTask Task (Event [Data])-- ^ A task has been submitted by the application
               | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
               | TaskComplete Task             -- ^ A task has completed
               | KernelComplete Kernel         -- ^ A kernel has completed
               | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
               | TransferComplete Transfer     -- ^ A data transfer has completed
-              | CreateVector DataDesc (Event Data) -- ^ A new vector data is to be created
               | MapVector DataDesc (Ptr ()) (Event Data) -- ^ A vector data is to be created using existing data
               | DataRelease Data              -- ^ A data is no longer necessary
               | Quit (Event ())               -- ^ Runtime shutdown is requested
@@ -58,7 +58,7 @@ data RuntimeState = RuntimeState {
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
   _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
-  _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
+  _submittedTasks :: [(Task,[Data])],       -- ^ Tasks that are to be scheduled
   _scheduledTasks :: Map Processor [Task]   -- ^ Tasks scheduled on processors (may be executing)
 }
 
@@ -239,3 +239,14 @@ runCompiledKernelOn proc k params = undefined
 -- Set an event in the R monad
 setEventR :: Event a -> a -> R ()
 setEventR ev v = lift $ setEvent ev v
+
+
+-- | Create data handle for a kernel parameter
+paramToData :: Parameter -> R Data
+paramToData (ReadOnly d) = return d
+paramToData (ReadWrite d) = do
+  d2 <- newData (dataDescriptor d)
+  return d2
+paramToData (Allocate dd) = do
+  d2 <- newData dd
+  return d2

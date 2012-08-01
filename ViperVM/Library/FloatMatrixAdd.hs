@@ -6,6 +6,7 @@ module ViperVM.Library.FloatMatrixAdd (
 import ViperVM.Kernel
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
+import ViperVM.Data
 
 floatMatrixAddCL :: Kernel
 floatMatrixAddCL = CLKernel "floatMatrixAdd" [] "" "\
@@ -24,7 +25,8 @@ floatMatrixAddCL = CLKernel "floatMatrixAdd" [] "" "\
 floatMatrixAddInterface :: KernelInterface
 floatMatrixAddInterface = KernelInterface {
   name = "Float Matrix Addition",
-  modes = [ReadOnly,ReadOnly,ReadWrite]
+  makeParameters = \[a,b] -> [ReadOnly a, ReadOnly b, Allocate (dataDescriptor a)],
+  makeResult = \[_,_,c] -> [c]
 }
 
 floatMatrixAdd :: KernelSet
