@@ -72,3 +72,8 @@ platformInfo :: Platform -> IO String
 platformInfo pf = do
   procs <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse procInfo (processors pf)
   return ("Processors:\n" ++ procs)
+
+attachedMemories :: Processor -> [Memory]
+attachedMemories (CLProcessor lib ctx dev) = [CLMemory lib ctx dev]
+attachedMemories HostProcessor = [HostMemory]
+

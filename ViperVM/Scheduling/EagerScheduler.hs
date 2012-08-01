@@ -18,7 +18,7 @@ import Text.Printf
 eagerScheduler :: Scheduler
 
 eagerScheduler (TaskSubmitted task) = do
-  let KernelSet _ ks = kernelSet task
+  let Task (KernelSet _ ks) _ = task
 
   procTasks <- gets (scheduledTasks ^$)
 

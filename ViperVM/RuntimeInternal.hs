@@ -2,7 +2,7 @@
 
 module ViperVM.RuntimeInternal (
   -- Types
-  Scheduler, Runtime(..), Message (..),
+  Scheduler, Runtime(..), Message (..), TaskRequest(..),
   -- Methods
   startRuntime, voidR,
   logCustomR, logInfoR, logWarningR, logErrorR,
@@ -11,14 +11,18 @@ module ViperVM.RuntimeInternal (
   setEventR,
   getProcessorsR, getLoggerR, getChannelR, getDatasR,
   postMessageR, kpToTp, dataInstanceExistsR, getInstancesR,
+  getCompiledKernelR,
+  registerActiveRequestR, registerTaskRequestsR,
   -- Lenses
   submittedTasks, compiledKernels, scheduledTasks
   ) where
 
 import Prelude hiding (lookup)
+
 import Control.Applicative ( (<$>), liftA2 )
 import Control.Concurrent
 import Control.Monad.State
+import Data.Foldable
 import Data.Lens.Lazy
 import Data.Lens.Template
 import Data.Map
@@ -50,6 +54,13 @@ data Message =  AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has bee
               | TransferComplete Transfer     -- ^ A data transfer has completed
               | DataRelease Data              -- ^ A data is no longer necessary
 
+data TaskRequest = RequestComputation Data
+                 | RequestCompilation [Kernel] Processor
+                 | RequestTransfer [Memory] Data
+                 | RequestDuplication Data Data Memory
+                 | RequestAllocation Data Memory
+                 deriving (Eq,Ord)
+
 -- | State of the runtime system
 data RuntimeState = RuntimeState {
   channel :: Chan Message,                  -- ^ Channel to communicate with the runtime
@@ -59,12 +70,14 @@ data RuntimeState = RuntimeState {
   linkChannels :: Map Link (Chan Transfer), -- ^ Channels to communicate with link threads
   -- Lenses
   _buffers :: Map Memory [Buffer],          -- ^ Buffers in each memory
-  _activeTransfers :: [Transfer],           -- ^ Current data transfers
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
   _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
   _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
-  _scheduledTasks :: Map Processor [Task]   -- ^ Tasks scheduled on processors (may be executing)
+  _scheduledTasks :: Map Processor [Task],  -- ^ Tasks scheduled on processors (may be executing)
+  _requestTasks :: Map TaskRequest [Task],  -- ^ Requests and tasks that have made the request
+  _taskRequests :: Map Task [TaskRequest],  -- ^ Tasks and the request the have made
+  _activeRequests :: [TaskRequest]
 }
 
 type R = StateT RuntimeState IO
@@ -92,12 +105,14 @@ startRuntime pf l s = do
     scheduler = s,
     linkChannels = lkChans,
     _buffers = empty,
-    _activeTransfers = [],
     _datas = empty,
     _dataCounter = 0,
     _compiledKernels = empty,
     _submittedTasks = [],
-    _scheduledTasks = fromList $ fmap (,[]) (processors pf)
+    _scheduledTasks = fromList $ fmap (,[]) (processors pf),
+    _requestTasks = empty,
+    _taskRequests = empty,
+    _activeRequests = []
   }
   void $ forkIO $ do
     logInfo l "Runtime started"
@@ -170,13 +185,25 @@ unregisterBuffer buf = modify (buffers ^%= modBuffer)
 submitTransfer :: Transfer -> R ()
 submitTransfer transfer@(Transfer link _ _) = do
   lift $ unless (checkTransfer transfer) $ error "Invalid transfer"
-  registerActiveTransfer transfer
   ch <- gets $ \x -> linkChannels x ! link
   lift $ writeChan ch transfer
 
--- | Register an active transfer
-registerActiveTransfer :: Transfer -> R ()
-registerActiveTransfer transfer = modify(activeTransfers ^%= (++) [transfer])
+-- | Register a request being fulfilled
+registerActiveRequestR :: TaskRequest -> R ()
+registerActiveRequestR req = modify(activeRequests ^%= (++) [req])
+
+-- | Register task requests
+registerTaskRequestsR :: Task -> [TaskRequest] -> R ()
+registerTaskRequestsR t reqs = do
+  modify(taskRequests ^%= alter (const $ Just reqs) t)
+  traverse_ (registerRequestTaskR t) reqs
+  
+-- | Register a request if it doesn't already exist and associate a task to it
+registerRequestTaskR :: Task -> TaskRequest -> R ()
+registerRequestTaskR t r = modify(requestTasks ^%= alter f r)
+  where
+    f (Just ts) = Just (t:ts)
+    f Nothing = Just [t]
 
 -- | Write a custom string message in the log
 logCustomR :: String -> String -> R ()
@@ -266,3 +293,9 @@ dataInstanceExistsR d = do
   ds <- getDatasR
   let n = fromMaybe 0 $ fmap length $ lookup d ds
   return $ n /= 0
+
+-- | Return a compiled kernel from the cache, if any
+getCompiledKernelR :: Processor -> Kernel -> R (Maybe CompiledKernel)
+getCompiledKernelR p k = do
+  cced <- gets (compiledKernels ^$)
+  return $ lookup p =<< lookup k cced

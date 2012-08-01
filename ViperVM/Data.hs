@@ -2,6 +2,10 @@ module ViperVM.Data where
 
 import Data.Word
 import ViperVM.View
+import ViperVM.Buffer
+import ViperVM.Platform
+
+----------------------------------------------------
 
 data Primitive = PrimFloat | PrimDouble
 
@@ -13,8 +17,7 @@ primitiveSize :: Primitive -> Word64
 primitiveSize PrimFloat = 4
 primitiveSize PrimDouble = 8
 
-data DataDesc = VectorDesc Primitive Word64
-data DataInstance = Vector View
+----------------------------------------------------
 
 type DataID = Word
 data Data = Data DataID DataDesc
@@ -27,3 +30,14 @@ instance Ord Data where
 
 dataDescriptor :: Data -> DataDesc
 dataDescriptor (Data _ desc) = desc
+
+----------------------------------------------------
+
+data DataDesc = VectorDesc Primitive Word64
+
+data DataInstance = Vector View
+
+-- | Return memory containing a data instance
+getDataInstanceMemory :: DataInstance -> Memory
+getDataInstanceMemory (Vector (View1D buf _ _)) = getBufferMemory buf
+getDataInstanceMemory _ = undefined
