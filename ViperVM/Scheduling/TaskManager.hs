@@ -4,7 +4,10 @@ module ViperVM.Scheduling.TaskManager (
 
 import Control.Monad.State
 import Data.Lens.Lazy
+import Data.Map (insert)
+import Data.Foldable
 import Data.Traversable
+
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
 import ViperVM.RuntimeInternal
@@ -28,6 +31,9 @@ taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
 
   -- Store task in state
   modify (submittedTasks ^%= (:) task)
+
+  -- Store data->task association
+  traverse_ (\d -> modify (dataTasks ^%= insert d task)) datas
 
   -- Indicate that a task has been submitted
   postMessageR $ TaskSubmitted task

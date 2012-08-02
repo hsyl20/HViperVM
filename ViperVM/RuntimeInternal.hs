@@ -4,7 +4,7 @@ module ViperVM.RuntimeInternal (
   -- Types
   Scheduler, Runtime(..), Message (..), TaskRequest(..),
   -- Methods
-  startRuntime, voidR,
+  startRuntime, voidR, putStrLnR,
   logCustomR, logInfoR, logWarningR, logErrorR,
   registerBuffer, registerDataInstance, newData,
   shutdownLogger,
@@ -14,7 +14,7 @@ module ViperVM.RuntimeInternal (
   getCompiledKernelR,
   registerActiveRequestR, registerTaskRequestsR,
   -- Lenses
-  submittedTasks, compiledKernels, scheduledTasks
+  submittedTasks, compiledKernels, scheduledTasks, dataTasks
   ) where
 
 import Prelude hiding (lookup)
@@ -27,6 +27,8 @@ import Data.Lens.Lazy
 import Data.Lens.Template
 import Data.Map
 import Data.Maybe (fromMaybe)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Word
 import Foreign.Ptr
 import qualified Data.List as List
@@ -49,6 +51,7 @@ data Message =  AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has bee
               | TaskSubmitted Task            -- ^ A task has been submitted
               | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
               | TaskComplete Task             -- ^ A task has completed
+              | Request TaskRequest           -- ^ A new task request has been submitted
               | KernelComplete Kernel         -- ^ A kernel has completed
               | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
               | TransferComplete Transfer     -- ^ A data transfer has completed
@@ -59,7 +62,7 @@ data TaskRequest = RequestComputation Data
                  | RequestTransfer [Memory] Data
                  | RequestDuplication Data Data Memory
                  | RequestAllocation Data Memory
-                 deriving (Eq,Ord)
+                 deriving (Eq,Ord,Show)
 
 -- | State of the runtime system
 data RuntimeState = RuntimeState {
@@ -71,13 +74,14 @@ data RuntimeState = RuntimeState {
   -- Lenses
   _buffers :: Map Memory [Buffer],          -- ^ Buffers in each memory
   _datas :: Map Data [DataInstance],        -- ^ Registered data
+  _dataTasks :: Map Data Task,              -- ^ Task computing each (uncomputed) data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
   _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
   _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
   _scheduledTasks :: Map Processor [Task],  -- ^ Tasks scheduled on processors (may be executing)
   _requestTasks :: Map TaskRequest [Task],  -- ^ Requests and tasks that have made the request
-  _taskRequests :: Map Task [TaskRequest],  -- ^ Tasks and the request the have made
-  _activeRequests :: [TaskRequest]
+  _taskRequests :: Map Task (Set TaskRequest),  -- ^ Tasks and the request the have made
+  _activeRequests :: Set TaskRequest
 }
 
 type R = StateT RuntimeState IO
@@ -106,13 +110,14 @@ startRuntime pf l s = do
     linkChannels = lkChans,
     _buffers = empty,
     _datas = empty,
+    _dataTasks = empty,
     _dataCounter = 0,
     _compiledKernels = empty,
     _submittedTasks = [],
     _scheduledTasks = fromList $ fmap (,[]) (processors pf),
     _requestTasks = empty,
     _taskRequests = empty,
-    _activeRequests = []
+    _activeRequests = Set.empty
   }
   void $ forkIO $ do
     logInfo l "Runtime started"
@@ -190,17 +195,19 @@ submitTransfer transfer@(Transfer link _ _) = do
 
 -- | Register a request being fulfilled
 registerActiveRequestR :: TaskRequest -> R ()
-registerActiveRequestR req = modify(activeRequests ^%= (++) [req])
+registerActiveRequestR req = modify(activeRequests ^%= Set.insert req)
 
 -- | Register task requests
-registerTaskRequestsR :: Task -> [TaskRequest] -> R ()
+registerTaskRequestsR :: Task -> Set TaskRequest -> R ()
 registerTaskRequestsR t reqs = do
   modify(taskRequests ^%= alter (const $ Just reqs) t)
   traverse_ (registerRequestTaskR t) reqs
   
 -- | Register a request if it doesn't already exist and associate a task to it
 registerRequestTaskR :: Task -> TaskRequest -> R ()
-registerRequestTaskR t r = modify(requestTasks ^%= alter f r)
+registerRequestTaskR t r = do
+  modify(requestTasks ^%= alter f r)
+  postMessageR $ Request r
   where
     f (Just ts) = Just (t:ts)
     f Nothing = Just [t]
@@ -266,6 +273,10 @@ shutdownLogger l = void $ withNewEvent $ \e -> do
 -- | "Do nothing" in the R monad
 voidR :: R ()
 voidR = lift $ return ()
+
+-- | putStrLn in the R monad
+putStrLnR :: String -> R ()
+putStrLnR s = lift $ putStrLn s
 
 -- Set an event in the R monad
 setEventR :: Event a -> a -> R ()

@@ -21,6 +21,7 @@ primitiveSize PrimDouble = 8
 
 type DataID = Word
 data Data = Data DataID DataDesc
+            deriving (Show)
 
 instance Eq Data where
   (==) (Data id1 _) (Data id2 _) = id1 == id2
@@ -34,6 +35,7 @@ dataDescriptor (Data _ desc) = desc
 ----------------------------------------------------
 
 data DataDesc = VectorDesc Primitive Word64
+                deriving (Show)
 
 data DataInstance = Vector View
 

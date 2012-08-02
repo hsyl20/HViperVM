@@ -30,6 +30,9 @@ instance Ord Memory where
   compare HostMemory _ = GT
   compare _ HostMemory = LT
 
+instance Show Memory where
+  show m = unsafePerformIO $ memInfo m
+
 instance Eq Processor where
   (==) HostProcessor HostProcessor = True
   (==) (CLProcessor lib1 _ id1) (CLProcessor lib2 _ id2) = lib1 == lib2 && id1 == id2
@@ -72,6 +75,13 @@ platformInfo :: Platform -> IO String
 platformInfo pf = do
   procs <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse procInfo (processors pf)
   return ("Processors:\n" ++ procs)
+
+
+memInfo :: Memory -> IO String
+memInfo HostMemory = return "[Host Memory]"
+memInfo (CLMemory lib _ dev) = do
+  sz <- clGetMemSize lib dev
+  return $ "[OpenCL] " ++ (show sz) ++ "MB"
 
 attachedMemories :: Processor -> [Memory]
 attachedMemories (CLProcessor lib ctx dev) = [CLMemory lib ctx dev]

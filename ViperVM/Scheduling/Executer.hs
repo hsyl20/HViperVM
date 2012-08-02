@@ -8,6 +8,7 @@ import ViperVM.Task
 
 import Data.List (intersect)
 import Data.Maybe
+import Data.Set (fromList)
 import Data.Traversable
 
 
@@ -37,8 +38,10 @@ executer (TaskScheduled task proc) = do
   -- TODO
   
   -- Store requests
-  let requests = computeReqs ++ transferReqs ++ compileReqs
+  let requests = fromList $ computeReqs ++ transferReqs ++ compileReqs
   registerTaskRequestsR task requests
 
+executer (Request r) = do
+  putStrLnR $ show r
 
 executer _ = voidR
