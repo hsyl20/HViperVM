@@ -28,7 +28,7 @@ import Data.Traversable (traverse)
 import Data.Foldable (traverse_)
 import Data.Lens.Lazy
 import Data.Lens.Template
-import Data.List (intersect)
+import Data.List (intersect,partition)
 import Data.Map (Map,alter,empty,lookup,fromList, (!))
 import Data.Maybe (fromMaybe,isJust,catMaybes)
 import Data.Set (Set)
@@ -344,8 +344,17 @@ getCompiledKernelR p k = do
 -- any other task
 getDetachableInstancesR :: Data -> Memory -> R (Set DataInstance)
 getDetachableInstancesR d mem = do
-  --TODO
-  return undefined
+  ds <- gets (datas ^$)
+  let allInstances = fromMaybe [] $ lookup d ds
+
+  let (memInstances,otherInstances) = partition (\i -> mem == getDataInstanceMemory i) allInstances
+  
+  return $ if null otherInstances || invalidLength memInstances then Set.empty else Set.fromList memInstances
+
+  where
+    invalidLength [] = True
+    invalidLength [_] = True
+    invalidLength _ = False
 
 -- | Get detachable instances for a data in a set of memories
 getDetachableInstancesAnyR :: Data -> [Memory] -> R (Set DataInstance)
