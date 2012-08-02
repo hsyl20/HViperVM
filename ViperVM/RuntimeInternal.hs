@@ -14,6 +14,7 @@ module ViperVM.RuntimeInternal (
   getCompiledKernelR,
   registerActiveRequestR, registerTaskRequestsR,
   isDataAllocatedR, isDataAllocatedAnyR,
+  determineTaskRequests, allocBufferR, mapHostBufferR,
   -- Lenses
   submittedTasks, compiledKernels, scheduledTasks, dataTasks
   ) where
@@ -27,8 +28,9 @@ import Data.Traversable (traverse)
 import Data.Foldable (traverse_)
 import Data.Lens.Lazy
 import Data.Lens.Template
-import Data.Map
-import Data.Maybe (fromMaybe,isJust)
+import Data.List (intersect)
+import Data.Map (Map,alter,empty,lookup,fromList, (!))
+import Data.Maybe (fromMaybe,isJust,catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word
@@ -62,7 +64,7 @@ data Message =  AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has bee
 data TaskRequest = RequestComputation Data
                  | RequestCompilation [Kernel] Processor
                  | RequestTransfer [Memory] Data
-                 | RequestDuplication Data Data Memory
+                 | RequestDuplication [Memory] Data
                  | RequestAllocation [Memory] Data
                  deriving (Eq,Ord,Show)
 
@@ -75,10 +77,11 @@ data RuntimeState = RuntimeState {
   linkChannels :: Map Link (Chan Transfer), -- ^ Channels to communicate with link threads
   -- Lenses
   _buffers :: Map Memory [Buffer],          -- ^ Buffers in each memory
-  _datas :: Map Data [DataInstance],        -- ^ Registered data
+  _datas :: Map Data [DataInstance],        -- ^ Data and their valid instances
   _dataTasks :: Map Data Task,              -- ^ Task computing each (uncomputed) data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
-  _dataAllocated :: Map Data (Map Memory DataInstance), -- ^ Allocated data, not valid yet
+  _bufferCounter :: Word,                   -- ^ Buffer counter (used to set buffer ID)
+  _invalidDataInstances :: Map Data [DataInstance], -- ^ Data and their invalid instances (just allocated, used in a transfer, etc.)
   _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
   _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
   _scheduledTasks :: Map Processor [Task],  -- ^ Tasks scheduled on processors (may be executing)
@@ -115,7 +118,8 @@ startRuntime pf l s = do
     _datas = empty,
     _dataTasks = empty,
     _dataCounter = 0,
-    _dataAllocated = empty,
+    _bufferCounter = 0,
+    _invalidDataInstances = empty,
     _compiledKernels = empty,
     _submittedTasks = [],
     _scheduledTasks = fromList $ fmap (,[]) (processors pf),
@@ -153,6 +157,13 @@ newData desc = do
   modify (dataCounter ^%= (+) 1)
   lift $ return (Data d desc)
 
+-- | Return a new buffer identifier
+newBufferID :: R BufferID
+newBufferID = do
+  c <- gets (bufferCounter ^$)
+  modify (bufferCounter ^%= (+) 1)
+  lift $ return c
+
 -- | Register a data with an initial instance
 registerDataInstance :: Data -> DataInstance -> R ()
 registerDataInstance d di = modify (datas ^%= modDatas)
@@ -164,7 +175,7 @@ registerDataInstance d di = modify (datas ^%= modDatas)
 -- | Create a buffer
 createBuffer :: Memory -> Word64 -> R Buffer
 createBuffer mem sz = do
-  buf <- lift $ allocBuffer mem sz
+  buf <- allocBufferR mem sz
   registerBuffer mem buf
   lift $ return buf
 
@@ -312,8 +323,8 @@ dataInstanceExistsR d = do
 -- | Indicate if a data has a allocated (not valid) instance in a memory
 isDataAllocatedR :: Data -> Memory -> R Bool
 isDataAllocatedR d m = do
-  allocs <- gets (dataAllocated ^$)
-  let inst = lookup m =<< lookup d allocs
+  allocs <- gets (invalidDataInstances ^$)
+  let inst = fmap (filter (\i -> m == getDataInstanceMemory i)) $ lookup d allocs
   return $ isJust inst
 
 -- | Indicate if a data has a allocated (not valid) instance in any memory of the given list
@@ -327,3 +338,63 @@ getCompiledKernelR :: Processor -> Kernel -> R (Maybe CompiledKernel)
 getCompiledKernelR p k = do
   cced <- gets (compiledKernels ^$)
   return $ lookup p =<< lookup k cced
+
+-- | Get instances that can be detached, either because there are other
+-- instances on some other memory or because the data won't be used anymore by
+-- any other task
+getDetachableInstancesR :: Data -> Memory -> R (Set DataInstance)
+getDetachableInstancesR d mem = do
+  --TODO
+  return undefined
+
+-- | Get detachable instances for a data in a set of memories
+getDetachableInstancesAnyR :: Data -> [Memory] -> R (Set DataInstance)
+getDetachableInstancesAnyR d ms = fmap Set.unions $ traverse (getDetachableInstancesR d) ms
+
+-- | Determine requests that need to be fulfilled for a task to be scheduled on
+-- a given processor
+determineTaskRequests :: Processor -> Task -> R (Set TaskRequest)
+determineTaskRequests proc task = do
+  let Task (KernelSet ki ks) params = task
+
+  -- Check that input data have been computed (i.e. have at least one instance)
+  let inputs = roDatas params
+
+  inputInstances <- traverse getInstancesR inputs
+  let computeReqs = map RequestComputation $ catMaybes $ zipWith (\x y -> if null x then Just y else Nothing) inputInstances inputs
+
+  -- Check that there is an instance of each parameter available in memory
+  let mems = attachedMemories proc
+  let inputInstanceMemories = map (intersect mems . map getDataInstanceMemory) inputInstances
+  let transferReqs = map (RequestTransfer mems) $ catMaybes $ zipWith (\x y -> if null x then Just y else Nothing) inputInstanceMemories inputs
+
+  -- Check that a kernel for the given proc has been compiled
+  cced <- traverse (getCompiledKernelR proc) ks
+  let compileReqs = if null (catMaybes cced) then [RequestCompilation ks proc] else []
+
+  -- Check allocated output data
+  let outputs = woDatas params
+  isAllocatedOutput <- traverse (flip isDataAllocatedAnyR mems) outputs
+  let allocReqs = map (RequestAllocation mems) $ catMaybes $ zipWith (\x y -> if x then Just y else Nothing) isAllocatedOutput outputs
+
+  -- Checks for read-write data: we need to detect if an instance of the input
+  -- data can be detached
+  let rwInputs = rwInputDatas params
+  detachableInstances <- traverse (flip getDetachableInstancesAnyR mems) rwInputs
+  let duplicateReqs = map (RequestDuplication mems) $ catMaybes $ zipWith (\x y -> if Set.null x then Just y else Nothing) detachableInstances rwInputs
+
+  let requests = Set.fromList $ computeReqs ++ transferReqs ++ compileReqs ++ allocReqs ++ duplicateReqs
+  return requests
+
+-- | Allocate a buffer in the given memory
+allocBufferR :: Memory -> Word64 -> R Buffer
+allocBufferR m sz = do
+  i <- newBufferID
+  buf <- lift $ allocBuffer i m sz
+  return buf
+
+-- | Map a host buffer
+mapHostBufferR :: Word64 -> Ptr () -> R Buffer
+mapHostBufferR sz ptr = do
+  i <- newBufferID
+  return $ HostBuffer i sz ptr

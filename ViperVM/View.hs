@@ -11,6 +11,7 @@ type Index = Word64
 
 data View = View1D Buffer Offset Size |
             View2D Buffer Offset Index Size Padding
+            deriving (Eq,Ord,Show)
 
 checkCompatibleViews :: View -> View -> Bool
 checkCompatibleViews (View1D _ _ s1) (View1D _ _ s2) = s1 == s2

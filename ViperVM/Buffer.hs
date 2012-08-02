@@ -9,32 +9,41 @@ import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import ViperVM.Backends.OpenCL
 
-data Buffer = CLBuffer OpenCLLibrary Memory CLMem | HostBuffer Word64 (Ptr ())
+type BufferID = Word
 
+data Buffer = CLBuffer BufferID OpenCLLibrary Memory CLMem | HostBuffer BufferID Word64 (Ptr ())
+              
 instance Eq Buffer where
-  (==) (CLBuffer _ mem1 m1) (CLBuffer _ mem2 m2) = (mem1 == mem2) && (m1 == m2)
-  (==) (HostBuffer _ m1) (HostBuffer _ m2) = m1 == m2
-  (==) _ _ = False
+  (==) a b = getBufferID a == getBufferID b
 
+instance Ord Buffer where
+  compare a b = compare (getBufferID a) (getBufferID b)
 
--- | Allocate a buffer in the given memory
-allocBuffer :: Memory -> Word64 -> IO Buffer
-allocBuffer HostMemory sz = do
+instance Show Buffer where
+  show b@(CLBuffer {}) = "OpenCL Buffer " ++ (show $ getBufferID b)
+  show b@(HostBuffer {}) = "Host Buffer " ++ (show $ getBufferID b)
+
+allocBuffer :: BufferID -> Memory -> Word64 -> IO Buffer
+allocBuffer i HostMemory sz = do
   ptr <- mallocBytes (fromIntegral sz)
-  return $ HostBuffer sz ptr
+  return $ HostBuffer i sz ptr
 
-allocBuffer mem@(CLMemory lib ctx dev) sz = do
+allocBuffer i mem@(CLMemory lib ctx dev) sz = do
   clmem <- clCreateBuffer lib ctx [] (sz,nullPtr)
   -- TODO: Force allocation on dev
-  return $ CLBuffer lib mem clmem
+  return $ CLBuffer i lib mem clmem
 
+-- | Return buffer unique identifier
+getBufferID :: Buffer -> BufferID
+getBufferID (CLBuffer i _ _ _) = i
+getBufferID (HostBuffer i _ _) = i
 
 -- | Release a buffer
 freeBuffer :: Buffer -> IO ()
-freeBuffer (HostBuffer _ ptr) = free ptr
-freeBuffer (CLBuffer lib _ m) = void $ clReleaseMemObject lib m
+freeBuffer (HostBuffer _ _ ptr) = free ptr
+freeBuffer (CLBuffer _ lib _ m) = void $ clReleaseMemObject lib m
 
 -- | Return memory containing the buffer
 getBufferMemory :: Buffer -> Memory
-getBufferMemory (HostBuffer _ _) = HostMemory
-getBufferMemory (CLBuffer _ mem _) = mem
+getBufferMemory (HostBuffer _ _ _) = HostMemory
+getBufferMemory (CLBuffer _ _ mem _) = mem

@@ -8,6 +8,7 @@ import ViperVM.Platform
 ----------------------------------------------------
 
 data Primitive = PrimFloat | PrimDouble
+                 deriving (Eq,Ord)
 
 instance Show Primitive where
   show PrimFloat = "Float"
@@ -35,9 +36,10 @@ dataDescriptor (Data _ desc) = desc
 ----------------------------------------------------
 
 data DataDesc = VectorDesc Primitive Word64
-                deriving (Show)
+                deriving (Eq,Ord,Show)
 
 data DataInstance = Vector View
+                    deriving (Eq,Ord,Show)
 
 -- | Return memory containing a data instance
 getDataInstanceMemory :: DataInstance -> Memory
