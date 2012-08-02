@@ -19,6 +19,7 @@ executer (TaskScheduled task proc) = do
 
   -- Check that input data have been computed (i.e. have at least one instance)
   let inputs = inputDatas params
+
   inputInstances <- traverse getInstancesR inputs
   let computeReqs = map RequestComputation $ catMaybes $ zipWith (\x y -> if null x then Just y else Nothing) inputInstances inputs
 
@@ -31,14 +32,16 @@ executer (TaskScheduled task proc) = do
   cced <- traverse (getCompiledKernelR proc) ks
   let compileReqs = if null (catMaybes cced) then [RequestCompilation ks proc] else []
 
+  -- Check allocated output data
+  let outputs = outputDatas params
+  isAllocatedOutput <- traverse (flip isDataAllocatedAnyR mems) outputs
+  let allocReqs = map (RequestAllocation mems) $ catMaybes $ zipWith (\x y -> if x then Just y else Nothing) isAllocatedOutput outputs
+
   -- Check read-write data (that may need to be duplicated)
   -- TODO
 
-  -- Check allocated output data
-  -- TODO
-  
   -- Store requests
-  let requests = fromList $ computeReqs ++ transferReqs ++ compileReqs
+  let requests = fromList $ computeReqs ++ transferReqs ++ compileReqs ++ allocReqs
   registerTaskRequestsR task requests
 
 executer (Request r) = do

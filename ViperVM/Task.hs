@@ -32,3 +32,13 @@ inputData (TPAllocate _) = Nothing
 -- | Return input datas for a list of parameters
 inputDatas :: [TaskParameter] -> [Data]
 inputDatas ps = catMaybes $ map inputData ps
+
+-- | Return output data for the given parameter
+outputData :: TaskParameter -> Maybe Data
+outputData (TPReadOnly _) = Nothing
+outputData (TPReadWrite _ d) = Just d
+outputData (TPAllocate d) = Just d
+
+-- | Return output datas for a list of parameters
+outputDatas :: [TaskParameter] -> [Data]
+outputDatas ps = catMaybes $ map outputData ps

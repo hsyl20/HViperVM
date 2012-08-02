@@ -13,6 +13,7 @@ module ViperVM.RuntimeInternal (
   postMessageR, kpToTp, dataInstanceExistsR, getInstancesR,
   getCompiledKernelR,
   registerActiveRequestR, registerTaskRequestsR,
+  isDataAllocatedR, isDataAllocatedAnyR,
   -- Lenses
   submittedTasks, compiledKernels, scheduledTasks, dataTasks
   ) where
@@ -22,11 +23,12 @@ import Prelude hiding (lookup)
 import Control.Applicative ( (<$>), liftA2 )
 import Control.Concurrent
 import Control.Monad.State
-import Data.Foldable
+import Data.Traversable (traverse)
+import Data.Foldable (traverse_)
 import Data.Lens.Lazy
 import Data.Lens.Template
 import Data.Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe,isJust)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word
@@ -61,7 +63,7 @@ data TaskRequest = RequestComputation Data
                  | RequestCompilation [Kernel] Processor
                  | RequestTransfer [Memory] Data
                  | RequestDuplication Data Data Memory
-                 | RequestAllocation Data Memory
+                 | RequestAllocation [Memory] Data
                  deriving (Eq,Ord,Show)
 
 -- | State of the runtime system
@@ -76,6 +78,7 @@ data RuntimeState = RuntimeState {
   _datas :: Map Data [DataInstance],        -- ^ Registered data
   _dataTasks :: Map Data Task,              -- ^ Task computing each (uncomputed) data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
+  _dataAllocated :: Map Data (Map Memory DataInstance), -- ^ Allocated data, not valid yet
   _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
   _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
   _scheduledTasks :: Map Processor [Task],  -- ^ Tasks scheduled on processors (may be executing)
@@ -112,6 +115,7 @@ startRuntime pf l s = do
     _datas = empty,
     _dataTasks = empty,
     _dataCounter = 0,
+    _dataAllocated = empty,
     _compiledKernels = empty,
     _submittedTasks = [],
     _scheduledTasks = fromList $ fmap (,[]) (processors pf),
@@ -304,6 +308,19 @@ dataInstanceExistsR d = do
   ds <- getDatasR
   let n = fromMaybe 0 $ fmap length $ lookup d ds
   return $ n /= 0
+
+-- | Indicate if a data has a allocated (not valid) instance in a memory
+isDataAllocatedR :: Data -> Memory -> R Bool
+isDataAllocatedR d m = do
+  allocs <- gets (dataAllocated ^$)
+  let inst = lookup m =<< lookup d allocs
+  return $ isJust inst
+
+-- | Indicate if a data has a allocated (not valid) instance in any memory of the given list
+isDataAllocatedAnyR :: Data -> [Memory] -> R Bool
+isDataAllocatedAnyR d ms = do
+  rs <- traverse (isDataAllocatedR d) ms
+  return $ any id rs
 
 -- | Return a compiled kernel from the cache, if any
 getCompiledKernelR :: Processor -> Kernel -> R (Maybe CompiledKernel)
