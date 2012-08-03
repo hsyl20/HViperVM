@@ -14,7 +14,7 @@ module ViperVM.RuntimeInternal (
   getCompiledKernelR,
   registerActiveRequestR, registerTaskRequestsR,
   isDataAllocatedR, isDataAllocatedAnyR,
-  determineTaskRequests, allocBufferR, mapHostBufferR,
+  determineTaskRequests, allocBufferR, mapHostBufferR, filterRequestsR,
   -- Lenses
   submittedTasks, compiledKernels, scheduledTasks, dataTasks
   ) where
@@ -30,6 +30,7 @@ import Data.Lens.Lazy
 import Data.Lens.Template
 import Data.List (intersect,partition)
 import Data.Map (Map,alter,empty,lookup,fromList, (!))
+import qualified Data.Map as Map
 import Data.Maybe (fromMaybe,isJust,catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -61,11 +62,11 @@ data Message =  AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has bee
               | TransferComplete Transfer     -- ^ A data transfer has completed
               | DataRelease Data              -- ^ A data is no longer necessary
 
-data TaskRequest = RequestComputation Data
-                 | RequestCompilation [Kernel] Processor
-                 | RequestTransfer [Memory] Data
-                 | RequestDuplication [Memory] Data
-                 | RequestAllocation [Memory] Data
+data TaskRequest = RequestComputation Data                -- ^ Request that a data has been computed
+                 | RequestCompilation [Kernel] Processor  -- ^ Request compilation of at least one kernel for the given processor
+                 | RequestTransfer [Memory] Data          -- ^ Request the transfer of a data instance in any of the given memories
+                 | RequestDuplication [Memory] Data       -- ^ Request a duplicated instance (i.e. detachable) of the data in any of the given memories
+                 | RequestAllocation [Memory] Data        -- ^ Request the allocation of a placeholder for the given data in any of the given memories
                  deriving (Eq,Ord,Show)
 
 -- | State of the runtime system
@@ -340,15 +341,15 @@ getCompiledKernelR p k = do
   return $ lookup p =<< lookup k cced
 
 -- | Get instances that can be detached, either because there are other
--- instances on some other memory or because the data won't be used anymore by
--- any other task
+-- instances or because the data won't be used anymore by any other task
 getDetachableInstancesR :: Data -> Memory -> R (Set DataInstance)
 getDetachableInstancesR d mem = do
+  
   ds <- gets (datas ^$)
   let allInstances = fromMaybe [] $ lookup d ds
-
   let (memInstances,otherInstances) = partition (\i -> mem == getDataInstanceMemory i) allInstances
   
+  -- TODO: indicate that instances that won't be used by any other task are valid
   return $ if null otherInstances || invalidLength memInstances then Set.empty else Set.fromList memInstances
 
   where
@@ -407,3 +408,10 @@ mapHostBufferR :: Word64 -> Ptr () -> R Buffer
 mapHostBufferR sz ptr = do
   i <- newBufferID
   return $ HostBuffer i sz ptr
+
+-- | Filter stored requests
+filterRequestsR :: (TaskRequest -> Bool) -> R ()
+filterRequestsR f = do
+  modify(taskRequests ^%= Map.map (Set.filter f))
+  modify(requestTasks ^%= Map.filterWithKey (\k _ -> f k))
+  modify(activeRequests ^%= Set.filter f)
