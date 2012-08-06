@@ -318,14 +318,13 @@ kpToTp (KPAllocate dd) = do
 getInstancesR :: Data -> R [DataInstance]
 getInstancesR d = do
   ds <- getDatasR
-  return $ fromMaybe [] $ lookup d ds
+  return $ Map.findWithDefault [] d ds
 
 -- | Check for existing instance of a data
 dataInstanceExistsR :: Data -> R Bool
 dataInstanceExistsR d = do
-  ds <- getDatasR
-  let n = fromMaybe 0 $ fmap length $ lookup d ds
-  return $ n /= 0
+  instances <- getInstancesR d
+  return $ not (null instances)
 
 -- | Indicate if a data has a allocated (not valid) instance in a memory
 isDataAllocatedR :: Data -> Memory -> R Bool
