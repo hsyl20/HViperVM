@@ -15,6 +15,7 @@ module ViperVM.RuntimeInternal (
   registerActiveRequestR, storeTaskRequestsR,
   isDataAllocatedR, isDataAllocatedAnyR,
   determineTaskRequests, allocBufferR, mapHostBufferR, filterRequestsR,
+  storeCompiledKernelR,updateCompilationRequestsR,
   -- Lenses
   submittedTasks, compiledKernels, scheduledTasks, dataTasks
   ) where
@@ -24,19 +25,19 @@ import Prelude hiding (lookup)
 import Control.Applicative ( (<$>), liftA2 )
 import Control.Concurrent
 import Control.Monad.State
-import Data.Traversable (traverse)
 import Data.Foldable (traverse_)
 import Data.Lens.Lazy
 import Data.Lens.Template
 import Data.List (intersect,partition)
 import Data.Map (Map,alter,empty,lookup,fromList, (!))
-import qualified Data.Map as Map
-import Data.Maybe (fromMaybe,isJust,catMaybes)
+import Data.Maybe (fromMaybe,isJust,isNothing,catMaybes)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Traversable (traverse)
 import Data.Word
 import Foreign.Ptr
 import qualified Data.List as List
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 import ViperVM.Buffer
 import ViperVM.Data
@@ -50,24 +51,26 @@ import ViperVM.Task
 import ViperVM.Transfer
 
 -- | Messages that the runtime can handle.
-data Message =  AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has been submitted by the application
-              | AppQuit (Event ())            -- ^ Runtime shutdown is requested
-              | AppMapVector DataDesc (Ptr ()) (Event Data) -- ^ A vector data is to be created using existing data
-              | TaskSubmitted Task            -- ^ A task has been submitted
-              | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
-              | TaskComplete Task             -- ^ A task has completed
-              | TaskReady Task                -- ^ A task has no associated request left
-              | RequestsStored                -- ^ Some new requests have been submitted
-              | KernelComplete Kernel         -- ^ A kernel has completed
-              | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
-              | TransferComplete Transfer     -- ^ A data transfer has completed
+data Message =  
+    AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has been submitted by the application
+  | AppQuit (Event ())            -- ^ Runtime shutdown is requested
+  | AppMapVector DataDesc (Ptr ()) (Event Data) -- ^ A vector data is to be created using existing data
+  | TaskSubmitted Task            -- ^ A task has been submitted
+  | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
+  | TaskComplete Task             -- ^ A task has completed
+  | TaskReady Task                -- ^ A task has no associated request left
+  | RequestsStored                -- ^ Some new requests have been submitted
+  | KernelComplete Kernel         -- ^ A kernel has completed
+  | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
+  | TransferComplete Transfer     -- ^ A data transfer has completed
 
-data TaskRequest = RequestComputation Data                -- ^ Request that a data has been computed
-                 | RequestCompilation [Kernel] Processor  -- ^ Request compilation of at least one kernel for the given processor
-                 | RequestTransfer [Memory] Data          -- ^ Request the transfer of a data instance in any of the given memories
-                 | RequestDuplication [Memory] Data       -- ^ Request a duplicated instance (i.e. detachable) of the data in any of the given memories
-                 | RequestAllocation [Memory] Data        -- ^ Request the allocation of a placeholder for the given data in any of the given memories
-                 deriving (Eq,Ord,Show)
+data TaskRequest = 
+   RequestComputation Data                -- ^ Request that a data has been computed
+ | RequestCompilation [Kernel] Processor  -- ^ Request compilation of at least one kernel for the given processor
+ | RequestTransfer [Memory] Data          -- ^ Request the transfer of a data instance in any of the given memories
+ | RequestDuplication [Memory] Data       -- ^ Request a duplicated instance (i.e. detachable) of the data in any of the given memories
+ | RequestAllocation [Memory] Data        -- ^ Request the allocation of a placeholder for the given data in any of the given memories
+ deriving (Eq,Ord,Show)
 
 -- | State of the runtime system
 data RuntimeState = RuntimeState {
@@ -336,9 +339,10 @@ isDataAllocatedAnyR d ms = do
 
 -- | Return a compiled kernel from the cache, if any
 getCompiledKernelR :: Processor -> Kernel -> R (Maybe CompiledKernel)
-getCompiledKernelR p k = do
-  cced <- gets (compiledKernels ^$)
-  return $ lookup p =<< lookup k cced
+getCompiledKernelR p k = gets (getCompiledKernel p k . getL compiledKernels)
+
+getCompiledKernel :: Processor -> Kernel -> Map Kernel (Map Processor CompiledKernel) -> Maybe CompiledKernel
+getCompiledKernel p k cks = lookup k cks >>= lookup p
 
 -- | Get instances that can be detached, either because there are other
 -- instances or because the data won't be used anymore by any other task
@@ -415,3 +419,25 @@ filterRequestsR f = do
   modify(taskRequests ^%= Map.map (Set.filter f))
   modify(requestTasks ^%= Map.filterWithKey (\k _ -> f k))
   modify(activeRequests ^%= Set.filter f)
+
+-- | Detect ready tasks
+detectReadyTasksR :: R ()
+detectReadyTasksR = do
+  tasks <- gets(Map.keys . Map.filter Set.null . getL taskRequests)
+  traverse_ (postMessageR . TaskReady) tasks
+
+-- | Store a compiled kernel in state
+storeCompiledKernelR :: Kernel -> CompiledKernel -> Processor -> R ()
+storeCompiledKernelR k ck proc = modify $ compiledKernels ^%= Map.insertWith Map.union k (Map.singleton proc ck)
+
+-- | Remove compilation requests that have been fulfilled
+updateCompilationRequestsR :: R ()
+updateCompilationRequestsR = do
+    cks <- gets(compiledKernels ^$)
+    filterRequestsR (f cks)
+    detectReadyTasksR
+  where
+    f cks (RequestCompilation ks p) = all (\k -> isNothing $ getCompiledKernel p k cks) ks
+    f _ _ = True
+   
+
