@@ -10,7 +10,7 @@ import Data.Traversable
 
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
-import ViperVM.RuntimeInternal
+import ViperVM.RuntimeInternal (Scheduler, Message (..), kpToTp, submittedTasks, dataTasks, postMessageR, setEventR, voidR)
 import ViperVM.Task
 
 taskManagerScheduler :: Scheduler

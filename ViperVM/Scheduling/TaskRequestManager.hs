@@ -10,6 +10,7 @@ import Data.Functor ( (<$>) )
 import Data.Lens.Lazy
 import Data.Maybe (catMaybes)
 import qualified Data.Map as Map
+import qualified Data.List as List
 
 taskRequestManager :: Scheduler
 
@@ -24,5 +25,10 @@ taskRequestManager (KernelCompiled k procs cks) = do
 taskRequestManager (DataAllocated d di) = do
   modify (invalidDataInstances ^%= Map.insertWith (++) d [di])
   updateAllocationRequestsR
+
+taskRequestManager (DataTransfered d di) = do
+  modify (invalidDataInstances ^%= Map.adjust (List.delete di) d)
+  modify (datas ^%= Map.insertWith (++) d [di])
+  updateTransferRequestsR
 
 taskRequestManager _ = voidR

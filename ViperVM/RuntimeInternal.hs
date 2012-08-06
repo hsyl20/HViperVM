@@ -15,9 +15,10 @@ module ViperVM.RuntimeInternal (
   registerActiveRequestR, storeTaskRequestsR,
   isDataAllocatedR, isDataAllocatedAnyR,
   determineTaskRequests, allocBufferR, mapHostBufferR, filterRequestsR,
-  storeCompiledKernelR, updateCompilationRequestsR, updateAllocationRequestsR,
+  storeCompiledKernelR,
+  updateCompilationRequestsR, updateAllocationRequestsR, updateTransferRequestsR,
   -- Lenses
-  submittedTasks, compiledKernels, scheduledTasks, dataTasks, invalidDataInstances
+  submittedTasks, compiledKernels, scheduledTasks, dataTasks, invalidDataInstances, datas
   ) where
 
 import Prelude hiding (lookup)
@@ -63,8 +64,9 @@ data Message =
   | KernelComplete Kernel         -- ^ A kernel has completed
   | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
   | DataAllocated Data DataInstance -- ^ A placeholder has been allocated for the given data
-  | TransferComplete Transfer     -- ^ A data transfer has completed
+  | DataTransfered Data DataInstance -- ^ A data has been transfered or duplicated
 
+-- | Requests that are associated to tasks and that must be fulfilled before the task cen be executed
 data TaskRequest = 
    RequestComputation Data                -- ^ Request that a data has been computed
  | RequestCompilation [Kernel] Processor  -- ^ Request compilation of at least one kernel for the given processor
@@ -453,4 +455,13 @@ updateAllocationRequestsR = do
     updateRequestsR (f instances)
   where
     f instances (RequestAllocation mems d) = null $ intersect mems $ map getDataInstanceMemory $ Map.findWithDefault [] d instances
+    f _ _ = True
+
+-- | Remove transfer requests that have been fulfilled
+updateTransferRequestsR :: R ()
+updateTransferRequestsR = do
+    ds <- gets(datas ^$)
+    updateRequestsR (f ds)
+  where
+    f ds (RequestTransfer mems d) = null $ intersect mems $ map getDataInstanceMemory $ Map.findWithDefault [] d ds
     f _ _ = True
