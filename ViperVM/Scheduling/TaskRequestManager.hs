@@ -3,6 +3,8 @@
 module ViperVM.Scheduling.TaskRequestManager where
 
 import ViperVM.RuntimeInternal
+import ViperVM.Internals.Requests
+import ViperVM.Internals.Structures
 
 import Control.Monad.State
 import Data.Foldable (traverse_)

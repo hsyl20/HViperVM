@@ -6,6 +6,8 @@ import ViperVM.Kernel
 import ViperVM.KernelSet
 import ViperVM.RuntimeInternal
 import ViperVM.Task
+import ViperVM.Internals.Logging
+import ViperVM.Internals.Structures(Scheduler, Message(..), scheduledTasks, voidR)
 
 import Control.Monad.State
 import Data.Lens.Lazy

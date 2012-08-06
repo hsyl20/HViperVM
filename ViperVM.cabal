@@ -41,6 +41,11 @@ library
     ViperVM.Transfer
     ViperVM.View
 
+    ViperVM.Internals.Logging
+    ViperVM.Internals.Requests
+    ViperVM.Internals.Structures
+    ViperVM.Internals.StartStop
+
     ViperVM.Scheduling.Composed
     ViperVM.Scheduling.DataManager
     ViperVM.Scheduling.Default

@@ -3,6 +3,8 @@ module ViperVM.Scheduling.DataManager (
   ) where
 
 import ViperVM.RuntimeInternal
+import ViperVM.Internals.Structures
+import ViperVM.Internals.Logging
 import ViperVM.Platform
 import ViperVM.View
 import ViperVM.Data

@@ -4,7 +4,7 @@ module ViperVM.Scheduling.Default (
 
 import ViperVM.Compiler
 import ViperVM.Logging.Logger
-import ViperVM.RuntimeInternal
+import ViperVM.Internals.Structures (Scheduler)
 import ViperVM.Scheduling.Composed
 import ViperVM.Scheduling.DataManager
 import ViperVM.Scheduling.EagerKernelCompiler
