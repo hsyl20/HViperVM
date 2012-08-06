@@ -1,13 +1,10 @@
 module ViperVM.RuntimeInternal (
   -- Methods
-  putStrLnR,
   registerBuffer, registerDataInstance, newData,
   setEventR,
   getProcessorsR, getLoggerR, getChannelR, getDatasR,
   postMessageR, kpToTp, dataInstanceExistsR, getInstancesR,
-  getCompiledKernelR,
   allocBufferR, mapHostBufferR,
-  storeCompiledKernelR,
   ) where
 
 import Prelude hiding (lookup)
@@ -18,7 +15,6 @@ import Data.Lens.Lazy
 import Data.Map (Map,alter, (!))
 import Data.Word
 import Foreign.Ptr
-import qualified Data.Map as Map
 import qualified Data.List as List
 
 import ViperVM.Internals.Structures
@@ -26,7 +22,6 @@ import ViperVM.Internals.Structures
 import ViperVM.Buffer
 import ViperVM.Data
 import ViperVM.Event
-import ViperVM.Kernel
 import ViperVM.KernelInterface
 import ViperVM.Logging.Logger
 import ViperVM.Platform
@@ -48,14 +43,6 @@ newBufferID = do
   modify (bufferCounter ^%= (+) 1)
   lift $ return c
 
--- | Register a data with an initial instance
-registerDataInstance :: Data -> DataInstance -> R ()
-registerDataInstance d di = modify (datas ^%= modDatas)
-  where
-    modDatas = alter f d
-    f (Just x) = Just (x ++ [di])
-    f Nothing  = Just [di]
-
 -- | Create a buffer
 createBuffer :: Memory -> Word64 -> R Buffer
 createBuffer mem sz = do
@@ -69,22 +56,6 @@ releaseBuffer buf = do
   unregisterBuffer buf
   lift $ freeBuffer buf
 
--- | Register a new buffer
-registerBuffer :: Memory -> Buffer -> R ()
-registerBuffer mem buf = modify (buffers ^%= modBuffer)
-  where
-    modBuffer = alter f mem
-    f (Just x) = Just (x ++ [buf])
-    f Nothing  = Just [buf]
-
--- | Unregister a buffer
-unregisterBuffer :: Buffer -> R ()
-unregisterBuffer buf = modify (buffers ^%= modBuffer)
-  where
-    mem = getBufferMemory buf
-    modBuffer :: Map Memory [Buffer] -> Map Memory [Buffer]
-    modBuffer = alter (fmap $ List.delete buf) mem
-
 -- | Start a new asynchronous transfer
 submitTransfer :: Transfer -> R ()
 submitTransfer transfer@(Transfer link _ _) = do
@@ -95,10 +66,6 @@ submitTransfer transfer@(Transfer link _ _) = do
 -- | Execute an action and return its start and end times
 timeActionR :: IO a -> R (a,TimedAction)
 timeActionR = lift . timeAction
-
--- | putStrLn in the R monad
-putStrLnR :: String -> R ()
-putStrLnR s = lift $ putStrLn s
 
 -- Set an event in the R monad
 setEventR :: Event a -> a -> R ()
@@ -127,6 +94,3 @@ mapHostBufferR sz ptr = do
   i <- newBufferID
   return $ HostBuffer i sz ptr
 
--- | Store a compiled kernel in state
-storeCompiledKernelR :: Kernel -> CompiledKernel -> Processor -> R ()
-storeCompiledKernelR k ck proc = modify $ compiledKernels ^%= Map.insertWith Map.union k (Map.singleton proc ck)

@@ -2,7 +2,6 @@
 
 module ViperVM.Scheduling.TaskRequestManager where
 
-import ViperVM.RuntimeInternal
 import ViperVM.Internals.Requests
 import ViperVM.Internals.Structures
 

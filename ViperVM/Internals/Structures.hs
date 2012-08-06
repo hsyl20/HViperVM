@@ -184,3 +184,31 @@ getDetachableInstancesR d mem = do
 getDetachableInstancesAnyR :: Data -> [Memory] -> R (Set DataInstance)
 getDetachableInstancesAnyR d ms = fmap Set.unions $ traverse (getDetachableInstancesR d) ms
 
+-- | Store a compiled kernel in state
+storeCompiledKernelR :: Kernel -> CompiledKernel -> Processor -> R ()
+storeCompiledKernelR k ck proc = modify $ compiledKernels ^%= Map.insertWith Map.union k (Map.singleton proc ck)
+
+-- | Register a data with an initial instance
+registerDataInstance :: Data -> DataInstance -> R ()
+registerDataInstance d di = modify (datas ^%= modDatas)
+  where
+    modDatas = Map.alter f d
+    f (Just x) = Just (x ++ [di])
+    f Nothing  = Just [di]
+
+-- | Register a new buffer
+registerBuffer :: Memory -> Buffer -> R ()
+registerBuffer mem buf = modify (buffers ^%= modBuffer)
+  where
+    modBuffer = Map.alter f mem
+    f (Just x) = Just (x ++ [buf])
+    f Nothing  = Just [buf]
+
+-- | Unregister a buffer
+unregisterBuffer :: Buffer -> R ()
+unregisterBuffer buf = modify (buffers ^%= modBuffer)
+  where
+    mem = getBufferMemory buf
+    modBuffer :: Map Memory [Buffer] -> Map Memory [Buffer]
+    modBuffer = Map.alter (fmap $ List.delete buf) mem
+
