@@ -12,7 +12,7 @@ module ViperVM.RuntimeInternal (
   getProcessorsR, getLoggerR, getChannelR, getDatasR,
   postMessageR, kpToTp, dataInstanceExistsR, getInstancesR,
   getCompiledKernelR,
-  registerActiveRequestR, registerTaskRequestsR,
+  registerActiveRequestR, storeTaskRequestsR,
   isDataAllocatedR, isDataAllocatedAnyR,
   determineTaskRequests, allocBufferR, mapHostBufferR, filterRequestsR,
   -- Lenses
@@ -56,7 +56,8 @@ data Message =  AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has bee
               | TaskSubmitted Task            -- ^ A task has been submitted
               | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
               | TaskComplete Task             -- ^ A task has completed
-              | Request TaskRequest           -- ^ A new task request has been submitted
+              | TaskReady Task                -- ^ A task has no associated request left
+              | RequestsStored                -- ^ Some new requests have been submitted
               | KernelComplete Kernel         -- ^ A kernel has completed
               | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
               | TransferComplete Transfer     -- ^ A data transfer has completed
@@ -212,17 +213,17 @@ submitTransfer transfer@(Transfer link _ _) = do
 registerActiveRequestR :: TaskRequest -> R ()
 registerActiveRequestR req = modify(activeRequests ^%= Set.insert req)
 
--- | Register task requests
-registerTaskRequestsR :: Task -> Set TaskRequest -> R ()
-registerTaskRequestsR t reqs = do
+-- | Store task requests
+storeTaskRequestsR :: Task -> Set TaskRequest -> R ()
+storeTaskRequestsR t reqs = do
   modify(taskRequests ^%= alter (const $ Just reqs) t)
-  traverse_ (registerRequestTaskR t) reqs
+  traverse_ (storeRequestTaskR t) reqs
+  postMessageR RequestsStored
   
--- | Register a request if it doesn't already exist and associate a task to it
-registerRequestTaskR :: Task -> TaskRequest -> R ()
-registerRequestTaskR t r = do
+-- | Store a request if it doesn't already exist and associate a task to it
+storeRequestTaskR :: Task -> TaskRequest -> R ()
+storeRequestTaskR t r = do
   modify(requestTasks ^%= alter f r)
-  postMessageR $ Request r
   where
     f (Just ts) = Just (t:ts)
     f Nothing = Just [t]

@@ -6,11 +6,6 @@ taskRequestManager :: Scheduler
 
 taskRequestManager (TaskScheduled task proc) = do
   requests <- determineTaskRequests proc task
-
-  -- Store requests
-  registerTaskRequestsR task requests
-
-taskRequestManager (Request r) = do
-  putStrLnR $ show r
+  storeTaskRequestsR task requests
 
 taskRequestManager _ = voidR
