@@ -15,9 +15,9 @@ module ViperVM.RuntimeInternal (
   registerActiveRequestR, storeTaskRequestsR,
   isDataAllocatedR, isDataAllocatedAnyR,
   determineTaskRequests, allocBufferR, mapHostBufferR, filterRequestsR,
-  storeCompiledKernelR,updateCompilationRequestsR,
+  storeCompiledKernelR, updateCompilationRequestsR, updateAllocationRequestsR,
   -- Lenses
-  submittedTasks, compiledKernels, scheduledTasks, dataTasks
+  submittedTasks, compiledKernels, scheduledTasks, dataTasks, invalidDataInstances
   ) where
 
 import Prelude hiding (lookup)
@@ -62,6 +62,7 @@ data Message =
   | RequestsStored                -- ^ Some new requests have been submitted
   | KernelComplete Kernel         -- ^ A kernel has completed
   | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
+  | DataAllocated Data DataInstance -- ^ A placeholder has been allocated for the given data
   | TransferComplete Transfer     -- ^ A data transfer has completed
 
 data TaskRequest = 
@@ -430,14 +431,26 @@ detectReadyTasksR = do
 storeCompiledKernelR :: Kernel -> CompiledKernel -> Processor -> R ()
 storeCompiledKernelR k ck proc = modify $ compiledKernels ^%= Map.insertWith Map.union k (Map.singleton proc ck)
 
+-- | Filter requests and detect ready tasks
+updateRequestsR :: (TaskRequest -> Bool) -> R ()
+updateRequestsR f = do
+  filterRequestsR f
+  detectReadyTasksR
+
 -- | Remove compilation requests that have been fulfilled
 updateCompilationRequestsR :: R ()
 updateCompilationRequestsR = do
     cks <- gets(compiledKernels ^$)
-    filterRequestsR (f cks)
-    detectReadyTasksR
+    updateRequestsR (f cks)
   where
     f cks (RequestCompilation ks p) = all (\k -> isNothing $ getCompiledKernel p k cks) ks
     f _ _ = True
    
-
+-- | Remove allocation requests that have been fulfilled
+updateAllocationRequestsR :: R ()
+updateAllocationRequestsR = do
+    instances <- gets(invalidDataInstances ^$)
+    updateRequestsR (f instances)
+  where
+    f instances (RequestAllocation mems d) = null $ intersect mems $ map getDataInstanceMemory $ Map.findWithDefault [] d instances
+    f _ _ = True
