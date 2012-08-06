@@ -10,6 +10,7 @@ import ViperVM.Scheduling.DataManager
 import ViperVM.Scheduling.EagerKernelCompiler
 import ViperVM.Scheduling.EagerScheduler
 import ViperVM.Scheduling.TaskManager
+import ViperVM.Scheduling.TaskRequestManager
 
 defaultScheduler :: Logger -> IO Scheduler
 
@@ -20,5 +21,6 @@ defaultScheduler logger = do
     eagerKernelCompiler compiler,
     eagerScheduler,
     dataManagerScheduler,
-    taskManagerScheduler]
+    taskManagerScheduler,
+    taskRequestManager]
   

@@ -60,7 +60,6 @@ data Message =  AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has bee
               | KernelComplete Kernel         -- ^ A kernel has completed
               | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
               | TransferComplete Transfer     -- ^ A data transfer has completed
-              | DataRelease Data              -- ^ A data is no longer necessary
 
 data TaskRequest = RequestComputation Data                -- ^ Request that a data has been computed
                  | RequestCompilation [Kernel] Processor  -- ^ Request compilation of at least one kernel for the given processor
