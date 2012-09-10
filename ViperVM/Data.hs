@@ -2,8 +2,6 @@ module ViperVM.Data where
 
 import Data.Word
 import ViperVM.View
-import ViperVM.Buffer
-import ViperVM.Platform
 
 ----------------------------------------------------
 
@@ -41,7 +39,7 @@ data DataDesc = VectorDesc Primitive Word64
 data DataInstance = Vector View
                     deriving (Eq,Ord,Show)
 
--- | Return memory containing a data instance
-getDataInstanceMemory :: DataInstance -> Memory
-getDataInstanceMemory (Vector (View1D buf _ _)) = getBufferMemory buf
-getDataInstanceMemory _ = undefined
+-- | Allocate a data instance in the given memory
+{-allocateDataInstance :: Data -> Memory -> Maybe DataInstance
+allocateDataInstance d m = do-}
+  

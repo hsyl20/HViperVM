@@ -17,14 +17,10 @@ import Control.Monad.State
 import Data.Lens.Lazy
 import Data.Lens.Template
 import Data.Map (Map)
-import Data.Maybe (isJust,fromMaybe)
 import Data.Set (Set)
-import Data.Traversable (traverse)
 import Data.Word
 import Foreign.Ptr
-import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 
 -- | Messages that the runtime can handle.
 data Message =  
@@ -58,7 +54,8 @@ data RuntimeState = RuntimeState {
   scheduler :: Scheduler,                   -- ^ Scheduler
   linkChannels :: Map Link (Chan Transfer), -- ^ Channels to communicate with link threads
   -- Lenses
-  _buffers :: Map Memory [Buffer],          -- ^ Buffers in each memory
+  _buffers :: [Buffer],                     -- ^ Associate buffer ID to real buffers
+  _memBuffers :: Map Memory [Buffer],       -- ^ Buffers in each memory
   _datas :: Map Data [DataInstance],        -- ^ Data and their valid instances
   _dataTasks :: Map Data Task,              -- ^ Task computing each (uncomputed) data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
@@ -121,14 +118,6 @@ getLoggerR = gets logger
 getChannelR :: R (Chan Message)
 getChannelR = gets channel
 
--- | Return valid data instances
-getDatasR :: R (Map Data [DataInstance])
-getDatasR = gets (datas ^$)
-
--- | Return invalid data instances
-getInvalidDataInstancesR :: R (Map Data [DataInstance])
-getInvalidDataInstancesR = gets (invalidDataInstances ^$)
-
 -- | Return compiled kernels
 getCompiledKernelsR :: R (Map Kernel (Map Processor CompiledKernel))
 getCompiledKernelsR = gets (compiledKernels ^$)
@@ -140,75 +129,8 @@ getCompiledKernelR p k = gets (getCompiledKernel p k . getL compiledKernels)
 getCompiledKernel :: Processor -> Kernel -> Map Kernel (Map Processor CompiledKernel) -> Maybe CompiledKernel
 getCompiledKernel p k cks = Map.lookup k cks >>= Map.lookup p
 
--- | Return data instances (if any)
-getInstancesR :: Data -> R [DataInstance]
-getInstancesR d = gets (Map.findWithDefault [] d . getL datas)
-
--- | Check for existing instance of a data
-dataInstanceExistsR :: Data -> R Bool
-dataInstanceExistsR d = do
-  instances <- getInstancesR d
-  return $ not (null instances)
-
--- | Indicate if a data has a allocated (not valid) instance in a memory
-isDataAllocatedR :: Data -> Memory -> R Bool
-isDataAllocatedR d m = do
-  allocs <- gets (invalidDataInstances ^$)
-  let inst = fmap (filter (\i -> m == getDataInstanceMemory i)) $ Map.lookup d allocs
-  return $ isJust inst
-
--- | Indicate if a data has a allocated (not valid) instance in any memory of the given list
-isDataAllocatedAnyR :: Data -> [Memory] -> R Bool
-isDataAllocatedAnyR d ms = do
-  rs <- traverse (isDataAllocatedR d) ms
-  return $ any id rs
-
--- | Get instances that can be detached, either because there are other
--- instances or because the data won't be used anymore by any other task
-getDetachableInstancesR :: Data -> Memory -> R (Set DataInstance)
-getDetachableInstancesR d mem = do
-  
-  ds <- gets (datas ^$)
-  let allInstances = fromMaybe [] $ Map.lookup d ds
-  let (memInstances,otherInstances) = List.partition (\i -> mem == getDataInstanceMemory i) allInstances
-  
-  -- TODO: indicate that instances that won't be used by any other task are valid
-  return $ if null otherInstances || invalidLength memInstances then Set.empty else Set.fromList memInstances
-
-  where
-    invalidLength [] = True
-    invalidLength [_] = True
-    invalidLength _ = False
-
--- | Get detachable instances for a data in a set of memories
-getDetachableInstancesAnyR :: Data -> [Memory] -> R (Set DataInstance)
-getDetachableInstancesAnyR d ms = fmap Set.unions $ traverse (getDetachableInstancesR d) ms
-
 -- | Store a compiled kernel in state
 storeCompiledKernelR :: Kernel -> CompiledKernel -> Processor -> R ()
 storeCompiledKernelR k ck proc = modify $ compiledKernels ^%= Map.insertWith Map.union k (Map.singleton proc ck)
 
--- | Register a data with an initial instance
-registerDataInstance :: Data -> DataInstance -> R ()
-registerDataInstance d di = modify (datas ^%= modDatas)
-  where
-    modDatas = Map.alter f d
-    f (Just x) = Just (x ++ [di])
-    f Nothing  = Just [di]
-
--- | Register a new buffer
-registerBuffer :: Memory -> Buffer -> R ()
-registerBuffer mem buf = modify (buffers ^%= modBuffer)
-  where
-    modBuffer = Map.alter f mem
-    f (Just x) = Just (x ++ [buf])
-    f Nothing  = Just [buf]
-
--- | Unregister a buffer
-unregisterBuffer :: Buffer -> R ()
-unregisterBuffer buf = modify (buffers ^%= modBuffer)
-  where
-    mem = getBufferMemory buf
-    modBuffer :: Map Memory [Buffer] -> Map Memory [Buffer]
-    modBuffer = Map.alter (fmap $ List.delete buf) mem
 

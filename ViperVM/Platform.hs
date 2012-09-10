@@ -16,6 +16,9 @@ data Memory = HostMemory
 
 data Link = CLLink OpenCLLibrary CLCommandQueue Memory Memory deriving (Eq,Ord)
 
+getLinkMemories :: Link -> (Memory,Memory)
+getLinkMemories (CLLink _ _ m1 m2) = (m1,m2)
+
 data Processor = HostProcessor
                | CLProcessor OpenCLLibrary CLContext CLDeviceID
 

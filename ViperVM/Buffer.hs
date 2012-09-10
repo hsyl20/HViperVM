@@ -9,41 +9,45 @@ import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import ViperVM.Backends.OpenCL
 
-type BufferID = Word
 
-data Buffer = CLBuffer BufferID OpenCLLibrary Memory CLMem | HostBuffer BufferID Word64 (Ptr ())
-              
+data Buffer = Buffer BufferId BufferImpl
+
+type BufferId = Word
+data BufferImpl = CLBuffer OpenCLLibrary Memory CLMem | HostBuffer Word64 (Ptr ())
+
 instance Eq Buffer where
-  (==) a b = getBufferID a == getBufferID b
+  (==) (Buffer a _) (Buffer b _) = a == b
 
 instance Ord Buffer where
-  compare a b = compare (getBufferID a) (getBufferID b)
+  compare (Buffer a _) (Buffer b _) = compare a b
 
 instance Show Buffer where
-  show b@(CLBuffer {}) = "OpenCL Buffer " ++ (show $ getBufferID b)
-  show b@(HostBuffer {}) = "Host Buffer " ++ (show $ getBufferID b)
-
-allocBuffer :: BufferID -> Memory -> Word64 -> IO Buffer
-allocBuffer i HostMemory sz = do
+  show (Buffer i _) = "Buffer " ++ (show i)
+              
+allocBuffer :: Memory -> Word64 -> IO BufferImpl
+allocBuffer HostMemory sz = do
   ptr <- mallocBytes (fromIntegral sz)
-  return $ HostBuffer i sz ptr
+  return $ HostBuffer sz ptr
 
-allocBuffer i mem@(CLMemory lib ctx dev) sz = do
+allocBuffer mem@(CLMemory lib ctx dev) sz = do
   clmem <- clCreateBuffer lib ctx [] (sz,nullPtr)
   -- TODO: Force allocation on dev
-  return $ CLBuffer i lib mem clmem
-
--- | Return buffer unique identifier
-getBufferID :: Buffer -> BufferID
-getBufferID (CLBuffer i _ _ _) = i
-getBufferID (HostBuffer i _ _) = i
+  return $ CLBuffer lib mem clmem
 
 -- | Release a buffer
-freeBuffer :: Buffer -> IO ()
-freeBuffer (HostBuffer _ _ ptr) = free ptr
-freeBuffer (CLBuffer _ lib _ m) = void $ clReleaseMemObject lib m
+freeBuffer :: BufferImpl -> IO ()
+freeBuffer (HostBuffer _ ptr) = free ptr
+freeBuffer (CLBuffer lib _ m) = void $ clReleaseMemObject lib m
 
 -- | Return memory containing the buffer
+getBufferImplMemory :: BufferImpl -> Memory
+getBufferImplMemory (HostBuffer {}) = HostMemory
+getBufferImplMemory (CLBuffer _ mem _) = mem
+
+-- | Return buffer implementation associated to a given buffer
+getBufferImpl :: Buffer -> BufferImpl
+getBufferImpl (Buffer _ impl) = impl
+
 getBufferMemory :: Buffer -> Memory
-getBufferMemory (HostBuffer _ _ _) = HostMemory
-getBufferMemory (CLBuffer _ _ mem _) = mem
+getBufferMemory = getBufferImplMemory . getBufferImpl
+

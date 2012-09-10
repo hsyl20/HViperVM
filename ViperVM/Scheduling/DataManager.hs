@@ -4,6 +4,7 @@ module ViperVM.Scheduling.DataManager (
 
 import ViperVM.RuntimeInternal
 import ViperVM.Internals.Structures
+import ViperVM.Internals.Memory
 import ViperVM.Internals.Logging
 import ViperVM.Platform
 import ViperVM.View
@@ -18,7 +19,7 @@ dataManagerScheduler (AppMapVector desc@(VectorDesc prim n) ptr r) = do
   let sz = n * primitiveSize prim
   logInfoR $ printf "Mapping %s vector of %d elements at address %s" (show prim) n (show ptr)
   buf <- mapHostBufferR sz ptr
-  registerBuffer HostMemory buf
+  registerBufferR HostMemory buf
   let view = View1D buf 0 sz
   let di = Vector view
   d <- newData desc

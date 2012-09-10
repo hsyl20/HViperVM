@@ -4,8 +4,8 @@ module ViperVM.Internals.Requests (
   ) where
 
 import ViperVM.Internals.Structures
+import ViperVM.Internals.Memory
 import ViperVM.Task
-import ViperVM.Data
 import ViperVM.KernelSet
 import ViperVM.Platform
 
@@ -89,7 +89,7 @@ storeRequestTaskR t r = do
 -- a given processor
 determineTaskRequests :: Processor -> Task -> R (Set TaskRequest)
 determineTaskRequests proc task = do
-  let Task (KernelSet ki ks) params = task
+  let Task (KernelSet _ ks) params = task
 
   -- Check that input data have been computed (i.e. have at least one instance)
   let inputs = roDatas params

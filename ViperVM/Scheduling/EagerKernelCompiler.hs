@@ -8,7 +8,7 @@ import ViperVM.KernelSet
 import ViperVM.RuntimeInternal
 import ViperVM.Task
 import ViperVM.Internals.Logging
-import ViperVM.Internals.Structures(Scheduler, Message(..), voidR)
+import ViperVM.Internals.Structures(Scheduler, Message(..), voidR, getProcessorsR, getChannelR)
 
 import Data.Traversable
 import Control.Concurrent.Chan
