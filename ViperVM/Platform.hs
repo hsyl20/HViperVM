@@ -50,9 +50,15 @@ instance Ord Processor where
 instance Show Processor where
   show p = unsafePerformIO $ procInfo p
 
+
+data Configuration = Configuration {
+  libraryOpenCL :: String
+}
+
 -- | Initialize platform
-initPlatform :: String -> IO Platform
-initPlatform cllib = do
+initPlatform :: Configuration -> IO Platform
+initPlatform config = do
+  let cllib = libraryOpenCL config 
   lib <- loadOpenCL cllib
   platforms <- clGetPlatformIDs lib
   devices <- traverse (clGetDeviceIDs lib CL_DEVICE_TYPE_ALL) platforms

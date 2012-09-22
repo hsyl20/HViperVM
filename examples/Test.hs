@@ -15,10 +15,14 @@ import ViperVM.Scheduling.Default
 import ViperVM.Task
 
 main = do
-  let cllib = "/usr/lib/libOpenCL.so"
+  let config = Configuration {
+    libraryOpenCL = "/usr/lib/libOpenCL.so"
+  }
+
+  putStrLn "Initializing platform..."
+  platform <- initPlatform config
 
   putStrLn "Querying platform infos..."
-  platform <- initPlatform cllib
   putStr =<< platformInfo platform
 
   let n = 1024
