@@ -61,22 +61,26 @@ library
 
     ViperVM.Library.FloatMatrixAdd
 
+    ViperVM.Parsing.Parser
+
   -- other-modules:       
   build-depends:       
-    base ==4.5.*,
-    unix ==2.5.*,
-    containers ==0.4.*,
+    base ==4.6.*,
+    unix ==2.6.*,
+    containers ==0.5.0.*,
     transformers ==0.*,
     mtl ==2.*,
     data-lens-template ==2.1.*,
     data-lens == 2.10.*,
-    dynamic-linker-template ==0.1.*
+    dynamic-linker-template ==0.1.*,
+    haskell-src-meta ==0.6.*,
+    haskell-src-exts ==1.13.*
 
   build-tools:         c2hs
   ghc-options:         -Wall
 
   if os(linux)
-    cpp-options: -DCALLCONV=ccall -DCallConv=CCall -Iinclude
+    cpp-options: -DCALLCONV=ccall -DCallConv=CCall
 
   if os(darwin)
     cpp-options: -DCALLCONV=ccall -DCallConv=CCall

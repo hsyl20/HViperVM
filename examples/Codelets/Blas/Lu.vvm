@@ -1,0 +1,6 @@
+module Blas where
+
+data Matrix = Matrix Int
+
+lu :: Matrix -> Matrix
+lu x = undefined

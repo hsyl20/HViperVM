@@ -1,9 +1,12 @@
 GHC=ghc -debug -rtsopts -threaded -ldl
 
-MAIN=Test.hs
+all: runtime parser
 
-all:
-	${GHC} ${MAIN}
+runtime: RuntimeTest.hs
+	${GHC} RuntimeTest.hs
+
+parser: ParseTest.hs
+	${GHC} ParseTest.hs
 
 clean:
-	rm -f *.hi *.o
+	rm -f *.hi *.o RuntimeTest ParseTest

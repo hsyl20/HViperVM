@@ -850,10 +850,10 @@ binaryFlags m = map toEnum . takeWhile (<= (fromEnum m)) $ [1 `shiftL` n | n <- 
 testMask :: Bits b => b -> b -> Bool
 testMask mask v = (v .&. mask) == v
 
-bitmaskFromFlags :: (Enum a, Bits b) => [a] -> b
+bitmaskFromFlags :: (Enum a, Num b, Bits b) => [a] -> b
 bitmaskFromFlags = foldl' (.|.) 0 . map (fromIntegral . fromEnum)
 
-bitmaskToFlags :: (Enum a, Bits b) => [a] -> b -> [a]
+bitmaskToFlags :: (Enum a, Num b, Bits b) => [a] -> b -> [a]
 bitmaskToFlags xs mask = filter (testMask mask . fromIntegral . fromEnum) xs
 
 bitmaskToDeviceTypes :: CLDeviceType_ -> [CLDeviceType]

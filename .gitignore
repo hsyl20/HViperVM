@@ -1,3 +1,6 @@
 *.swp
 *.o
 *.hi
+dist
+hannibal.sh
+.save_ignore
