@@ -38,7 +38,7 @@ eagerScheduler (TaskSubmitted task) = do
   modify (scheduledTasks ^= newProcTasks)
 
   postMessageR $ TaskScheduled task proc
-  logInfoR $ printf "Scheduling task %s on %s" (show task) (show proc)
+  logInfoR $ printf "[Eager Scheduler] Scheduling task %s on %s" (show task) (show proc)
 
 
 eagerScheduler _ = voidR
