@@ -12,6 +12,17 @@ import ViperVM.Scheduling.EagerScheduler
 import ViperVM.Scheduling.TaskManager
 import ViperVM.Scheduling.TaskRequestManager
 
+-- | Default scheduler uses:
+--
+--     * A single thread compiler
+--
+--     * An eager kernel compiler
+--
+--     * An eager scheduler
+--
+--     * Default data manager, task manager and task request manager
+--
+-- [@logger@] Logger to use
 defaultScheduler :: Logger -> IO Scheduler
 
 defaultScheduler logger = do
