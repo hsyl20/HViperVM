@@ -1,6 +1,6 @@
-HViperVM
-========
+ViperVM
+=======
 
-ViperVM in Haskell
+ViperVM is a runtime system for heterogeneous written in Haskell.
 
-Use cabal to build
+> cabal configure && cabal install && ./dist/build/RuntimeTest/RuntimeTest

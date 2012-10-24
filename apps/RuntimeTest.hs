@@ -1,19 +1,14 @@
-import Control.Monad ( liftM2 )
-import Data.Maybe (isJust)
-import Data.Traversable
 import Foreign.Marshal.Alloc
 import System.IO (stdout)
 
-import ViperVM
 import ViperVM.Data
-import ViperVM.Kernel
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Logging.TextLogger
 import ViperVM.Platform
 import ViperVM.Runtime
 import ViperVM.Scheduling.Default
-import ViperVM.Task
 
+main :: IO ()
 main = do
   let config = Configuration {
     libraryOpenCL = "/usr/lib/libOpenCL.so"
