@@ -33,6 +33,7 @@ startRuntime pf l s = do
     _buffers = [],
     _memBuffers = Map.empty,
     _datas = Map.empty,
+    _dataEvents = Map.empty,
     _dataTasks = Map.empty,
     _dataCounter = 0,
     _bufferCounter = 0,

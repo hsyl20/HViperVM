@@ -2,6 +2,7 @@ module ViperVM.Runtime (
   startRuntime, stopRuntime,
   mapVector,
   submitTask,
+  waitForData,
   -- Events
   waitEvent,sync
   ) where
@@ -39,3 +40,7 @@ stopRuntime r = sendRuntimeCmd r AppQuit
 -- | Submit a task to the runtime system
 submitTask :: Runtime -> KernelSet -> [Data] -> IO (Event [Data])
 submitTask r ks ds = sendRuntimeCmd r $ AppTaskSubmit ks ds
+
+-- | Wait for a data to be computed
+waitForData :: Runtime -> Data -> IO (Event ())
+waitForData r d = sendRuntimeCmd r $ AppWaitForData d

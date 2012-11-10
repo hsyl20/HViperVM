@@ -27,6 +27,7 @@ data Message =
     AppTaskSubmit KernelSet [Data] (Event [Data])-- ^ A task has been submitted by the application
   | AppQuit (Event ())            -- ^ Runtime shutdown is requested
   | AppMapVector DataDesc (Ptr ()) (Event Data) -- ^ A vector data is to be created using existing data
+  | AppWaitForData Data (Event ()) -- ^ Synchronously wait for data computation
   | TaskSubmitted Task            -- ^ A task has been submitted
   | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
   | TaskComplete Task             -- ^ A task has completed
@@ -45,7 +46,14 @@ data TaskRequest =
  | RequestTransfer [Memory] Data          -- ^ Request the transfer of a data instance in any of the given memories
  | RequestDuplication [Memory] Data       -- ^ Request a duplicated instance (i.e. detachable) of the data in any of the given memories
  | RequestAllocation [Memory] Data        -- ^ Request the allocation of a placeholder for the given data in any of the given memories
- deriving (Eq,Ord,Show)
+ deriving (Eq,Ord)
+
+instance Show TaskRequest where
+  show (RequestComputation d) = "Computation of " ++ show d 
+  show (RequestCompilation ks proc) = "Compilation of any of " ++ show ks
+  show (RequestTransfer ms d) = "Transfer of " ++ show d ++ " in any of " ++ show ms
+  show (RequestDuplication ms d) = "Duplication of " ++  show d ++ " in any of " ++ show ms
+  show (RequestAllocation ms d) = "Allocation of " ++  show d ++ " in any of " ++ show ms
 
 -- | State of the runtime system
 data RuntimeState = RuntimeState {
@@ -58,6 +66,7 @@ data RuntimeState = RuntimeState {
   _buffers :: [Buffer],                     -- ^ Associate buffer ID to real buffers
   _memBuffers :: Map Memory [Buffer],       -- ^ Buffers in each memory
   _datas :: Map Data [DataInstance],        -- ^ Data and their valid instances
+  _dataEvents :: Map Data [Event ()],       -- ^ Data and waiting events
   _dataTasks :: Map Data Task,              -- ^ Task computing each (uncomputed) data
   _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
   _bufferCounter :: Word,                   -- ^ Buffer counter (used to set buffer ID)

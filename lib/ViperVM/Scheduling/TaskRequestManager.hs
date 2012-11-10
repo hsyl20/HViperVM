@@ -2,6 +2,7 @@
 
 module ViperVM.Scheduling.TaskRequestManager where
 
+import ViperVM.Internals.Logging
 import ViperVM.Internals.Requests
 import ViperVM.Internals.Structures
 
@@ -10,8 +11,10 @@ import Data.Foldable (traverse_)
 import Data.Functor ( (<$>) )
 import Data.Lens.Lazy
 import Data.Maybe (catMaybes)
+import Text.Printf
 import qualified Data.Map as Map
 import qualified Data.List as List
+import qualified Data.Set as Set
 
 -- | Maintain the list of requests that need to be fulfilled to execute a scheduled task
 taskRequestManager :: Scheduler
@@ -19,6 +22,8 @@ taskRequestManager :: Scheduler
 -- When a task is scheduled on a proc, we determine its initial request set
 taskRequestManager (TaskScheduled task proc) = do
   requests <- determineTaskRequests proc task
+  logInfoR $ printf "Task %s scheduled on %s have the following %d requests:" (show task) (show proc) (Set.size requests)
+  traverse_ (logInfoR . (++) "  - " . show) requests
   storeTaskRequestsR task requests
 
 -- When a kernel has been compiled for several procs, we store the compiled kernels

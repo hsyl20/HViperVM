@@ -7,7 +7,9 @@ import Data.Lens.Lazy
 import Data.Map (insert)
 import Data.Foldable
 import Data.Traversable
+import Text.Printf
 
+import ViperVM.Internals.Logging
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
 import ViperVM.Internals.Structures (Scheduler, Message(..), submittedTasks, dataTasks, voidR, postMessageR)
@@ -42,5 +44,10 @@ taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
   -- Return result data
   let result = makeResult ki datas
   setEventR r result
+
+taskManagerScheduler (TaskReady task@(Task ks params)) = do
+  logInfoR $ printf "Task %s ready to be executed! (TODO)" (show task)
+  postMessageR $ TaskComplete task
+
 
 taskManagerScheduler _ = voidR

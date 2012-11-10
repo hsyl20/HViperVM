@@ -52,6 +52,7 @@ library
     ViperVM.Scheduling.Default
     ViperVM.Scheduling.EagerKernelCompiler
     ViperVM.Scheduling.EagerScheduler
+    ViperVM.Scheduling.MemoryManager
     ViperVM.Scheduling.TaskRequestManager
     ViperVM.Scheduling.TaskManager
 

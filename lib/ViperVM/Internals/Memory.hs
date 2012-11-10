@@ -1,11 +1,12 @@
 module ViperVM.Internals.Memory where
 
-import ViperVM.Internals.Structures
-import ViperVM.Data
 import ViperVM.Buffer
-import ViperVM.View
+import ViperVM.Data
+import ViperVM.Event
+import ViperVM.Internals.Structures
 import ViperVM.Platform
 import ViperVM.Transfer
+import ViperVM.View
 import Foreign.Ptr
 import ViperVM.Backends.OpenCL.CommandQueue
 import ViperVM.Backends.OpenCL.Event
@@ -23,8 +24,8 @@ import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 
 -- | Register a data with an initial instance
-registerDataInstance :: Data -> DataInstance -> R ()
-registerDataInstance d di = modify (datas ^%= modDatas)
+registerDataInstanceR :: Data -> DataInstance -> R ()
+registerDataInstanceR d di = modify (datas ^%= modDatas)
   where
     modDatas = Map.alter f d
     f (Just x) = Just (x ++ [di])
@@ -37,6 +38,14 @@ registerBufferR mem buf = modify (memBuffers ^%= modBuffer)
     modBuffer = Map.alter f mem
     f (Just x) = Just (x ++ [buf])
     f Nothing  = Just [buf]
+
+-- | Register data event
+registerDataEventR :: Data -> Event () -> R ()
+registerDataEventR d ev = modify (dataEvents ^%= modDataEvents)
+  where
+    modDataEvents = Map.alter f d
+    f (Just x) = Just (x ++ [ev])
+    f Nothing  = Just [ev]
 
 -- | Unregister a buffer
 unregisterBufferR :: Buffer -> R ()
@@ -117,6 +126,10 @@ getInvalidDataInstancesR = gets (invalidDataInstances ^$)
 getInstancesR :: Data -> R [DataInstance]
 getInstancesR d = gets (Map.findWithDefault [] d . getL datas)
 
+-- | Return data events (if any)
+getDataEventsR :: Data -> R [Event ()]
+getDataEventsR d = gets (Map.findWithDefault [] d . getL dataEvents)
+
 -- | Check for existing instance of a data
 dataInstanceExistsR :: Data -> R Bool
 dataInstanceExistsR d = do
@@ -142,8 +155,8 @@ newBufferId = do
   lift $ return c
 
 -- | Create a buffer
-createBuffer :: Memory -> Word64 -> R Buffer
-createBuffer mem sz = do
+createBufferR :: Memory -> Word64 -> R Buffer
+createBufferR mem sz = do
   buf <- allocBufferR mem sz
   registerBufferR mem buf
   lift $ return buf

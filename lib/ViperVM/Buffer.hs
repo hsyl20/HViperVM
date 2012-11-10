@@ -31,7 +31,7 @@ allocBuffer HostMemory sz = do
 
 allocBuffer mem@(CLMemory lib ctx dev) sz = do
   clmem <- clCreateBuffer lib ctx [] (sz,nullPtr)
-  -- TODO: Force allocation on dev
+  -- TODO: Force allocation on dev (clMemMigrate if available, copybuffer otherwise)
   return $ CLBuffer lib mem clmem
 
 -- | Release a buffer

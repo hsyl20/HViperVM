@@ -4,6 +4,7 @@ import ViperVM.Backends.OpenCL
 import Data.Traversable
 import Data.Functor
 import System.IO.Unsafe
+import Text.Printf
 
 data Platform = Platform {
   memories :: [Memory],
@@ -87,10 +88,10 @@ platformInfo pf = do
 
 
 memInfo :: Memory -> IO String
-memInfo HostMemory = return "[Host Memory]"
+memInfo HostMemory = return "Host Memory"
 memInfo (CLMemory lib _ dev) = do
-  sz <- clGetMemSize lib dev
-  return $ "[OpenCL] " ++ (show sz) ++ "MB"
+  sz <- clGetDeviceGlobalMemSize lib dev
+  return $ printf "OpenCL Memory %s (%s KB)" (show dev) (show sz)
 
 attachedMemories :: Processor -> [Memory]
 attachedMemories (CLProcessor lib ctx dev) = [CLMemory lib ctx dev]

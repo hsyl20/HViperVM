@@ -33,6 +33,8 @@ main = do
 
   [c] <- sync $ submitTask runtime floatMatrixAdd [a,b]
 
+  sync $ waitForData runtime c
+
   sync $ stopRuntime runtime
 
   putStrLn "Done."

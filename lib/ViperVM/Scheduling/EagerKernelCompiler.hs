@@ -5,7 +5,6 @@ module ViperVM.Scheduling.EagerKernelCompiler (
 import Prelude hiding (lookup)
 import ViperVM.Compiler
 import ViperVM.KernelSet
-import ViperVM.RuntimeInternal
 import ViperVM.Task
 import ViperVM.Internals.Logging
 import ViperVM.Internals.Structures(Scheduler, Message(..), voidR, getProcessorsR, getChannelR)

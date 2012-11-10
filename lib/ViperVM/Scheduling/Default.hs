@@ -9,6 +9,7 @@ import ViperVM.Scheduling.Composed
 import ViperVM.Scheduling.DataManager
 import ViperVM.Scheduling.EagerKernelCompiler
 import ViperVM.Scheduling.EagerScheduler
+import ViperVM.Scheduling.MemoryManager
 import ViperVM.Scheduling.TaskManager
 import ViperVM.Scheduling.TaskRequestManager
 
@@ -31,6 +32,7 @@ defaultScheduler logger = do
   return $ composedScheduler [
     eagerKernelCompiler compiler,
     eagerScheduler,
+    memoryManagerScheduler,
     dataManagerScheduler,
     taskManagerScheduler,
     taskRequestManager]

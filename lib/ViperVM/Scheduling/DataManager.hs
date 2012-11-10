@@ -3,14 +3,14 @@ module ViperVM.Scheduling.DataManager (
   ) where
 
 
-import ViperVM.RuntimeInternal
-import ViperVM.Internals.Structures
-import ViperVM.Internals.Memory
-import ViperVM.Internals.Logging
-import ViperVM.Platform
-import ViperVM.View
-import ViperVM.Task
 import ViperVM.Data
+import ViperVM.Internals.Logging
+import ViperVM.Internals.Memory
+import ViperVM.Internals.Structures
+import ViperVM.Platform
+import ViperVM.RuntimeInternal
+import ViperVM.Task
+import ViperVM.View
 
 import Data.Foldable (traverse_)
 import Text.Printf
@@ -26,11 +26,25 @@ dataManagerScheduler (AppMapVector desc@(VectorDesc prim n) ptr r) = do
   let view = View1D buf 0 sz
   let di = Vector view
   d <- newData desc
-  registerDataInstance d di
+  registerDataInstanceR d di
   setEventR r d
+
+
+-- Check that the data has not already been computed
+-- and trigger or store the data event accordingly
+dataManagerScheduler (AppWaitForData d ev) = do
+  cond <- dataInstanceExistsR d
+  if cond
+    then setEventR ev ()
+    else registerDataEventR d ev
+    
 
 -- Indicate data that have been computed upon task completion
 dataManagerScheduler (TaskComplete (Task _ params)) = do
-  traverse_ (postMessageR . DataComputed) $ outputDatas params
+  flip traverse_ (outputDatas params) $ \d -> do
+    postMessageR (DataComputed d)
+    evs <- getDataEventsR d
+    traverse_ (flip setEventR ()) evs
+
 
 dataManagerScheduler _ = voidR
