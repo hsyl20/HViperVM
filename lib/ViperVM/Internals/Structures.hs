@@ -36,6 +36,7 @@ data Message =
   | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
   | DataAllocated Data DataInstance -- ^ A placeholder has been allocated for the given data
   | DataTransfered Data DataInstance -- ^ A data has been transfered or duplicated
+  | DataComputed Data             -- ^ A data has been computed
 
 -- | Requests that are associated to tasks and that must be fulfilled before the task cen be executed
 data TaskRequest = 
