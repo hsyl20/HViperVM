@@ -11,6 +11,7 @@ import ViperVM.Logging.Logger
 import ViperVM.Platform
 import ViperVM.Task
 import ViperVM.Transfer
+import ViperVM.View
 
 import Control.Concurrent.Chan
 import Control.Monad.State
@@ -143,4 +144,25 @@ getCompiledKernel p k cks = Map.lookup k cks >>= Map.lookup p
 storeCompiledKernelR :: Kernel -> CompiledKernel -> Processor -> R ()
 storeCompiledKernelR k ck proc = modify $ compiledKernels ^%= Map.insertWith Map.union k (Map.singleton proc ck)
 
+isLinking :: Memory -> Memory -> Link -> Bool
+isLinking m1 m2 l = ms == (m1,m2) || ms == (m2,m1)
+  where
+    ms = getLinkMemories l 
 
+-- | Get links between memories
+getLinksBetweenMemories :: Memory -> Memory -> R [Link]
+getLinksBetweenMemories m1 m2 = gets (filter (isLinking m1 m2) . links . platform)
+
+-- Get links between two views
+getLinksBetweenViews :: View -> View -> R [Link]
+getLinksBetweenViews v1 v2 = getLinksBetweenMemories m1 m2
+  where
+    m1 = getViewMemory v1
+    m2 = getViewMemory v2
+
+-- Get links between two data instances
+getLinksBetweenDataInstances :: DataInstance -> DataInstance -> R [Link]
+getLinksBetweenDataInstances d1 d2 = getLinksBetweenViews v1 v2
+  where
+    v1 = getDataInstanceView d1
+    v2 = getDataInstanceView d2

@@ -17,6 +17,9 @@ data Memory = HostMemory
 
 data Link = CLLink OpenCLLibrary CLCommandQueue Memory Memory deriving (Eq,Ord)
 
+instance Show Link where
+  show (CLLink _ _ m1 m2) = printf "OpenCL link between %s and %s" (show m1) (show m2)
+
 getLinkMemories :: Link -> (Memory,Memory)
 getLinkMemories (CLLink _ _ m1 m2) = (m1,m2)
 

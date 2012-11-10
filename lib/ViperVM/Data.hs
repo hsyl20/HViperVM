@@ -40,6 +40,9 @@ data DataDesc = VectorDesc Primitive Word64
 data DataInstance = Vector View
                     deriving (Eq,Ord,Show)
 
+getDataInstanceView :: DataInstance -> View
+getDataInstanceView (Vector v) = v
+
 backingBufferSize :: DataDesc -> Word64
 backingBufferSize (VectorDesc PrimFloat n) = 4 * n
 backingBufferSize (VectorDesc PrimDouble n) = 8 * n

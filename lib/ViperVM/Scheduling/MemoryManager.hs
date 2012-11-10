@@ -4,6 +4,7 @@ module ViperVM.Scheduling.MemoryManager (
 
 
 import ViperVM.Data
+import ViperVM.Transfer
 import ViperVM.Internals.Logging
 import ViperVM.Internals.Memory
 import ViperVM.Internals.Structures
@@ -39,9 +40,17 @@ executeRequestR (RequestTransfer ms d) = do
   let size = backingBufferSize (dataDescriptor d)
   buf <- createBufferR m size
   di <- lift . return $ createDataInstance (dataDescriptor d) buf
-  logInfoR $ printf "[Memory Manager] Transfer a buffer of size %d for %s in %s (TODO)" size (show d) (show m)
+  logInfoR $ printf "[Memory Manager] Transfer a buffer of size %d for %s in %s" size (show d) (show m)
+  -- Select source
+  srcs <- getInstancesR d
+  let src = head srcs
+  -- Select link
+  links <- getLinksBetweenDataInstances src di
+  let link = head links
+  let tr = transferDataInstance link src di
+  logInfoR $ printf "[Memory Manager] Scheduling %s..." (show tr)
+  lift $ performTransfer tr
   registerDataInstanceR d di
-  -- TODO
   postMessageR $ DataTransfered d di
 
 executeRequestR _ = voidR
