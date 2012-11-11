@@ -69,21 +69,22 @@ checkTransfer l v1 v2 = lm1 == m1 && lm2 == m2 && checkCompatibleViews v1 v2
 
 -- | Perform transfer synchronously
 performTransfer :: Transfer -> IO ()
-performTransfer (Transfer link src dst) = case link of
-  -- Host --> CL
-  CLLink lib cq HostMemory _ -> case (src,dst) of
-    (View1D (Buffer _ (HostBuffer _ ptr)) soff sz, View1D (Buffer _ (CLBuffer _ _ buf)) doff _) -> do
-      let srcptr = plusPtr ptr (fromIntegral soff)
-      e <- clEnqueueWriteBuffer lib cq buf True doff sz srcptr []
-      _ <- clReleaseEvent lib e
-      return ()
-  -- CL --> Host
-  CLLink lib cq _ HostMemory -> case (src,dst) of
-    (View1D (Buffer _ (CLBuffer _ _ buf)) soff sz, View1D (Buffer _ (HostBuffer _ ptr)) doff _) -> do
+performTransfer (Transfer link src dst) = case (link,src,dst) of
+
+  -- (Host --> CL, View1D, View1D)
+  (CLLink lib cq HostMemory (CLMemory {}), View1D (Buffer _ (HostBuffer _ ptr)) soff sz, View1D (Buffer _ (CLBuffer _ _ buf)) doff _) -> do
+    let srcptr = plusPtr ptr (fromIntegral soff)
+    e <- clEnqueueWriteBuffer lib cq buf True doff sz srcptr []
+    void $ clReleaseEvent lib e
+
+  -- (CL --> Host, View1D, View1D)
+  (CLLink lib cq (CLMemory {}) HostMemory, View1D (Buffer _ (CLBuffer _ _ buf)) soff sz, View1D (Buffer _ (HostBuffer _ ptr)) doff _) -> do
       let dstptr = plusPtr ptr (fromIntegral doff)
       e <- clEnqueueReadBuffer lib cq buf True soff sz dstptr []
-      _ <- clReleaseEvent lib e
-      return ()
+      void $ clReleaseEvent lib e
+
+  _ -> undefined
+
 
 -- | Indicate if a data has a allocated (not valid) instance in a memory
 isDataAllocatedR :: Data -> Memory -> R Bool
