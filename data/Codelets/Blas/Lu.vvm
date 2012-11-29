@@ -1,6 +1,4 @@
 module Blas where
 
-data Matrix = Matrix Int
-
-lu :: Matrix -> Matrix
-lu x = undefined
+dummy :: Int -> Int -> Int -> Int
+dummy x y z = (x + y) * (x +z)

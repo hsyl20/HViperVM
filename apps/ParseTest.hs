@@ -4,6 +4,19 @@ import Paths_ViperVM
 
 main :: IO ()
 main = do
-   input <- getDataFileName "data/Codelets/Blas/Lu.vvm"
+   let f = "data/Codelets/Blas/Lu.vvm"
+   
+   input <- getDataFileName f
    file <- readFile input
-   putStrLn $ show $ parse file
+   let p = parse file
+    
+   putStrLn $ "Parsing " ++ f
+
+   putStrLn $ show $ p
+
+   putStrLn $ "Searching for function \"dummy\""
+
+   case p of
+     Right m -> execute m "dummy"
+     _ -> return ()
+
