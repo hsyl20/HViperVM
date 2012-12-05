@@ -76,7 +76,7 @@ import ViperVM.Backends.OpenCL.Types(
   CLDeviceLocalMemType(..), CLDeviceMemCacheType(..), CLPlatformInfo(..),
   CLPlatformID, CLDeviceID, CLDeviceType(..), CLCommandQueueProperty, 
   getCLValue, getEnumCL, bitmaskToDeviceTypes, bitmaskToCommandQueueProperties, 
-  whenSuccess, bitmaskToFPConfig, bitmaskToExecCapability )
+  whenSuccess, wrapCheckSuccess, bitmaskToFPConfig, bitmaskToExecCapability )
 
 -- -----------------------------------------------------------------------------
 
@@ -89,17 +89,21 @@ import ViperVM.Backends.OpenCL.Types(
 -- -----------------------------------------------------------------------------
 getNumPlatforms :: OpenCLLibrary -> IO CLuint
 getNumPlatforms lib = alloca $ \(num_platforms :: Ptr CLuint) -> do 
-  whenSuccess (raw_clGetPlatformIDs lib 0 nullPtr num_platforms) 
-    $ peek num_platforms
+  err <- wrapCheckSuccess (raw_clGetPlatformIDs lib 0 nullPtr num_platforms)
+  if err
+    then peek num_platforms
+    else return 0 -- the ICD may return an error CL_PLATFORM_NOT_FOUND_KHR...
 
 -- | Obtain the list of platforms available. Returns the list if the function 
 -- is executed successfully. Otherwise it returns the empty list.
 clGetPlatformIDs :: OpenCLLibrary -> IO [CLPlatformID]
 clGetPlatformIDs lib = do
   nplats <- getNumPlatforms lib
-  allocaArray (fromIntegral nplats) $ \(plats :: Ptr CLPlatformID) -> do
-    whenSuccess (raw_clGetPlatformIDs lib nplats plats nullPtr) 
-      $ peekArray (fromIntegral nplats) plats
+  if nplats == 0
+    then return []
+    else allocaArray (fromIntegral nplats) $ \(plats :: Ptr CLPlatformID) -> do
+           whenSuccess(raw_clGetPlatformIDs lib nplats plats nullPtr)
+             $ peekArray (fromIntegral nplats) plats
   
 getPlatformInfoSize :: OpenCLLibrary -> CLPlatformID -> CLuint -> IO CSize
 getPlatformInfoSize lib platform infoid = alloca $ \(value_size :: Ptr CSize) -> do
