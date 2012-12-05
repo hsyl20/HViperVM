@@ -31,6 +31,7 @@ library
     ViperVM.Compiler
     ViperVM.Data
     ViperVM.Event
+    ViperVM.Executer
     ViperVM.Kernel
     ViperVM.KernelInterface
     ViperVM.KernelSet

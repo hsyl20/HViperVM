@@ -18,6 +18,8 @@ import ViperVM.Task
 
 taskManagerScheduler :: Scheduler
 
+-- | When an application submits a task, its resulting data handles are
+-- generated and returned and the task is stored to be executed
 taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
   
   -- Make kernel parameters from inputs:
@@ -45,8 +47,13 @@ taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
   let result = makeResult ki datas
   setEventR r result
 
-taskManagerScheduler (TaskReady task@(Task ks params)) = do
+-- | When a task is ready to be executed on a proc, a kernel is selected
+-- and the asynchronous execution is planned
+taskManagerScheduler (TaskReady task@(Task ks params) proc) = do
   logInfoR $ printf "Task %s ready to be executed! (TODO)" (show task)
+  -- Select kernel
+  let k = head ks
+  TODO -- call execute in Executer
   postMessageR $ TaskComplete task
 
 

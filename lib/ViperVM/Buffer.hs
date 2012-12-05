@@ -51,3 +51,7 @@ getBufferImpl (Buffer _ impl) = impl
 getBufferMemory :: Buffer -> Memory
 getBufferMemory = getBufferImplMemory . getBufferImpl
 
+getCLBuffer :: Buffer -> CLMem
+getCLBuffer buf = clmem
+   where
+      CLBuffer _ _ clmem = getBufferImpl buf

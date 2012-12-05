@@ -32,7 +32,7 @@ data Message =
   | TaskSubmitted Task            -- ^ A task has been submitted
   | TaskScheduled Task Processor  -- ^ A task has been scheduled on a given processor
   | TaskComplete Task             -- ^ A task has completed
-  | TaskReady Task                -- ^ A task has no associated request left
+  | TaskReady Task                -- ^ A task has no associated request left on proc
   | RequestsStored                -- ^ Some new requests have been submitted
   | KernelComplete Kernel         -- ^ A kernel has completed
   | KernelCompiled Kernel [Processor] [Maybe CompiledKernel] -- ^ A kernel compilation has completed
