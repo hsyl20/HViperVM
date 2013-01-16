@@ -1,12 +1,14 @@
 module ViperVM.Internals.Memory where
 
 import ViperVM.Buffer
+import qualified ViperVM.Buffer as Buffer (getMemory,getBufferImpl)
 import ViperVM.Data
 import ViperVM.Event
 import ViperVM.Internals.Structures
 import ViperVM.Platform
 import ViperVM.Transfer
-import ViperVM.View
+import ViperVM.Region
+import qualified ViperVM.Region as Region (getMemory)
 import Foreign.Ptr
 import ViperVM.Backends.OpenCL.CommandQueue
 import ViperVM.Backends.OpenCL.Event
@@ -51,34 +53,34 @@ registerDataEventR d ev = modify (dataEvents ^%= modDataEvents)
 unregisterBufferR :: Buffer -> R ()
 unregisterBufferR buf = modify (memBuffers ^%= modBuffer mem)
   where
-    mem = getBufferMemory buf
+    mem = Buffer.getMemory buf
     modBuffer :: Memory -> Map Memory [Buffer] -> Map Memory [Buffer]
     modBuffer m = Map.alter (fmap $ List.delete buf) m
 
 -- | Return memory containing a data instance
 getDataInstanceMemory :: DataInstance -> Memory
-getDataInstanceMemory (Vector (View1D buf _ _)) = getBufferMemory buf
+getDataInstanceMemory (Vector (Region1D buf _ _)) = Buffer.getMemory buf
 getDataInstanceMemory _ = undefined
 
-checkTransfer :: Link -> View -> View -> Bool
-checkTransfer l v1 v2 = lm1 == m1 && lm2 == m2 && checkCompatibleViews v1 v2
+checkTransfer :: Link -> Region -> Region -> Bool
+checkTransfer l v1 v2 = lm1 == m1 && lm2 == m2 && checkCompatibleRegions v1 v2
   where
     (lm1,lm2) = getLinkMemories l
-    m1 = getViewMemory v1
-    m2 = getViewMemory v2
+    m1 = Region.getMemory v1
+    m2 = Region.getMemory v2
 
 -- | Perform transfer synchronously
 performTransfer :: Transfer -> IO ()
 performTransfer (Transfer link src dst) = case (link,src,dst) of
 
-  -- (Host --> CL, View1D, View1D)
-  (CLLink lib cq HostMemory (CLMemory {}), View1D (Buffer _ (HostBuffer _ ptr)) soff sz, View1D (Buffer _ (CLBuffer _ _ buf)) doff _) -> do
+  -- (Host --> CL, Region1D, Region1D)
+  (CLLink lib cq HostMemory (CLMemory {}), Region1D (Buffer _ (HostBuffer _ ptr)) soff sz, Region1D (Buffer _ (CLBuffer _ _ buf)) doff _) -> do
     let srcptr = plusPtr ptr (fromIntegral soff)
     e <- clEnqueueWriteBuffer lib cq buf True doff sz srcptr []
     void $ clReleaseEvent lib e
 
-  -- (CL --> Host, View1D, View1D)
-  (CLLink lib cq (CLMemory {}) HostMemory, View1D (Buffer _ (CLBuffer _ _ buf)) soff sz, View1D (Buffer _ (HostBuffer _ ptr)) doff _) -> do
+  -- (CL --> Host, Region1D, Region1D)
+  (CLLink lib cq (CLMemory {}) HostMemory, Region1D (Buffer _ (CLBuffer _ _ buf)) soff sz, Region1D (Buffer _ (HostBuffer _ ptr)) doff _) -> do
       let dstptr = plusPtr ptr (fromIntegral doff)
       e <- clEnqueueReadBuffer lib cq buf True soff sz dstptr []
       void $ clReleaseEvent lib e
@@ -165,7 +167,7 @@ createBufferR mem sz = do
 -- | Release a buffer
 releaseBuffer :: Buffer -> R ()
 releaseBuffer buf = do
-  let b = getBufferImpl buf
+  let b = Buffer.getBufferImpl buf
   unregisterBufferR buf
   lift $ freeBuffer b
 

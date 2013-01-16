@@ -1,11 +1,11 @@
 module ViperVM.Transfer where
 
-import ViperVM.View
+import ViperVM.Region
 import ViperVM.Platform
 import ViperVM.Data
 import Text.Printf
 
-data Transfer = Transfer Link View View
+data Transfer = Transfer Link Region Region
 
 instance Show Transfer where
   show (Transfer l v1 v2) = printf "Transfer from %s to %s on %s" (show v1) (show v2) (show l)

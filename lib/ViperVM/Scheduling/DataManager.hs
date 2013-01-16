@@ -10,7 +10,7 @@ import ViperVM.Internals.Structures
 import ViperVM.Platform
 import ViperVM.RuntimeInternal
 import ViperVM.Task
-import ViperVM.View
+import ViperVM.Region
 
 import Data.Foldable (traverse_)
 import Text.Printf
@@ -23,8 +23,8 @@ dataManagerScheduler (AppMapVector desc@(VectorDesc prim n) ptr r) = do
   logInfoR $ printf "Mapping %s vector of %d elements at address %s" (show prim) n (show ptr)
   buf <- mapHostBufferR sz ptr
   registerBufferR HostMemory buf
-  let view = View1D buf 0 sz
-  let di = Vector view
+  let region = Region1D buf 0 sz
+  let di = Vector region
   d <- newData desc
   registerDataInstanceR d di
   setEventR r d

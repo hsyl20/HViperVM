@@ -48,8 +48,8 @@ getBufferImplMemory (CLBuffer _ mem _) = mem
 getBufferImpl :: Buffer -> BufferImpl
 getBufferImpl (Buffer _ impl) = impl
 
-getBufferMemory :: Buffer -> Memory
-getBufferMemory = getBufferImplMemory . getBufferImpl
+getMemory :: Buffer -> Memory
+getMemory = getBufferImplMemory . getBufferImpl
 
 getCLBuffer :: Buffer -> CLMem
 getCLBuffer buf = clmem

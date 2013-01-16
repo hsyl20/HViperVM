@@ -2,7 +2,7 @@ module ViperVM.Data where
 
 import Data.Word
 import ViperVM.Buffer
-import ViperVM.View
+import ViperVM.Region
 
 ----------------------------------------------------
 
@@ -37,15 +37,15 @@ dataDescriptor (Data _ desc) = desc
 data DataDesc = VectorDesc Primitive Word64
                 deriving (Eq,Ord,Show)
 
-data DataInstance = Vector View
+data DataInstance = Vector Region
                     deriving (Eq,Ord,Show)
 
-getDataInstanceView :: DataInstance -> View
-getDataInstanceView (Vector v) = v
+getDataInstanceRegion :: DataInstance -> Region
+getDataInstanceRegion (Vector v) = v
 
 backingBufferSize :: DataDesc -> Word64
 backingBufferSize (VectorDesc PrimFloat n) = 4 * n
 backingBufferSize (VectorDesc PrimDouble n) = 8 * n
 
 createDataInstance :: DataDesc -> Buffer -> DataInstance
-createDataInstance desc@(VectorDesc _ _) b = Vector $ View1D b 0 (backingBufferSize desc)
+createDataInstance desc@(VectorDesc _ _) b = Vector $ Region1D b 0 (backingBufferSize desc)

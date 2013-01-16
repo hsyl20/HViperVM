@@ -11,7 +11,8 @@ import ViperVM.Logging.Logger
 import ViperVM.Platform
 import ViperVM.Task
 import ViperVM.Transfer
-import ViperVM.View
+import qualified ViperVM.Region as Region (getMemory)
+import ViperVM.Region (Region)
 
 import Control.Concurrent.Chan
 import Control.Monad.State
@@ -153,16 +154,16 @@ isLinking m1 m2 l = ms == (m1,m2) || ms == (m2,m1)
 getLinksBetweenMemories :: Memory -> Memory -> R [Link]
 getLinksBetweenMemories m1 m2 = gets (filter (isLinking m1 m2) . links . platform)
 
--- Get links between two views
-getLinksBetweenViews :: View -> View -> R [Link]
-getLinksBetweenViews v1 v2 = getLinksBetweenMemories m1 m2
+-- Get links between two regions
+getLinksBetweenRegions :: Region -> Region -> R [Link]
+getLinksBetweenRegions v1 v2 = getLinksBetweenMemories m1 m2
   where
-    m1 = getViewMemory v1
-    m2 = getViewMemory v2
+    m1 = Region.getMemory v1
+    m2 = Region.getMemory v2
 
 -- Get links between two data instances
 getLinksBetweenDataInstances :: DataInstance -> DataInstance -> R [Link]
-getLinksBetweenDataInstances d1 d2 = getLinksBetweenViews v1 v2
+getLinksBetweenDataInstances d1 d2 = getLinksBetweenRegions v1 v2
   where
-    v1 = getDataInstanceView d1
-    v2 = getDataInstanceView d2
+    v1 = getDataInstanceRegion d1
+    v2 = getDataInstanceRegion d2

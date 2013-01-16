@@ -40,7 +40,7 @@ library
     ViperVM.RuntimeInternal
     ViperVM.Task
     ViperVM.Transfer
-    ViperVM.View
+    ViperVM.Region
 
     ViperVM.Internals.Logging
     ViperVM.Internals.Memory
