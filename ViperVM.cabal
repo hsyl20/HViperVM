@@ -46,6 +46,7 @@ library
     ViperVM.Internals.RegionManager
     ViperVM.Internals.InstanceManager
     ViperVM.Internals.DataManager  
+    ViperVM.Internals.KernelManager  
     ViperVM.Internals.Logging
     ViperVM.Internals.Memory
     ViperVM.Internals.Requests

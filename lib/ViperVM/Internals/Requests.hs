@@ -45,7 +45,7 @@ updateRequestsR f = do
 -- | Remove compilation requests that have been fulfilled
 updateCompilationRequestsR :: R ()
 updateCompilationRequestsR = do
-    cks <- getCompiledKernelsR
+    cks <- compiledKernelsR
     updateRequestsR (f cks)
   where
     f cks (RequestCompilation ks p) = all (\k -> isNothing $ getCompiledKernel p k cks) ks

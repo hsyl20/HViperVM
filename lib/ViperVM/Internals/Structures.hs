@@ -16,6 +16,8 @@ import ViperVM.Internals.BufferManager
 import ViperVM.Internals.RegionManager
 import ViperVM.Internals.InstanceManager
 import ViperVM.Internals.DataManager
+import ViperVM.Internals.KernelManager
+import qualified ViperVM.Internals.KernelManager as KernelManager
 
 import Control.Concurrent.Chan
 import Control.Monad.State
@@ -25,7 +27,6 @@ import Data.Lens.Template
 import Data.Map (Map)
 import Data.Set (Set)
 import Foreign.Ptr
-import qualified Data.Map as Map
 
 -- | Messages that the runtime can handle.
 data Message =  
@@ -72,11 +73,11 @@ data RuntimeState = RuntimeState {
   _regionManager :: RegionManager,          -- ^ Region manager
   _instanceManager :: InstanceManager,      -- ^ Data instance manager
   _dataManager   :: DataManager,            -- ^ Data manager
+  _kernelManager   :: KernelManager,        -- ^ Kernel manager
 
   _dataEvents :: Map Data [Event ()],       -- ^ Data and waiting events
   _dataTasks :: Map Data Task,              -- ^ Task computing each (uncomputed) data
   _invalidDataInstances :: Map Data [DataInstance], -- ^ Data and their invalid instances (just allocated, used in a transfer, etc.)
-  _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
   _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
   _scheduledTasks :: Map Processor [Task],  -- ^ Tasks scheduled on processors (may be executing)
   _requestTasks :: Map TaskRequest [Task],  -- ^ Requests and tasks that have made the request
@@ -133,24 +134,20 @@ getLoggerR = gets logger
 getChannelR :: R (Chan Message)
 getChannelR = gets channel
 
--- | Return compiled kernels
-getCompiledKernelsR :: R (Map Kernel (Map Processor CompiledKernel))
-getCompiledKernelsR = gets (compiledKernels ^$)
-
 -- | Return scheduled tasks
 getScheduledTasksR :: R (Map Processor [Task])
 getScheduledTasksR = gets (scheduledTasks ^$)
 
+getKernelManagerR :: R KernelManager
+getKernelManagerR = gets (kernelManager ^$)
+
 -- | Return a compiled kernel from the cache, if any
 getCompiledKernelR :: Processor -> Kernel -> R (Maybe CompiledKernel)
-getCompiledKernelR p k = gets (getCompiledKernel p k . getL compiledKernels)
+getCompiledKernelR p k = gets (\s -> compiledFor (kernelManager ^$ s) p k)
 
-getCompiledKernel :: Processor -> Kernel -> Map Kernel (Map Processor CompiledKernel) -> Maybe CompiledKernel
-getCompiledKernel p k cks = Map.lookup k cks >>= Map.lookup p
-
--- | Store a compiled kernel in state
+-- | Associate a compiled kernel
 storeCompiledKernelR :: Kernel -> CompiledKernel -> Processor -> R ()
-storeCompiledKernelR k ck proc = modify $ compiledKernels ^%= Map.insertWith Map.union k (Map.singleton proc ck)
+storeCompiledKernelR k ck proc = modify ( kernelManager ^%= \mgr -> KernelManager.associate mgr k proc ck)
 
 isLinking :: Memory -> Memory -> Link -> Bool
 isLinking m1 m2 l = ms == (m1,m2) || ms == (m2,m1)

@@ -22,6 +22,7 @@ import qualified ViperVM.Internals.BufferManager as BufferManager
 import qualified ViperVM.Internals.RegionManager as RegionManager
 import qualified ViperVM.Internals.InstanceManager as InstanceManager
 import qualified ViperVM.Internals.DataManager as DataManager
+import qualified ViperVM.Internals.KernelManager as KernelManager
 
 -- | Starts the runtime on the given platform
 startRuntime :: Platform -> Logger -> Scheduler -> IO Runtime
@@ -35,14 +36,16 @@ startRuntime pf l s = do
     logger = l,
     scheduler = s,
     linkChannels = lkChans,
+
     _bufferManager = BufferManager.init,
     _regionManager = RegionManager.init,
     _instanceManager = InstanceManager.init,
     _dataManager = DataManager.init,
+    _kernelManager = KernelManager.init,
+
     _dataEvents = Map.empty,
     _dataTasks = Map.empty,
     _invalidDataInstances = Map.empty,
-    _compiledKernels = Map.empty,
     _submittedTasks = [],
     _scheduledTasks = Map.fromList $ fmap (,[]) (processors pf),
     _requestTasks = Map.empty,
