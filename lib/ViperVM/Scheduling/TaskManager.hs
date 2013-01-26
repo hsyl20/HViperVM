@@ -2,19 +2,23 @@ module ViperVM.Scheduling.TaskManager (
   taskManagerScheduler
   ) where
 
+import Control.Applicative ((<$>))
 import Control.Monad.State
+import Control.Concurrent.Chan
 import Data.Lens.Lazy
-import Data.Map (insert)
-import Data.Foldable
+import Data.Map (insert,filterWithKey,toList)
+import Data.Foldable (traverse_)
 import Data.Traversable
 import Text.Printf
 
 import ViperVM.Internals.Logging
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
-import ViperVM.Internals.Structures (Scheduler, Message(..), submittedTasks, dataTasks, voidR, postMessageR)
+import ViperVM.Kernel
+import ViperVM.Internals.Structures (Scheduler, Message(..), submittedTasks, dataTasks, voidR, getChannelR, postMessageR, getScheduledTasksR)
 import ViperVM.RuntimeInternal (kpToTp, setEventR)
 import ViperVM.Task
+import ViperVM.Executer
 
 taskManagerScheduler :: Scheduler
 
@@ -49,12 +53,20 @@ taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
 
 -- | When a task is ready to be executed on a proc, a kernel is selected
 -- and the asynchronous execution is planned
-taskManagerScheduler (TaskReady task@(Task ks params) proc) = do
+taskManagerScheduler (TaskReady task@(Task ks params)) = do
   logInfoR $ printf "Task %s ready to be executed! (TODO)" (show task)
+
   -- Select kernel
-  let k = head ks
-  TODO -- call execute in Executer
-  postMessageR $ TaskComplete task
+  let (KernelSet _ (k:_)) = ks
+
+  -- Select proc
+  proc <- (head . toList. filterWithKey (\k v -> elem task v)) <$> getScheduledTasksR
+
+  let conf = configure k params
+  --TODO -- call execute in Executer
+  chan <- getChannelR
+  execute proc k conf $ do
+    writeChan chan $ TaskComplete task
 
 
 taskManagerScheduler _ = voidR

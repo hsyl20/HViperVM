@@ -1,6 +1,6 @@
 module ViperVM.RuntimeInternal (
   -- Methods
-  registerBufferR, registerDataInstanceR, newData,
+  registerDataInstanceR,
   setEventR, timeActionR,
   postMessageR, kpToTp
   ) where
@@ -8,11 +8,11 @@ module ViperVM.RuntimeInternal (
 import Prelude hiding (lookup)
 
 import Control.Monad.State (lift)
+import Control.Applicative
 
 import ViperVM.Internals.Structures
 import ViperVM.Internals.Memory
 
-import ViperVM.Data
 import ViperVM.Event
 import ViperVM.KernelInterface
 import ViperVM.Logging.Logger
@@ -29,9 +29,5 @@ setEventR ev v = lift $ setEvent ev v
 -- | Convert kernel parameter into task parameter, allocating data when necessary
 kpToTp :: KernelParameter -> R TaskParameter
 kpToTp (KPReadOnly d) = return $ (TPReadOnly d)
-kpToTp (KPReadWrite d) = do
-  d2 <- newData (dataDescriptor d)
-  return $ TPReadWrite d d2
-kpToTp (KPAllocate dd) = do
-  d2 <- newData dd
-  return $ TPAllocate d2
+kpToTp (KPReadWrite d) = TPReadWrite d <$> (allocateDataR =<< descriptorR d)
+kpToTp (KPAllocate dd) = TPAllocate <$> allocateDataR dd

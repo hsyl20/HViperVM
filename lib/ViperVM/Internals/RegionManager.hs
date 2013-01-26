@@ -1,4 +1,5 @@
 module ViperVM.Internals.RegionManager (
+   RegionManager,
    ViperVM.Internals.RegionManager.init,
    add,
    remove,
@@ -14,7 +15,7 @@ import ViperVM.Buffer
 import ViperVM.Region
 
 -- | Manage buffer regions
-data RegionManager = RegionManager (Map Buffer [Region])
+newtype RegionManager = RegionManager (Map Buffer [Region])
 
 -- | Initialize a region manager
 init :: RegionManager

@@ -7,8 +7,9 @@ import ViperVM.Kernel
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
 import ViperVM.Data
+import ViperVM.Internals.DataManager
 import ViperVM.Buffer
-import ViperVM.View
+import ViperVM.Region
 
 floatMatrixAddCL :: Kernel
 floatMatrixAddCL = CLKernel {
@@ -32,10 +33,10 @@ floatMatrixAddCL = CLKernel {
 floatMatrixAddCLConfig :: [(DataDesc,DataInstance)] -> KernelConfiguration
 floatMatrixAddCLConfig dis = CLKernelConfiguration gDim lDim params
    where
-      -- TODO: we shouldn't use vectors. We should use view offset
-      (VectorDesc PrimFloat n1, Vector (View1D buf1 _ _)) = head dis
-      (VectorDesc PrimFloat _, Vector (View1D buf2 _ _)) = head (tail dis)
-      (VectorDesc PrimFloat _, Vector (View1D buf3 _ _)) = head (tail (tail dis))
+      -- TODO: we shouldn't use vectors. We should use region offset
+      (VectorDesc PrimFloat n1, Vector buf1 (Region1D _ _)) = head dis
+      (VectorDesc PrimFloat _, Vector buf2 (Region1D _ _)) = head (tail dis)
+      (VectorDesc PrimFloat _, Vector buf3 (Region1D _ _)) = head (tail (tail dis))
       gDim = [fromIntegral n1,1,1]
       lDim = []
       params = [CLKPInt (fromIntegral n1), CLKPInt 1, CLKPMem (getCLBuffer buf1), CLKPMem (getCLBuffer buf2), CLKPMem (getCLBuffer buf3)]
@@ -44,7 +45,7 @@ floatMatrixAddCLConfig dis = CLKernelConfiguration gDim lDim params
 floatMatrixAddInterface :: KernelInterface
 floatMatrixAddInterface = KernelInterface {
   name = "Float Matrix Addition",
-  makeParameters = \[a,b] -> [KPReadOnly a, KPReadOnly b, KPAllocate (dataDescriptor a)],
+  makeParameters = \mgr [a,b] -> [KPReadOnly a, KPReadOnly b, KPAllocate (descriptor mgr a)],
   makeResult = \[_,_,c] -> [c]
 }
 

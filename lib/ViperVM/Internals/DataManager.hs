@@ -1,7 +1,9 @@
 module ViperVM.Internals.DataManager (
+   DataManager,
    ViperVM.Internals.DataManager.init,
    allocate,
-   release
+   release,
+   descriptor
 ) where
 
 import qualified Data.Map as Map
@@ -42,3 +44,7 @@ release :: DataManager -> Data -> DataManager
 release manager d = DataManager newDescriptors (lastId manager)
    where
       newDescriptors = Map.delete d (descriptors manager)
+
+-- | Retrieve data descriptor
+descriptor :: DataManager -> Data -> DataDesc
+descriptor manager d = fromJust $ Map.lookup d (descriptors manager)

@@ -11,16 +11,19 @@ import ViperVM.Logging.Logger
 import ViperVM.Platform
 import ViperVM.Task
 import ViperVM.Transfer
-import qualified ViperVM.Region as Region (getMemory)
-import ViperVM.Region (Region)
+
+import ViperVM.Internals.BufferManager
+import ViperVM.Internals.RegionManager
+import ViperVM.Internals.InstanceManager
+import ViperVM.Internals.DataManager
 
 import Control.Concurrent.Chan
 import Control.Monad.State
+import Control.Applicative ((<$>))
 import Data.Lens.Lazy
 import Data.Lens.Template
 import Data.Map (Map)
 import Data.Set (Set)
-import Data.Word
 import Foreign.Ptr
 import qualified Data.Map as Map
 
@@ -43,16 +46,16 @@ data Message =
 
 -- | Requests that are associated to tasks and that must be fulfilled before the task cen be executed
 data TaskRequest = 
-   RequestComputation Data                -- ^ Request that a data has been computed
+   RequestComputation Data              -- ^ Request that a data has been computed
  | RequestCompilation [Kernel] Processor  -- ^ Request compilation of at least one kernel for the given processor
- | RequestTransfer [Memory] Data          -- ^ Request the transfer of a data instance in any of the given memories
- | RequestDuplication [Memory] Data       -- ^ Request a duplicated instance (i.e. detachable) of the data in any of the given memories
- | RequestAllocation [Memory] Data        -- ^ Request the allocation of a placeholder for the given data in any of the given memories
+ | RequestTransfer [Memory] Data        -- ^ Request the transfer of a data instance in any of the given memories
+ | RequestDuplication [Memory] Data     -- ^ Request a duplicated instance (i.e. detachable) of the data in any of the given memories
+ | RequestAllocation [Memory] Data      -- ^ Request the allocation of a placeholder for the given data in any of the given memories
  deriving (Eq,Ord)
 
 instance Show TaskRequest where
   show (RequestComputation d) = "Computation of " ++ show d 
-  show (RequestCompilation ks proc) = "Compilation of any of " ++ show ks
+  show (RequestCompilation ks _) = "Compilation of any of " ++ show ks
   show (RequestTransfer ms d) = "Transfer of " ++ show d ++ " in any of " ++ show ms
   show (RequestDuplication ms d) = "Duplication of " ++  show d ++ " in any of " ++ show ms
   show (RequestAllocation ms d) = "Allocation of " ++  show d ++ " in any of " ++ show ms
@@ -65,13 +68,13 @@ data RuntimeState = RuntimeState {
   scheduler :: Scheduler,                   -- ^ Scheduler
   linkChannels :: Map Link (Chan Transfer), -- ^ Channels to communicate with link threads
   -- Lenses
-  _buffers :: [Buffer],                     -- ^ Associate buffer ID to real buffers
-  _memBuffers :: Map Memory [Buffer],       -- ^ Buffers in each memory
-  _datas :: Map Data [DataInstance],        -- ^ Data and their valid instances
+  _bufferManager :: BufferManager,          -- ^ Buffer manager
+  _regionManager :: RegionManager,          -- ^ Region manager
+  _instanceManager :: InstanceManager,      -- ^ Data instance manager
+  _dataManager   :: DataManager,            -- ^ Data manager
+
   _dataEvents :: Map Data [Event ()],       -- ^ Data and waiting events
   _dataTasks :: Map Data Task,              -- ^ Task computing each (uncomputed) data
-  _dataCounter :: Word,                     -- ^ Data counter (used to set data ID)
-  _bufferCounter :: Word,                   -- ^ Buffer counter (used to set buffer ID)
   _invalidDataInstances :: Map Data [DataInstance], -- ^ Data and their invalid instances (just allocated, used in a transfer, etc.)
   _compiledKernels :: Map Kernel (Map Processor CompiledKernel), -- ^ Compiled kernel cache
   _submittedTasks :: [Task],                -- ^ Tasks that are to be scheduled
@@ -134,6 +137,10 @@ getChannelR = gets channel
 getCompiledKernelsR :: R (Map Kernel (Map Processor CompiledKernel))
 getCompiledKernelsR = gets (compiledKernels ^$)
 
+-- | Return scheduled tasks
+getScheduledTasksR :: R (Map Processor [Task])
+getScheduledTasksR = gets (scheduledTasks ^$)
+
 -- | Return a compiled kernel from the cache, if any
 getCompiledKernelR :: Processor -> Kernel -> R (Maybe CompiledKernel)
 getCompiledKernelR p k = gets (getCompiledKernel p k . getL compiledKernels)
@@ -151,19 +158,16 @@ isLinking m1 m2 l = ms == (m1,m2) || ms == (m2,m1)
     ms = getLinkMemories l 
 
 -- | Get links between memories
-getLinksBetweenMemories :: Memory -> Memory -> R [Link]
-getLinksBetweenMemories m1 m2 = gets (filter (isLinking m1 m2) . links . platform)
+getLinksBetweenMemoriesR :: Memory -> Memory -> R [Link]
+getLinksBetweenMemoriesR m1 m2 = gets (filter (isLinking m1 m2) . links . platform)
 
--- Get links between two regions
-getLinksBetweenRegions :: Region -> Region -> R [Link]
-getLinksBetweenRegions v1 v2 = getLinksBetweenMemories m1 m2
-  where
-    m1 = Region.getMemory v1
-    m2 = Region.getMemory v2
+-- | Memory containing the given buffer
+getBufferMemoryR :: Buffer -> R Memory
+getBufferMemoryR buffer = flip bufferMemory buffer <$> gets (bufferManager ^$)
 
 -- Get links between two data instances
 getLinksBetweenDataInstances :: DataInstance -> DataInstance -> R [Link]
-getLinksBetweenDataInstances d1 d2 = getLinksBetweenRegions v1 v2
-  where
-    v1 = getDataInstanceRegion d1
-    v2 = getDataInstanceRegion d2
+getLinksBetweenDataInstances d1 d2 = do
+   m1 <- getBufferMemoryR (getDataInstanceBuffer d1)
+   m2 <- getBufferMemoryR (getDataInstanceBuffer d2)
+   getLinksBetweenMemoriesR m1 m2

@@ -5,6 +5,7 @@ import ViperVM.Buffer
 import ViperVM.Region
 
 ----------------------------------------------------
+type Data = Word
 
 data Primitive = PrimFloat | PrimDouble
                  deriving (Eq,Ord)
@@ -19,33 +20,22 @@ primitiveSize PrimDouble = 8
 
 ----------------------------------------------------
 
-type DataID = Word
-data Data = Data DataID DataDesc
-            deriving (Show)
-
-instance Eq Data where
-  (==) (Data id1 _) (Data id2 _) = id1 == id2
-
-instance Ord Data where
-  compare (Data id1 _) (Data id2 _) = compare id1 id2
-
-dataDescriptor :: Data -> DataDesc
-dataDescriptor (Data _ desc) = desc
-
-----------------------------------------------------
-
 data DataDesc = VectorDesc Primitive Word64
                 deriving (Eq,Ord,Show)
 
-data DataInstance = Vector Region
+data DataInstance = Vector Buffer Region
                     deriving (Eq,Ord,Show)
 
 getDataInstanceRegion :: DataInstance -> Region
-getDataInstanceRegion (Vector v) = v
+getDataInstanceRegion (Vector _ r) = r
+
+getDataInstanceBuffer :: DataInstance -> Buffer
+getDataInstanceBuffer (Vector b _) = b
 
 backingBufferSize :: DataDesc -> Word64
 backingBufferSize (VectorDesc PrimFloat n) = 4 * n
 backingBufferSize (VectorDesc PrimDouble n) = 8 * n
 
 createDataInstance :: DataDesc -> Buffer -> DataInstance
-createDataInstance desc@(VectorDesc _ _) b = Vector $ Region1D b 0 (backingBufferSize desc)
+createDataInstance desc@(VectorDesc _ _) b = Vector b $ Region1D 0 (backingBufferSize desc)
+

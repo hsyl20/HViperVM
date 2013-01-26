@@ -6,9 +6,9 @@ import ViperVM.KernelSet
 import Data.Maybe
 
 -- | Task data parameters and operation to perform (allocate, duplicate, nop)
-data TaskParameter = TPReadOnly Data        -- ^ A data accessed in read-only mode
+data TaskParameter = TPReadOnly Data          -- ^ A data accessed in read-only mode
                    | TPReadWrite Data Data  -- ^ A data that is duplicated into the second data
-                   | TPAllocate Data        -- ^ A newly allocated data
+                   | TPAllocate Data          -- ^ A newly allocated data
                    deriving (Eq,Ord)
 
 -- | A task

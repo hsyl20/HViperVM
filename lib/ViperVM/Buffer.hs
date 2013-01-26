@@ -8,8 +8,10 @@ import Foreign.Ptr
 import ViperVM.Backends.OpenCL
 
 
-type BufferId = Word
-data Buffer = CLBuffer OpenCLLibrary Memory CLMem | HostBuffer Word64 (Ptr ())
+data Buffer = 
+   CLBuffer OpenCLLibrary Memory CLMem |
+   HostBuffer Word64 (Ptr ())
+   deriving (Ord,Eq)
 
 instance Show Buffer where
   show (CLBuffer {}) = "OpenCL Buffer"
