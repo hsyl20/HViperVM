@@ -42,6 +42,7 @@ library
     ViperVM.Transfer
     ViperVM.Region
 
+    ViperVM.Internals.BufferManager
     ViperVM.Internals.Logging
     ViperVM.Internals.Memory
     ViperVM.Internals.Requests
