@@ -1,59 +1,44 @@
 module ViperVM.Internals.DataManager (
    ViperVM.Internals.DataManager.init,
    allocate,
-   associate,
-   dissociate,
-   dataInstances,
-   dataDescriptor
+   release
 ) where
 
 import qualified Data.Map as Map
-import qualified Data.List as List
 import Data.Map
-import Data.Word
 import Data.Maybe
+import Data.Word
+
+import Control.Applicative
 
 import ViperVM.Data
 
 data DataManager = DataManager {
-   descriptors :: Map Data DataDesc,
-   instances :: Map Data [DataInstance],
-   lastId :: Word
-}
+      descriptors :: Map Data DataDesc,
+      lastId :: Word
+   }
 
 -- | Initialize a data manager
 init :: DataManager
-init = DataManager {
-      descriptors = Map.empty,
-      instances = Map.empty,
-      lastId = 0
-   }
-
+init = DataManager Map.empty 0
 
 -- | Allocate a data
 allocate :: DataManager -> DataDesc -> (DataManager, Data)
 allocate manager desc = (newManager, dataId)
    where
-      dataId = lastId manager
+      dataId = findFreeId manager
       newDescriptors = Map.insert dataId desc (descriptors  manager)
-      newManager = DataManager newDescriptors (instances manager) (dataId + 1)
+      newManager = DataManager newDescriptors dataId
 
--- | Associate an instance to a data
-associate :: DataManager -> Data -> DataInstance -> DataManager
-associate manager d inst = manager { instances = Map.update (wrap . ((:) inst)) d (instances manager) }
+-- | Find next free id
+findFreeId :: DataManager -> Word
+findFreeId manager = fromMaybe findNextFreeId $ const nextId <$> Map.lookup nextId (descriptors manager)
    where
-      wrap s = if List.null s then Nothing else Just s
+      findNextFreeId = findFreeId (manager { lastId = nextId + 1 })
+      nextId = lastId manager + 1
 
--- | Dissociate an instance from a data
-dissociate :: DataManager -> Data -> DataInstance -> DataManager
-dissociate manager d inst = manager { instances = Map.update (wrap . (List.delete inst)) d (instances manager) }
+-- | Release a data
+release :: DataManager -> Data -> DataManager
+release manager d = DataManager newDescriptors (lastId manager)
    where
-      wrap s = if List.null s then Nothing else Just s
-
--- | Return instances of a data
-dataInstances :: DataManager -> Data -> [DataInstance]
-dataInstances manager d = fromMaybe [] (Map.lookup d (instances manager))
-
--- | Return data descriptor
-dataDescriptor :: DataManager -> Data -> DataDesc
-dataDescriptor manager d = fromJust (Map.lookup d (descriptors manager))
+      newDescriptors = Map.delete d (descriptors manager)
