@@ -3,7 +3,7 @@ module ViperVM.Internals.BufferManager (
    ViperVM.Internals.BufferManager.init,
    buffers,
    allocate,
-   mapHostMemory,
+   mapHostBuffer,
    ViperVM.Internals.BufferManager.free,
    bufferMemory
 ) where
@@ -68,8 +68,8 @@ allocate manager mem sz = do
    return (newManager, maybeBuffer)
 
 -- | Map host memory into a buffer
-mapHostMemory :: BufferManager -> Word64 -> Ptr () -> (BufferManager, Buffer)
-mapHostMemory manager sz ptr = (associate manager HostMemory buffer, buffer)
+mapHostBuffer :: BufferManager -> Word64 -> Ptr () -> (BufferManager, Buffer)
+mapHostBuffer manager sz ptr = (associate manager HostMemory buffer, buffer)
    where 
       buffer = HostBuffer sz ptr
 

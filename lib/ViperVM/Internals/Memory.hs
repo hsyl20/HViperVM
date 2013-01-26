@@ -30,8 +30,8 @@ import ViperVM.Internals.InstanceManager
 import ViperVM.Internals.DataManager
 
 -- | Register a data with an initial instance
-registerDataInstanceR :: Data -> DataInstance -> R ()
-registerDataInstanceR d di = modify (instanceManager ^%= \mgr -> InstanceManager.associate mgr d di)
+associateDataInstanceR :: Data -> DataInstance -> R ()
+associateDataInstanceR d di = modify (instanceManager ^%= \mgr -> InstanceManager.associate mgr d di)
 
 -- | Retrieve buffer manager
 getBufferManagerR :: R BufferManager
@@ -89,6 +89,10 @@ instancesR d = gets (\s -> InstanceManager.instances (instanceManager ^$ s) d)
 descriptorR :: Data -> R DataDesc
 descriptorR d = gets(\s -> descriptor (dataManager ^$ s) d)
 
+-- | Retrieve data list
+datasR :: R [Data]
+datasR = gets (\s -> datas (dataManager ^$ s))
+
 -- | Register data event
 registerDataEventR :: Data -> Event () -> R ()
 registerDataEventR d ev = modify (dataEvents ^%= modDataEvents)
@@ -96,6 +100,14 @@ registerDataEventR d ev = modify (dataEvents ^%= modDataEvents)
     modDataEvents = Map.alter f d
     f (Just x) = Just (x ++ [ev])
     f Nothing  = Just [ev]
+
+-- | Map host buffer
+mapHostBufferR :: Word64 -> Ptr () -> R Buffer
+mapHostBufferR sz ptr = do
+   mgr <- getBufferManagerR
+   let (mgr2,buffer) = mapHostBuffer mgr sz ptr
+   putBufferManagerR mgr2
+   return buffer
 
 -- | Return memory containing a data instance
 getDataInstanceMemoryR :: DataInstance -> R Memory

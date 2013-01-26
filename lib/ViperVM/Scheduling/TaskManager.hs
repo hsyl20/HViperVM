@@ -16,6 +16,7 @@ import ViperVM.KernelInterface
 import ViperVM.KernelSet
 import ViperVM.Kernel
 import ViperVM.Internals.Structures (Scheduler, Message(..), submittedTasks, dataTasks, voidR, getChannelR, postMessageR, getScheduledTasksR)
+import ViperVM.Internals.Memory (getDataManagerR)
 import ViperVM.RuntimeInternal (kpToTp, setEventR)
 import ViperVM.Task
 import ViperVM.Executer
@@ -26,11 +27,13 @@ taskManagerScheduler :: Scheduler
 -- generated and returned and the task is stored to be executed
 taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
   
+  dataMgr <- getDataManagerR
+
   -- Make kernel parameters from inputs:
   --   - data accessed in read-only mode
   --   - data accessed in read-write mode
   --   - data that must be allocated
-  let kps = makeParameters ki ds
+  let kps = makeParameters ki dataMgr ds
 
   -- Create task parameters
   params <- traverse kpToTp kps

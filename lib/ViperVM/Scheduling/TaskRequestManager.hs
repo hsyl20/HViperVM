@@ -5,6 +5,7 @@ module ViperVM.Scheduling.TaskRequestManager where
 import ViperVM.Internals.Logging
 import ViperVM.Internals.Requests
 import ViperVM.Internals.Structures
+import ViperVM.Internals.Memory
 
 import Control.Monad.State
 import Data.Foldable (traverse_)
@@ -41,7 +42,7 @@ taskRequestManager (DataAllocated d di) = do
 -- no longer invalid, we store the new data and we update transfer requests
 taskRequestManager (DataTransfered d di) = do
   modify (invalidDataInstances ^%= Map.adjust (List.delete di) d)
-  modify (datas ^%= Map.insertWith (++) d [di])
+  associateDataInstanceR d di
   updateTransferRequestsR
 
 taskRequestManager _ = voidR

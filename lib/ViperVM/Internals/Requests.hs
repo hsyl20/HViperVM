@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module ViperVM.Internals.Requests (
   updateCompilationRequestsR, updateAllocationRequestsR, updateTransferRequestsR,
   storeTaskRequestsR, registerActiveRequestR,determineTaskRequests,
@@ -10,6 +12,8 @@ import ViperVM.KernelSet
 import ViperVM.Platform
 
 import Control.Monad.State
+import Control.Applicative
+
 import Data.Foldable (traverse_)
 import Data.Lens.Lazy
 import Data.List (intersect)
@@ -51,18 +55,21 @@ updateCompilationRequestsR = do
 updateAllocationRequestsR :: R ()
 updateAllocationRequestsR = do
     instances <- getInvalidDataInstancesR
-    updateRequestsR (f instances)
+    instanceMem <- traverse (traverse getDataInstanceMemoryR) instances
+    updateRequestsR (f instanceMem)
   where
-    f instances (RequestAllocation mems d) = null $ intersect mems $ map getDataInstanceMemory $ Map.findWithDefault [] d instances
+    f instMem (RequestAllocation mems d) = null $ intersect mems $ Map.findWithDefault [] d instMem
     f _ _ = True
 
 -- | Remove transfer requests that have been fulfilled
 updateTransferRequestsR :: R ()
 updateTransferRequestsR = do
-    ds <- getDatasR
-    updateRequestsR (f ds)
+    ds <- datasR
+    dataMems <- traverse (instancesR >=> traverse getDataInstanceMemoryR) ds
+    let dataInsts = Map.fromList $ ds `zip` dataMems
+    updateRequestsR (f dataInsts)
   where
-    f ds (RequestTransfer mems d) = null $ intersect mems $ map getDataInstanceMemory $ Map.findWithDefault [] d ds
+    f dataMem (RequestTransfer mems d) = null $ intersect mems $ Map.findWithDefault [] d dataMem
     f _ _ = True
 
 -- | Register a request being fulfilled
@@ -94,12 +101,12 @@ determineTaskRequests proc task = do
   -- Check that input data have been computed (i.e. have at least one instance)
   let inputs = roDatas params
 
-  inputInstances <- traverse getInstancesR inputs
+  inputInstances <- traverse instancesR inputs
   let computeReqs = map RequestComputation $ catMaybes $ zipWith (\x y -> if null x then Just y else Nothing) inputInstances inputs
 
   -- Check that there is an instance of each parameter available in memory
   let mems = attachedMemories proc
-  let inputInstanceMemories = map (intersect mems . map getDataInstanceMemory) inputInstances
+  inputInstanceMemories <- traverse (\x -> intersect mems <$> traverse getDataInstanceMemoryR x) inputInstances
   let transferReqs = map (RequestTransfer mems) $ catMaybes $ zipWith (\x y -> if null x then Just y else Nothing) inputInstanceMemories inputs
 
   -- Check that a kernel for the given proc has been compiled

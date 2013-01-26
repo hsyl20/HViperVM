@@ -1,6 +1,5 @@
 module ViperVM.RuntimeInternal (
   -- Methods
-  registerDataInstanceR,
   setEventR, timeActionR,
   postMessageR, kpToTp
   ) where
