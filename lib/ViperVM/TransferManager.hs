@@ -1,6 +1,6 @@
 module ViperVM.TransferManager (
    TransferManager,
-   ViperVM.TransferManager.init
+   initTransferManager
 ) where
 
 import ViperVM.Transfer
@@ -9,5 +9,5 @@ import ViperVM.Transfer
 data TransferManager = TransferManager [Transfer]
 
 -- | Initialize a transfer manager
-init :: TransferManager
-init = TransferManager []
+initTransferManager :: TransferManager
+initTransferManager = TransferManager []

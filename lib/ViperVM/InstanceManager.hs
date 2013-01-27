@@ -1,6 +1,6 @@
 module ViperVM.InstanceManager (
    InstanceManager,
-   ViperVM.InstanceManager.init,
+   initInstanceManager,
    associate,
    dissociate,
    instances,
@@ -17,8 +17,8 @@ import ViperVM.Data
 newtype InstanceManager = InstanceManager (Map Data [DataInstance])
 
 -- | Initialize an instance manager
-init :: InstanceManager
-init = InstanceManager Map.empty
+initInstanceManager :: InstanceManager
+initInstanceManager = InstanceManager Map.empty
 
 -- | Return instances of a data
 instances :: InstanceManager -> Data -> [DataInstance]

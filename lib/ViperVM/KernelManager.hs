@@ -1,6 +1,6 @@
 module ViperVM.KernelManager (
    KernelManager,
-   ViperVM.KernelManager.init,
+   initKernelManager,
    register,
    associate,
    compiledFor
@@ -17,8 +17,8 @@ data KernelManager = KernelManager {
    }
 
 -- | Initialize kernel manager
-init :: KernelManager
-init = KernelManager Map.empty
+initKernelManager :: KernelManager
+initKernelManager = KernelManager Map.empty
 
 -- | Register a kernel
 register :: KernelManager -> Kernel -> KernelManager

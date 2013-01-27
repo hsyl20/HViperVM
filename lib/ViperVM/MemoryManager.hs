@@ -7,9 +7,6 @@ module ViperVM.MemoryManager (
    initMemoryManager, shutdown, allocateBuffer, releaseBuffer, lockRegion, unlockRegion, transferRegion,
 ) where
 
-import qualified ViperVM.BufferManager as BufferManager
-import qualified ViperVM.RegionManager as RegionManager
-import qualified ViperVM.TransferManager as TransferManager
 import ViperVM.Buffer
 import ViperVM.BufferManager 
 import ViperVM.Event
@@ -41,8 +38,6 @@ data MemoryManager = MemoryManager {
 -- Commands
 class Cmd a where
    wrap :: a -> Command
-
-data AccessMode = ReadOnly | ReadWrite | WriteOnly
 
 data Shutdown = Shutdown (Event ())
 data BufferAllocation = BufferAllocation Memory Word64 (Event (Maybe Buffer))
@@ -84,9 +79,9 @@ initMemoryManager pf = do
    let mgr = MemoryManager {
       channel = ch,
       platform = pf,
-      _bufferManager = BufferManager.init,
-      _regionManager = RegionManager.init,
-      _transferManager = TransferManager.init
+      _bufferManager = initBufferManager,
+      _regionManager = initRegionManager,
+      _transferManager = initTransferManager
    }
 
    void $ forkIO (memoryManager mgr)
@@ -166,3 +161,9 @@ executeCommand mgr (BufferReleaseCmd (BufferRelease buffer ev)) = do
          bufMgr2 <- free (bufferManager ^$ mgr) buffer
          setEvent ev BufferReleaseSuccess
          return (bufferManager ^= bufMgr2 $ mgr) 
+
+-- Region locking
+executeCommand mgr (RegionLockCmd (RegionLock buf reg mode ev)) = do
+   let (regMgr2, success) = lock (regionManager ^$ mgr) buf reg mode
+   setEvent ev success
+   return (regionManager ^= regMgr2 $ mgr) 

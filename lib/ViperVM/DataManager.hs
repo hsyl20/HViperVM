@@ -1,6 +1,6 @@
 module ViperVM.DataManager (
    DataManager,
-   ViperVM.DataManager.init,
+   initDataManager,
    allocate,
    release,
    descriptor,
@@ -22,8 +22,8 @@ data DataManager = DataManager {
    }
 
 -- | Initialize a data manager
-init :: DataManager
-init = DataManager Map.empty 0
+initDataManager :: DataManager
+initDataManager = DataManager Map.empty 0
 
 -- | Allocate a data
 allocate :: DataManager -> DataDesc -> (DataManager, Data)

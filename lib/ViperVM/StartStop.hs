@@ -18,11 +18,11 @@ import Control.Applicative (liftA2, (<$>))
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
-import qualified ViperVM.BufferManager as BufferManager
-import qualified ViperVM.RegionManager as RegionManager
-import qualified ViperVM.InstanceManager as InstanceManager
-import qualified ViperVM.DataManager as DataManager
-import qualified ViperVM.KernelManager as KernelManager
+import ViperVM.BufferManager
+import ViperVM.RegionManager
+import ViperVM.InstanceManager
+import ViperVM.DataManager
+import ViperVM.KernelManager
 
 -- | Starts the runtime on the given platform
 startRuntime :: Platform -> Logger -> Scheduler -> IO Runtime
@@ -37,11 +37,11 @@ startRuntime pf l s = do
     scheduler = s,
     linkChannels = lkChans,
 
-    _bufferManager = BufferManager.init,
-    _regionManager = RegionManager.init,
-    _instanceManager = InstanceManager.init,
-    _dataManager = DataManager.init,
-    _kernelManager = KernelManager.init,
+    _bufferManager = initBufferManager,
+    _regionManager = initRegionManager,
+    _instanceManager = initInstanceManager,
+    _dataManager = initDataManager,
+    _kernelManager = initKernelManager,
 
     _dataEvents = Map.empty,
     _dataTasks = Map.empty,

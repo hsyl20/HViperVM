@@ -1,6 +1,6 @@
 module ViperVM.BufferManager (
    BufferManager,
-   ViperVM.BufferManager.init,
+   initBufferManager,
    buffers,
    allocate,
    mapHostBuffer,
@@ -29,8 +29,8 @@ import ViperVM.Backends.OpenCL
 newtype BufferManager = BufferManager (Map Memory (Set Buffer))
 
 -- | Initialize a memory manager
-init :: BufferManager
-init = BufferManager Map.empty
+initBufferManager :: BufferManager
+initBufferManager = BufferManager Map.empty
 
 -- | Retrieve buffers in a given memory
 buffers :: BufferManager -> Memory -> Set Buffer
