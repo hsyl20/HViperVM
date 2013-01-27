@@ -1,6 +1,6 @@
-module ViperVM.Internals.DataManager (
+module ViperVM.DataManager (
    DataManager,
-   ViperVM.Internals.DataManager.init,
+   ViperVM.DataManager.init,
    allocate,
    release,
    descriptor,

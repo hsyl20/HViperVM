@@ -1,12 +1,12 @@
 {-# LANGUAGE TupleSections #-}
 
-module ViperVM.Internals.Requests (
+module ViperVM.Requests (
   updateCompilationRequestsR, updateAllocationRequestsR, updateTransferRequestsR,
   storeTaskRequestsR, registerActiveRequestR,determineTaskRequests,
   ) where
 
-import ViperVM.Internals.Structures
-import ViperVM.Internals.Memory
+import ViperVM.Structures
+import ViperVM.Memory
 import ViperVM.Task
 import ViperVM.KernelSet
 import ViperVM.Platform

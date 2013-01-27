@@ -9,8 +9,8 @@ module ViperVM.Runtime (
 
 import ViperVM.Data
 import ViperVM.Event
-import ViperVM.Internals.StartStop
-import ViperVM.Internals.Structures (Message(..), Runtime(..))
+import ViperVM.StartStop
+import ViperVM.Structures (Message(..), Runtime(..))
 import ViperVM.KernelSet
 
 import Control.Concurrent

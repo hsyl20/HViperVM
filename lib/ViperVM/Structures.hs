@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts #-} 
 
-module ViperVM.Internals.Structures where
+module ViperVM.Structures where
 
 import ViperVM.Buffer
 import ViperVM.Data
@@ -12,12 +12,12 @@ import ViperVM.Platform
 import ViperVM.Task
 import ViperVM.Transfer
 
-import ViperVM.Internals.BufferManager
-import ViperVM.Internals.RegionManager
-import ViperVM.Internals.InstanceManager
-import ViperVM.Internals.DataManager
-import ViperVM.Internals.KernelManager
-import qualified ViperVM.Internals.KernelManager as KernelManager
+import ViperVM.BufferManager
+import ViperVM.RegionManager
+import ViperVM.InstanceManager
+import ViperVM.DataManager
+import ViperVM.KernelManager
+import qualified ViperVM.KernelManager as KernelManager
 
 import Control.Concurrent.Chan
 import Control.Monad.State

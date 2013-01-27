@@ -1,6 +1,6 @@
-module ViperVM.Internals.RegionManager (
+module ViperVM.RegionManager (
    RegionManager,
-   ViperVM.Internals.RegionManager.init,
+   ViperVM.RegionManager.init,
    add,
    remove,
    regions

@@ -7,7 +7,7 @@ import ViperVM.Kernel
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
 import ViperVM.Data
-import ViperVM.Internals.DataManager
+import ViperVM.DataManager
 import ViperVM.Buffer
 import ViperVM.Region
 

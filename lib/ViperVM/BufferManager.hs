@@ -1,10 +1,10 @@
-module ViperVM.Internals.BufferManager (
+module ViperVM.BufferManager (
    BufferManager,
-   ViperVM.Internals.BufferManager.init,
+   ViperVM.BufferManager.init,
    buffers,
    allocate,
    mapHostBuffer,
-   ViperVM.Internals.BufferManager.free,
+   ViperVM.BufferManager.free,
    bufferMemory
 ) where
 

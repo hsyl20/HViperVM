@@ -11,12 +11,12 @@ import Data.Foldable (traverse_)
 import Data.Traversable
 import Text.Printf
 
-import ViperVM.Internals.Logging
+import ViperVM.Logging
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
 import ViperVM.Kernel
-import ViperVM.Internals.Structures (Scheduler, Message(..), submittedTasks, dataTasks, voidR, getChannelR, postMessageR, getScheduledTasksR)
-import ViperVM.Internals.Memory (getDataManagerR)
+import ViperVM.Structures (Scheduler, Message(..), submittedTasks, dataTasks, voidR, getChannelR, postMessageR, getScheduledTasksR)
+import ViperVM.Memory (getDataManagerR)
 import ViperVM.RuntimeInternal (kpToTp, setEventR)
 import ViperVM.Task
 import ViperVM.Executer

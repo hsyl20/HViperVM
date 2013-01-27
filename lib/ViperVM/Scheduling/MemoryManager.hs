@@ -5,9 +5,9 @@ module ViperVM.Scheduling.MemoryManager (
 
 import ViperVM.Data
 import ViperVM.Transfer
-import ViperVM.Internals.Logging
-import ViperVM.Internals.Memory
-import ViperVM.Internals.Structures
+import ViperVM.Logging
+import ViperVM.Memory
+import ViperVM.Structures
 
 import Control.Monad.State
 

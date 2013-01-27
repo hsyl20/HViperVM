@@ -1,6 +1,6 @@
-module ViperVM.Internals.RequestManager (
+module ViperVM.RequestManager (
    RequestManager,
-   ViperVM.Internals.RequestManager.init,
+   ViperVM.RequestManager.init,
    submit,
 ) where
 

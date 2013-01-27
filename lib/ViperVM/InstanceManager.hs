@@ -1,6 +1,6 @@
-module ViperVM.Internals.InstanceManager (
+module ViperVM.InstanceManager (
    InstanceManager,
-   ViperVM.Internals.InstanceManager.init,
+   ViperVM.InstanceManager.init,
    associate,
    dissociate,
    instances,

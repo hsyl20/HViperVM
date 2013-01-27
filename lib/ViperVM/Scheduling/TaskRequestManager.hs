@@ -2,10 +2,10 @@
 
 module ViperVM.Scheduling.TaskRequestManager where
 
-import ViperVM.Internals.Logging
-import ViperVM.Internals.Requests
-import ViperVM.Internals.Structures
-import ViperVM.Internals.Memory
+import ViperVM.Logging
+import ViperVM.Requests
+import ViperVM.Structures
+import ViperVM.Memory
 
 import Control.Monad.State
 import Data.Foldable (traverse_)

@@ -1,9 +1,9 @@
-module ViperVM.Internals.Memory where
+module ViperVM.Memory where
 
 import ViperVM.Buffer
 import ViperVM.Data
 import ViperVM.Event
-import ViperVM.Internals.Structures
+import ViperVM.Structures
 import ViperVM.Platform
 import ViperVM.Transfer
 import ViperVM.Region
@@ -22,12 +22,12 @@ import qualified Data.List as List
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
-import qualified ViperVM.Internals.InstanceManager as InstanceManager
-import qualified ViperVM.Internals.BufferManager as BufferManager
-import qualified ViperVM.Internals.DataManager as DataManager
-import ViperVM.Internals.BufferManager 
-import ViperVM.Internals.InstanceManager
-import ViperVM.Internals.DataManager
+import qualified ViperVM.InstanceManager as InstanceManager
+import qualified ViperVM.BufferManager as BufferManager
+import qualified ViperVM.DataManager as DataManager
+import ViperVM.BufferManager 
+import ViperVM.InstanceManager
+import ViperVM.DataManager
 
 -- | Register a data with an initial instance
 associateDataInstanceR :: Data -> DataInstance -> R ()

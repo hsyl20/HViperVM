@@ -9,8 +9,8 @@ import Prelude hiding (lookup)
 import Control.Monad.State (lift)
 import Control.Applicative
 
-import ViperVM.Internals.Structures
-import ViperVM.Internals.Memory
+import ViperVM.Structures
+import ViperVM.Memory
 
 import ViperVM.Event
 import ViperVM.KernelInterface

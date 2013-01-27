@@ -1,6 +1,6 @@
 module ViperVM.Scheduling.Composed where
 
-import ViperVM.Internals.Structures (Scheduler)
+import ViperVM.Structures (Scheduler)
 import Control.Monad.State
 
 -- | Compose a list of schedulers (executed from left to right)

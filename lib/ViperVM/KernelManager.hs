@@ -1,6 +1,6 @@
-module ViperVM.Internals.KernelManager (
+module ViperVM.KernelManager (
    KernelManager,
-   ViperVM.Internals.KernelManager.init,
+   ViperVM.KernelManager.init,
    register,
    associate,
    compiledFor

@@ -42,17 +42,17 @@ library
     ViperVM.Transfer
     ViperVM.Region
 
-    ViperVM.Internals.BufferManager
-    ViperVM.Internals.RegionManager
-    ViperVM.Internals.InstanceManager
-    ViperVM.Internals.DataManager  
-    ViperVM.Internals.KernelManager  
-    ViperVM.Internals.RequestManager  
-    ViperVM.Internals.Logging
-    ViperVM.Internals.Memory
-    ViperVM.Internals.Requests
-    ViperVM.Internals.StartStop
-    ViperVM.Internals.Structures
+    ViperVM.BufferManager
+    ViperVM.RegionManager
+    ViperVM.InstanceManager
+    ViperVM.DataManager  
+    ViperVM.KernelManager  
+    ViperVM.RequestManager  
+    ViperVM.Logging
+    ViperVM.Memory
+    ViperVM.Requests
+    ViperVM.StartStop
+    ViperVM.Structures
 
     ViperVM.Scheduling.Composed
     ViperVM.Scheduling.DataManager

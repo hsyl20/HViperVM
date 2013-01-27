@@ -1,8 +1,8 @@
-module ViperVM.Internals.Logging (
+module ViperVM.Logging (
   logCustomR, logErrorR, logWarningR, logInfoR 
   ) where
 
-import ViperVM.Internals.Structures
+import ViperVM.Structures
 import ViperVM.Logging.Logger
 
 -- | Write a custom string message in the log

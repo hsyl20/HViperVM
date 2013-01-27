@@ -4,9 +4,9 @@ module ViperVM.Scheduling.DataManager (
 
 
 import ViperVM.Data
-import ViperVM.Internals.Logging
-import ViperVM.Internals.Memory
-import ViperVM.Internals.Structures
+import ViperVM.Logging
+import ViperVM.Memory
+import ViperVM.Structures
 import ViperVM.RuntimeInternal
 import ViperVM.Task
 import ViperVM.Region

@@ -1,14 +1,14 @@
 {-# LANGUAGE TupleSections #-} 
 
-module ViperVM.Internals.StartStop (
+module ViperVM.StartStop (
   startRuntime
   ) where
 
-import ViperVM.Internals.Structures
+import ViperVM.Structures
 import ViperVM.Logging.Logger
 import ViperVM.Event
 import ViperVM.Platform (processors, links, Platform)
---import ViperVM.Internals.Logging
+--import ViperVM.Logging
 
 import Control.Monad.State (evalStateT,gets)
 import Control.Concurrent.Chan
@@ -18,11 +18,11 @@ import Control.Applicative (liftA2, (<$>))
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
-import qualified ViperVM.Internals.BufferManager as BufferManager
-import qualified ViperVM.Internals.RegionManager as RegionManager
-import qualified ViperVM.Internals.InstanceManager as InstanceManager
-import qualified ViperVM.Internals.DataManager as DataManager
-import qualified ViperVM.Internals.KernelManager as KernelManager
+import qualified ViperVM.BufferManager as BufferManager
+import qualified ViperVM.RegionManager as RegionManager
+import qualified ViperVM.InstanceManager as InstanceManager
+import qualified ViperVM.DataManager as DataManager
+import qualified ViperVM.KernelManager as KernelManager
 
 -- | Starts the runtime on the given platform
 startRuntime :: Platform -> Logger -> Scheduler -> IO Runtime
