@@ -43,6 +43,9 @@ library
 
     ViperVM.BufferManager
     ViperVM.RegionManager
+    ViperVM.TransferManager  
+    ViperVM.MemoryManager  
+
     ViperVM.InstanceManager
     ViperVM.DataManager  
     ViperVM.KernelManager  
