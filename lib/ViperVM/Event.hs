@@ -2,7 +2,7 @@
 -- computed asynchronously
 module ViperVM.Event (
   Event, OwnedEvent,
-  newEvent, waitEvent, setEvent, withNewEvent
+  newEvent, waitEvent, setEvent, withNewEvent,publishEvent
  ) where
 
 import Control.Concurrent
