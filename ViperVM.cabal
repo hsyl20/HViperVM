@@ -100,31 +100,31 @@ library
     cpp-options: -DCALLCONV=stdcall -DCallConv=StdCall
 
 
-executable RuntimeTest
-
-  main-is: RuntimeTest.hs
-
+executable PlatformInfo
+  main-is: PlatformInfo.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall
   build-depends: 
     base,
     ViperVM
 
+executable RuntimeTest
+  main-is: RuntimeTest.hs
   hs-source-dirs: apps
-
   ghc-options: -Wall
+  build-depends: 
+    base,
+    ViperVM
 
 
 executable ParseTest
-
   main-is: ParseTest.hs
-
+  hs-source-dirs: apps
+  ghc-options: -Wall
   build-depends: 
     base,
     ViperVM
-
-  hs-source-dirs: apps
-
-  ghc-options: -Wall
-
-
   other-modules:
     Paths_ViperVM
+
+
