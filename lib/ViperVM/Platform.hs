@@ -95,7 +95,12 @@ initPlatform config = do
          let proc = CLProcessor lib context queue device
          return (mem,link,proc)
 
-   return $ Platform clMems clLinks clProcs
+
+   let mems = HostMemory : clMems 
+       lnks = clLinks
+       procs = clProcs
+
+   return $ Platform mems lnks procs
 
 -- | Get memories at each end of a link
 linkEndpoints :: Link -> (Memory,Memory)
