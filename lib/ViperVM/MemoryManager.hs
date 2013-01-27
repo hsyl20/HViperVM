@@ -167,3 +167,9 @@ executeCommand mgr (RegionLockCmd (RegionLock buf reg mode ev)) = do
    let (regMgr2, success) = lock (regionManager ^$ mgr) buf reg mode
    setEvent ev success
    return (regionManager ^= regMgr2 $ mgr) 
+
+-- Region unlocking
+executeCommand mgr (RegionUnlockCmd (RegionUnlock buf reg mode ev)) = do
+   let regMgr2 = unlock (regionManager ^$ mgr) buf reg mode
+   setEvent ev True
+   return (regionManager ^= regMgr2 $ mgr) 
