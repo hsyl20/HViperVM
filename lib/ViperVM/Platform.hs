@@ -1,3 +1,5 @@
+-- | This module gives applications a complete view of the underlying
+-- architecture (memory network and processors)
 module ViperVM.Platform where
 
 import ViperVM.Backends.OpenCL
@@ -6,25 +8,18 @@ import Control.Applicative
 import System.IO.Unsafe
 import Text.Printf
 
+
+-- | A computing platform
 data Platform = Platform {
   memories :: [Memory],
   links :: [Link],
   processors :: [Processor]
 }
 
+
+-- | A memory node
 data Memory = HostMemory
             | CLMemory OpenCLLibrary CLContext CLDeviceID
-
-data Link = CLLink OpenCLLibrary CLCommandQueue Memory Memory deriving (Eq,Ord)
-
-instance Show Link where
-  show (CLLink _ _ m1 m2) = printf "OpenCL link between %s and %s" (show m1) (show m2)
-
-getLinkMemories :: Link -> (Memory,Memory)
-getLinkMemories (CLLink _ _ m1 m2) = (m1,m2)
-
-data Processor = HostProcessor
-               | CLProcessor OpenCLLibrary CLContext CLCommandQueue CLDeviceID
 
 instance Eq Memory where
   (==) HostMemory HostMemory = True
@@ -39,6 +34,21 @@ instance Ord Memory where
 
 instance Show Memory where
   show m = unsafePerformIO $ memInfo m
+
+
+
+-- | A link between two memories
+data Link = CLLink OpenCLLibrary CLCommandQueue Memory Memory
+            deriving (Eq,Ord)
+
+instance Show Link where
+  show (CLLink _ _ m1 m2) = printf "OpenCL link between %s and %s" (show m1) (show m2)
+
+
+
+-- | A processing unit
+data Processor = HostProcessor
+               | CLProcessor OpenCLLibrary CLContext CLCommandQueue CLDeviceID
 
 instance Eq Processor where
   (==) HostProcessor HostProcessor = True
@@ -55,6 +65,7 @@ instance Show Processor where
   show p = unsafePerformIO $ procInfo p
 
 
+-- | Platform configuration
 data Configuration = Configuration {
   libraryOpenCL :: String
 }
@@ -62,10 +73,13 @@ data Configuration = Configuration {
 -- | Initialize platform
 initPlatform :: Configuration -> IO Platform
 initPlatform config = do
-   let cllib = libraryOpenCL config 
-   lib <- loadOpenCL cllib
+
+   -- Load OpenCL platform
+   lib <- loadOpenCL (libraryOpenCL config)
+
    platforms <- clGetPlatformIDs lib
-   liftA (platformFromTuple . unzip3 . concat) $ forM platforms $ \platform -> do
+
+   (clMems, clLinks, clProcs) <- liftA (unzip3 . concat) $ forM platforms $ \platform -> do
       devices <- clGetDeviceIDs lib CL_DEVICE_TYPE_ALL platform
       context <- clCreateContext lib [CL_CONTEXT_PLATFORM platform] devices putStrLn
       forM devices $ \device -> do
@@ -75,10 +89,14 @@ initPlatform config = do
          let link = CLLink lib queue HostMemory mem
          let proc = CLProcessor lib context queue device
          return (mem,link,proc)
-   where
-      platformFromTuple (mems,lnks,procs) = Platform mems lnks procs
 
+   return $ Platform clMems clLinks clProcs
 
+-- | Get memories at each end of a link
+getLinkMemories :: Link -> (Memory,Memory)
+getLinkMemories (CLLink _ _ m1 m2) = (m1,m2)
+
+-- | Get processor information string
 procInfo :: Processor -> IO String
 procInfo (CLProcessor lib _ _ dev) = do
   name <- clGetDeviceName lib dev
@@ -93,12 +111,14 @@ platformInfo pf = do
   return ("Processors:\n" ++ procs)
 
 
+-- | Get memory information string
 memInfo :: Memory -> IO String
 memInfo HostMemory = return "Host Memory"
 memInfo (CLMemory lib _ dev) = do
   sz <- clGetDeviceGlobalMemSize lib dev
   return $ printf "OpenCL Memory %s (%s KB)" (show dev) (show sz)
 
+-- | Retrieve memories attached to a given processor
 attachedMemories :: Processor -> [Memory]
 attachedMemories (CLProcessor lib ctx _ dev) = [CLMemory lib ctx dev]
 attachedMemories HostProcessor = [HostMemory]
