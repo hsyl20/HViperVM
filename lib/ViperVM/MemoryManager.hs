@@ -2,8 +2,9 @@
 
 module ViperVM.MemoryManager (
    MemoryManager, AccessMode(..),
-   ViperVM.MemoryManager.init,
-   shutdown, allocateBuffer, releaseBuffer, lockRegion, unlockRegion, transferRegion
+   BufferAllocation(..), BufferRelease(..), RegionLock(..), RegionUnlock(..), RegionTransfer(..),
+   BufferReleaseState(..),
+   initMemoryManager, shutdown, allocateBuffer, releaseBuffer, lockRegion, unlockRegion, transferRegion,
 ) where
 
 import qualified ViperVM.BufferManager as BufferManager
@@ -45,7 +46,7 @@ data AccessMode = ReadOnly | ReadWrite | WriteOnly
 
 data Shutdown = Shutdown (Event ())
 data BufferAllocation = BufferAllocation Memory Word64 (Event (Maybe Buffer))
-data BufferRelease = BufferRelease Buffer (Event Bool)
+data BufferRelease = BufferRelease Buffer (Event BufferReleaseState)
 data RegionLock = RegionLock Buffer Region AccessMode (Event Bool)
 data RegionUnlock = RegionUnlock Buffer Region AccessMode (Event Bool)
 data RegionTransfer = RegionTransfer Buffer Region Buffer Region (Event Bool)
@@ -65,7 +66,8 @@ instance Cmd RegionUnlock where wrap = RegionUnlockCmd
 instance Cmd RegionTransfer where wrap = RegionTransferCmd
 
 
-
+data BufferReleaseState = BufferReleaseSuccess | BufferReleaseErrorRegionLeft
+                          deriving (Show)
 
 $( makeLens ''MemoryManager )
 
@@ -75,8 +77,8 @@ $( makeLens ''MemoryManager )
 -----------------------------------------------------------------------
 
 -- | Initialize memory manager
-init :: Platform -> IO MemoryManager
-init pf = do
+initMemoryManager :: Platform -> IO MemoryManager
+initMemoryManager pf = do
    ch <- newChan
 
    let mgr = MemoryManager {
@@ -143,8 +145,24 @@ memoryManager mgr = do
 -- | Effective command execution is performed here
 executeCommand :: MemoryManager -> Command -> IO MemoryManager
 
+executeCommand _ (ShutdownCmd {}) = undefined
+
 -- Buffer allocation
 executeCommand mgr (BufferAllocationCmd (BufferAllocation mem sz ev)) = do
    (bufMgr2, buffer) <- allocate (bufferManager ^$ mgr) mem sz
    setEvent ev buffer
    return (bufferManager ^= bufMgr2 $ mgr) 
+
+-- Buffer release
+executeCommand mgr (BufferReleaseCmd (BufferRelease buffer ev)) = do
+
+   -- Check that there is no region left in the buffer
+   let regs = regions (regionManager ^$ mgr) buffer
+   if not (null regs) 
+      then do
+         setEvent ev BufferReleaseErrorRegionLeft
+         return mgr
+      else do
+         bufMgr2 <- free (bufferManager ^$ mgr) buffer
+         setEvent ev BufferReleaseSuccess
+         return (bufferManager ^= bufMgr2 $ mgr) 
