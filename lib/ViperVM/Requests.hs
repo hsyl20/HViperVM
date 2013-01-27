@@ -105,7 +105,7 @@ determineTaskRequests proc task = do
   let computeReqs = map RequestComputation $ catMaybes $ zipWith (\x y -> if null x then Just y else Nothing) inputInstances inputs
 
   -- Check that there is an instance of each parameter available in memory
-  let mems = attachedMemories proc
+  let mems = processorMemories proc
   inputInstanceMemories <- traverse (\x -> intersect mems <$> traverse getDataInstanceMemoryR x) inputInstances
   let transferReqs = map (RequestTransfer mems) $ catMaybes $ zipWith (\x y -> if null x then Just y else Nothing) inputInstanceMemories inputs
 

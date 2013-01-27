@@ -166,7 +166,7 @@ storeCompiledKernelR k ck proc = modify ( kernelManager ^%= \mgr -> KernelManage
 isLinking :: Memory -> Memory -> Link -> Bool
 isLinking m1 m2 l = ms == (m1,m2) || ms == (m2,m1)
   where
-    ms = getLinkMemories l 
+    ms = linkEndpoints l 
 
 -- | Get links between memories
 getLinksBetweenMemoriesR :: Memory -> Memory -> R [Link]
@@ -273,7 +273,7 @@ checkTransfer (Transfer l b1 r1 b2 r2) = do
   m2 <- getBufferMemoryR b2
   return $ lm1 == m1 && lm2 == m2 && checkCompatibleRegions r1 r2
   where
-    (lm1,lm2) = getLinkMemories l
+    (lm1,lm2) = linkEndpoints l
 
 -- | Perform transfer synchronously
 performTransfer :: Transfer -> IO ()

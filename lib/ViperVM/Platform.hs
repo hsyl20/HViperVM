@@ -1,6 +1,11 @@
 -- | This module gives applications a complete view of the underlying
 -- architecture (memory network and processors)
-module ViperVM.Platform where
+module ViperVM.Platform (
+   Platform, Memory(..), Processor(..), Link(..), Configuration(..),
+   initPlatform, platformInfo, procInfo, memInfo,
+   memories, links, processors,
+   linkEndpoints, processorMemories
+) where
 
 import ViperVM.Backends.OpenCL
 import Data.Traversable
@@ -93,8 +98,8 @@ initPlatform config = do
    return $ Platform clMems clLinks clProcs
 
 -- | Get memories at each end of a link
-getLinkMemories :: Link -> (Memory,Memory)
-getLinkMemories (CLLink _ _ m1 m2) = (m1,m2)
+linkEndpoints :: Link -> (Memory,Memory)
+linkEndpoints (CLLink _ _ m1 m2) = (m1,m2)
 
 -- | Get processor information string
 procInfo :: Processor -> IO String
@@ -108,7 +113,8 @@ procInfo HostProcessor = return "[Host]"
 platformInfo :: Platform -> IO String
 platformInfo pf = do
   procs <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse procInfo (processors pf)
-  return ("Processors:\n" ++ procs)
+  mems <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse memInfo (memories pf)
+  return ("Processors:\n" ++ procs ++ "Memories:\n" ++ mems)
 
 
 -- | Get memory information string
@@ -116,10 +122,28 @@ memInfo :: Memory -> IO String
 memInfo HostMemory = return "Host Memory"
 memInfo (CLMemory lib _ dev) = do
   sz <- clGetDeviceGlobalMemSize lib dev
-  return $ printf "OpenCL Memory %s (%s KB)" (show dev) (show sz)
+  devName <- clGetDeviceName lib dev
+  return $ printf "[OpenCL] Memory %s (%s)" (prettyShowSize (fromIntegral sz) Kilo ++ "Bytes") devName
+
+data Unit = Base | Kilo | Mega | Giga | Tera | Peta deriving (Show)
+
+-- | Pretty print a size
+prettyShowSize :: Double -> Unit -> String
+prettyShowSize n unit = if n > 999 then prettyShowSize (n / 1000.0) (nextUnit unit) else printf "%.2f %s" n (show unit)
+   where
+      nextUnit :: Unit -> Unit
+      nextUnit u = case u of 
+         Base -> Kilo
+         Kilo -> Mega
+         Mega -> Giga
+         Giga -> Tera
+         Tera -> Peta
+         Peta -> undefined
+
+
 
 -- | Retrieve memories attached to a given processor
-attachedMemories :: Processor -> [Memory]
-attachedMemories (CLProcessor lib ctx _ dev) = [CLMemory lib ctx dev]
-attachedMemories HostProcessor = [HostMemory]
+processorMemories :: Processor -> [Memory]
+processorMemories (CLProcessor lib ctx _ dev) = [CLMemory lib ctx dev]
+processorMemories HostProcessor = [HostMemory]
 
