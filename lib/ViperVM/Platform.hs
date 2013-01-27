@@ -2,7 +2,7 @@
 -- architecture (memory network and processors)
 module ViperVM.Platform (
    Platform, Memory(..), Processor(..), Link(..), Configuration(..),
-   initPlatform, platformInfo, procInfo, memInfo,
+   initPlatform, platformInfo, procInfo, memInfo, linkInfo,
    memories, links, processors,
    linkEndpoints, processorMemories
 ) where
@@ -110,26 +110,44 @@ procInfo (CLProcessor lib _ _ dev) = do
 
 procInfo HostProcessor = return "[Host]"
 
+
+-- | Retrieve platform information string
 platformInfo :: Platform -> IO String
 platformInfo pf = do
   procs <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse procInfo (processors pf)
   mems <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse memInfo (memories pf)
-  return ("Processors:\n" ++ procs ++ "Memories:\n" ++ mems)
+  lks <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse linkInfo (links pf)
+  return ("Processors:\n" ++ procs ++ "Memories:\n" ++ mems ++ "Links:\n" ++ lks)
 
 
--- | Get memory information string
+-- | Retrieve memory information string
 memInfo :: Memory -> IO String
-memInfo HostMemory = return "Host Memory"
+memInfo HostMemory = return "[Host] Host Memory"
 memInfo (CLMemory lib _ dev) = do
   sz <- clGetDeviceGlobalMemSize lib dev
   devName <- clGetDeviceName lib dev
-  return $ printf "[OpenCL] Memory %s (%s)" (prettyShowSize (fromIntegral sz) Kilo ++ "Bytes") devName
+  return $ printf "[OpenCL] Memory %sBytes (%s)" (prettyShowSize (fromIntegral sz) Base) devName
+
+-- | Retrieve memory name
+memName :: Memory -> IO String
+memName HostMemory = return "Host Memory"
+memName (CLMemory lib _ dev) = do
+   devName <- clGetDeviceName lib dev
+   return $ printf "%s (OpenCL)" devName
+
+-- | Retrieve link information string
+linkInfo :: Link -> IO String
+linkInfo (CLLink _ _ e1 e2) = do
+   name1 <- memName e1
+   name2 <- memName e2
+   return $ printf "[OpenCL] Link between:\n      - %s\n      - %s" name1 name2
+   
 
 data Unit = Base | Kilo | Mega | Giga | Tera | Peta deriving (Show)
 
 -- | Pretty print a size
 prettyShowSize :: Double -> Unit -> String
-prettyShowSize n unit = if n > 999 then prettyShowSize (n / 1000.0) (nextUnit unit) else printf "%.2f %s" n (show unit)
+prettyShowSize n unit = if n > 1023 then prettyShowSize (n / 1024.0) (nextUnit unit) else printf "%.2f %s" n (show unit)
    where
       nextUnit :: Unit -> Unit
       nextUnit u = case u of 
