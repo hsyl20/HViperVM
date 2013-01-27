@@ -37,7 +37,6 @@ library
     ViperVM.KernelSet
     ViperVM.Platform
     ViperVM.Runtime
-    ViperVM.RuntimeInternal
     ViperVM.Task
     ViperVM.Transfer
     ViperVM.Region
@@ -49,7 +48,6 @@ library
     ViperVM.KernelManager  
     ViperVM.RequestManager  
     ViperVM.Logging
-    ViperVM.Memory
     ViperVM.Requests
     ViperVM.StartStop
     ViperVM.Structures

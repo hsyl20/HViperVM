@@ -2,11 +2,9 @@ module ViperVM.Scheduling.TaskManager (
   taskManagerScheduler
   ) where
 
-import Control.Applicative ((<$>))
 import Control.Monad.State
-import Control.Concurrent.Chan
 import Data.Lens.Lazy
-import Data.Map (insert,filterWithKey,toList)
+import Data.Map (insert)
 import Data.Foldable (traverse_)
 import Data.Traversable
 import Text.Printf
@@ -14,12 +12,8 @@ import Text.Printf
 import ViperVM.Logging
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
-import ViperVM.Kernel
-import ViperVM.Structures (Scheduler, Message(..), submittedTasks, dataTasks, voidR, getChannelR, postMessageR, getScheduledTasksR)
-import ViperVM.Memory (getDataManagerR)
-import ViperVM.RuntimeInternal (kpToTp, setEventR)
+import ViperVM.Structures
 import ViperVM.Task
-import ViperVM.Executer
 
 taskManagerScheduler :: Scheduler
 

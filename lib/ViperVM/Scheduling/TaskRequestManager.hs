@@ -5,7 +5,6 @@ module ViperVM.Scheduling.TaskRequestManager where
 import ViperVM.Logging
 import ViperVM.Requests
 import ViperVM.Structures
-import ViperVM.Memory
 
 import Control.Monad.State
 import Data.Foldable (traverse_)

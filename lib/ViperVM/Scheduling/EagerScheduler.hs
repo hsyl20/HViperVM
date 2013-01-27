@@ -4,10 +4,9 @@ module ViperVM.Scheduling.EagerScheduler (
 
 import ViperVM.Kernel
 import ViperVM.KernelSet
-import ViperVM.RuntimeInternal
 import ViperVM.Task
 import ViperVM.Logging
-import ViperVM.Structures(Scheduler, Message(..), scheduledTasks, voidR)
+import ViperVM.Structures
 
 import Control.Monad.State
 import Data.Lens.Lazy

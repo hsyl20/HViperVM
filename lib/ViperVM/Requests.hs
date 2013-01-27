@@ -6,7 +6,6 @@ module ViperVM.Requests (
   ) where
 
 import ViperVM.Structures
-import ViperVM.Memory
 import ViperVM.Task
 import ViperVM.KernelSet
 import ViperVM.Platform
