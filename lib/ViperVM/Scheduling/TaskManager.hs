@@ -59,6 +59,8 @@ taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
 taskManagerScheduler (TaskReady task@(Task ks params)) = do
   logInfoR $ printf "Task %s ready to be executed! (TODO)" (show task)
 
+{- FIXME
+
   -- Select kernel
   let (KernelSet _ (k:_)) = ks
 
@@ -68,8 +70,8 @@ taskManagerScheduler (TaskReady task@(Task ks params)) = do
   let conf = configure k params
   --TODO -- call execute in Executer
   chan <- getChannelR
-  execute proc k conf $ do
-    writeChan chan $ TaskComplete task
+  lift $ execute proc k conf $ do
+    writeChan chan $ TaskComplete task -}
 
 
 taskManagerScheduler _ = voidR

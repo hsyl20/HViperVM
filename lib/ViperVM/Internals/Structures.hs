@@ -136,10 +136,10 @@ getChannelR = gets channel
 
 -- | Return scheduled tasks
 getScheduledTasksR :: R (Map Processor [Task])
-getScheduledTasksR = gets (scheduledTasks ^$)
+getScheduledTasksR = access scheduledTasks
 
 getKernelManagerR :: R KernelManager
-getKernelManagerR = gets (kernelManager ^$)
+getKernelManagerR = access kernelManager
 
 -- | Return a compiled kernel from the cache, if any
 getCompiledKernelR :: Processor -> Kernel -> R (Maybe CompiledKernel)

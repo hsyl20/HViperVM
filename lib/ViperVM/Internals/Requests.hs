@@ -17,7 +17,7 @@ import Control.Applicative
 import Data.Foldable (traverse_)
 import Data.Lens.Lazy
 import Data.List (intersect)
-import Data.Maybe (isNothing, catMaybes)
+import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import Data.Traversable (traverse)
 import qualified Data.Map as Map
@@ -45,11 +45,12 @@ updateRequestsR f = do
 -- | Remove compilation requests that have been fulfilled
 updateCompilationRequestsR :: R ()
 updateCompilationRequestsR = do
-    cks <- compiledKernelsR
+   return () --FIXME
+    {-cks <- compiledKernelsR
     updateRequestsR (f cks)
   where
     f cks (RequestCompilation ks p) = all (\k -> isNothing $ getCompiledKernel p k cks) ks
-    f _ _ = True
+    f _ _ = True-}
    
 -- | Remove allocation requests that have been fulfilled
 updateAllocationRequestsR :: R ()
