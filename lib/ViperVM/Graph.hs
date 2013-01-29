@@ -2,7 +2,7 @@
 module ViperVM.Graph (
    Graph, Node,
    newGraph, addNode, addNode_, removeNode, printGraph, nodeValue, setNodeValue,
-   tailEndpoints, headEndpoints,
+   tailEndpoints, headEndpoints, leaves, roots,
 ) where
 
 import Control.Concurrent.STM
@@ -115,15 +115,30 @@ printGraph g = do
 
    return $ concat strs
 
+-- | Retrieve filtered edges
+filterEdges :: Graph a -> (NodeSet -> Bool) -> STM NodeSet
+filterEdges g f = do
+   oldEdges <- readTVar (edges g)
+   IntMap.keysSet . IntMap.filter f <$> traverse readTVar oldEdges
+
 -- | Return outgoing edges endpoints
 tailEndpoints :: Graph a -> Node -> STM NodeSet
 tailEndpoints g n = do
    oldEdges <- readTVar (edges g)
    readTVar (oldEdges ! n)
 
+
 -- | Return incoming edges endpoints
 headEndpoints :: Graph a -> Node -> STM NodeSet
-headEndpoints g n = do
-   oldEdges <- readTVar (edges g)
-   IntMap.keysSet . IntMap.filter (IntSet.member n) <$> traverse readTVar oldEdges
+headEndpoints g n = filterEdges g (IntSet.member n)
       
+-- | Retrieve leaf nodes
+leaves :: Graph a -> STM NodeSet
+leaves g = filterEdges g IntSet.null
+   
+-- | Retrieve leaf nodes
+roots :: Graph a -> STM NodeSet
+roots g = do
+   oldEdges <- readTVar (edges g)
+   IntMap.foldl IntSet.difference (IntMap.keysSet oldEdges) <$> traverse readTVar oldEdges
+   

@@ -34,14 +34,20 @@ main = do
 
    (node3,node4) <- atomically $ do
       n1 <- addNode g2 (Task "dtrsm") empty
-      n2 <- addNode g2 (Task "dsymm") empty
+      n2 <- addNode g2 (Task "dsymm") (fromList [n1])
       n3 <- addNode g2 (Task "dsyrk") empty
       n4 <- addNode g2 (Task "dgemm") (fromList [n1,n2,n3])
-      return (n3,n4)
+      return (n1,n4)
 
    putStrLn =<< atomically (printGraph g2)
 
-   dgemmTailEndp <- toList <$> atomically (tailEndpoints g2 node4)
-   dsyrkHeadEndp <- toList <$> atomically (headEndpoints g2 node3)
-   putStrLn $ "DGEMM tail endpoints: " ++ show dgemmTailEndp
-   putStrLn $ "DSYRK head endpoints: " ++ show dsyrkHeadEndp
+   tps <- toList <$> atomically (tailEndpoints g2 node4)
+   hps <- toList <$> atomically (headEndpoints g2 node3)
+   putStrLn $ "DGEMM tail endpoints: " ++ show tps
+   putStrLn $ "DTRSM head endpoints: " ++ show hps
+
+   ls <- toList <$> atomically (leaves g2)
+   putStrLn $ "Leaves: " ++ show ls
+
+   rs <- toList <$> atomically (roots g2)
+   putStrLn $ "Roots: " ++ show rs
