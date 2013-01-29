@@ -31,17 +31,26 @@ newGraph :: STM (Graph a)
 newGraph = Graph <$> newTVar 0 <*> newTVar IntMap.empty <*> newTVar IntMap.empty
 
 
+-- | Find the next free ID, update the Graph and return the ID
+fetchFreeId :: Graph g -> STM Int
+fetchFreeId g = do
+   oldId <- readTVar (lastId g)
+   ks <- IntMap.keysSet <$> readTVar (nodes g)
+
+   let ids = iterate (+1) (oldId+1)
+   let newId = head $ dropWhile (flip IntSet.member ks) ids
+
+   writeTVar (lastId g) newId
+   return newId
+
 -- | Add a node in the graph
 addNode :: Graph a -> a -> NodeSet -> STM Node
 addNode g v deps = do
-   oldId    <- readTVar (lastId g)
    oldNodes <- readTVar (nodes g)
    oldEdges <- readTVar (edges g)
 
-   -- Update last ID
-   let nodeId = oldId + 1
-
-   writeTVar (lastId g) nodeId
+   -- Get and update last ID
+   nodeId <- fetchFreeId g
 
    -- Add node
    nodValue <- newTVar v
