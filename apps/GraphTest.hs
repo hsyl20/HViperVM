@@ -1,6 +1,7 @@
 import ViperVM.Graph
 
 import Control.Concurrent.STM
+import Control.Applicative ((<$>))
 import Data.IntSet
 
 
@@ -31,10 +32,16 @@ main = do
 
    g2 <- atomically newGraph :: IO (Graph Task)
 
-   atomically $ do
+   (node3,node4) <- atomically $ do
       n1 <- addNode g2 (Task "dtrsm") empty
       n2 <- addNode g2 (Task "dsymm") empty
       n3 <- addNode g2 (Task "dsyrk") empty
-      addNode_ g2 (Task "dgemm") (fromList [n1,n2,n3])
+      n4 <- addNode g2 (Task "dgemm") (fromList [n1,n2,n3])
+      return (n3,n4)
 
    putStrLn =<< atomically (printGraph g2)
+
+   dgemmTailEndp <- toList <$> atomically (tailEndpoints g2 node4)
+   dsyrkHeadEndp <- toList <$> atomically (headEndpoints g2 node3)
+   putStrLn $ "DGEMM tail endpoints: " ++ show dgemmTailEndp
+   putStrLn $ "DSYRK head endpoints: " ++ show dsyrkHeadEndp

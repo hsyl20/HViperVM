@@ -2,12 +2,14 @@
 module ViperVM.Graph (
    Graph, Node,
    newGraph, addNode, addNode_, removeNode, printGraph, nodeValue, setNodeValue,
+   tailEndpoints, headEndpoints,
 ) where
 
 import Control.Concurrent.STM
 import Control.Applicative
 import Control.Monad
 import Data.IntMap
+import Data.Traversable (traverse)
 import Data.IntSet
 import Text.Printf
 import qualified Data.IntMap as IntMap
@@ -17,10 +19,11 @@ import qualified Data.IntSet as IntSet
 data Graph a = Graph {
    lastId :: TVar Int,
    nodes :: TVar (IntMap (TVar a)),
-   edges :: TVar (IntMap (TVar IntSet))
+   edges :: TVar (IntMap (TVar NodeSet))
 }
 
 type Node = Int
+type NodeSet = IntSet
 
 
 -- | Create a new graph
@@ -29,7 +32,7 @@ newGraph = Graph <$> newTVar 0 <*> newTVar IntMap.empty <*> newTVar IntMap.empty
 
 
 -- | Add a node in the graph
-addNode :: Graph a -> a -> IntSet -> STM Node
+addNode :: Graph a -> a -> NodeSet -> STM Node
 addNode g v deps = do
    oldId    <- readTVar (lastId g)
    oldNodes <- readTVar (nodes g)
@@ -51,12 +54,14 @@ addNode g v deps = do
 
    return nodeId
 
-addNode_ :: Graph a -> a -> IntSet -> STM ()
+
+-- | Add a node without returning it
+addNode_ :: Graph a -> a -> NodeSet -> STM ()
 addNode_ g v ds = void $ addNode g v ds
 
 
 -- | Filter a set of nodes
-filterNode :: Node -> TVar IntSet -> STM ()
+filterNode :: Node -> TVar NodeSet -> STM ()
 filterNode n s = do
    old <- readTVar s
    let new = IntSet.filter (/=n) old
@@ -89,6 +94,7 @@ nodeValue g n = do
    value <- readTVar $ oldNodes ! n
    return $ value
 
+
 -- | Set the value of a node
 setNodeValue :: Graph a -> Node -> a -> STM ()
 setNodeValue g n v = do
@@ -108,3 +114,16 @@ printGraph g = do
       return $ printf "%d --> %s\t%s\n" k (show deps) (show value)
 
    return $ concat strs
+
+-- | Return outgoing edges endpoints
+tailEndpoints :: Graph a -> Node -> STM NodeSet
+tailEndpoints g n = do
+   oldEdges <- readTVar (edges g)
+   readTVar (oldEdges ! n)
+
+-- | Return incoming edges endpoints
+headEndpoints :: Graph a -> Node -> STM NodeSet
+headEndpoints g n = do
+   oldEdges <- readTVar (edges g)
+   IntMap.keysSet . IntMap.filter (IntSet.member n) <$> traverse readTVar oldEdges
+      
