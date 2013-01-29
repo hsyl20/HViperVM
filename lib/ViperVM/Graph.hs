@@ -145,7 +145,7 @@ headEndpoints g n = filterEdges g (IntSet.member n)
 leaves :: Graph a -> STM NodeSet
 leaves g = filterEdges g IntSet.null
    
--- | Retrieve leaf nodes
+-- | Retrieve root nodes
 roots :: Graph a -> STM NodeSet
 roots g = do
    oldEdges <- readTVar (edges g)
