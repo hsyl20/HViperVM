@@ -16,50 +16,91 @@ import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
 
 -- | The task graph structure
-data Graph a = Graph {
-   lastId :: TVar Int,
-   nodes :: TVar (IntMap (TVar a)),
-   edges :: TVar (IntMap (TVar NodeSet))
-}
+data GraphS a = GraphS Int (IntMap (NodeS a))  -- ^ GraphS lastId nodeEdges
+data NodeS a = NodeS (TVar a) (TVar NodeSet)   -- ^ NodeS value edges
 
 type Node = Int
 type NodeSet = IntSet
 
+newtype Graph a = Graph (TVar (GraphS a))
 
 -- | Create a new graph
 newGraph :: STM (Graph a)
-newGraph = Graph <$> newTVar 0 <*> newTVar IntMap.empty <*> newTVar IntMap.empty
+newGraph = Graph <$> newTVar (GraphS 0 IntMap.empty)
 
+-- | Retrieve graph last used Id
+lastId :: Graph a -> STM Int
+lastId (Graph g) = do
+   (GraphS l _) <- readTVar g
+   return l
 
--- | Find the next free ID, update the Graph and return the ID
+-- | Retrieve values and edges of a graph
+valueEdges :: Graph a -> STM (IntMap (NodeS a))
+valueEdges (Graph g) = do
+   (GraphS _ ns) <- readTVar g
+   return ns
+
+-- | Retrieve graph edges
+edges :: Graph a -> STM (IntMap (TVar NodeSet))
+edges g = fmap (\(NodeS _ s) -> s) <$> valueEdges g
+
+-- | Retrieve graph nodes
+nodes :: Graph a -> STM NodeSet
+nodes g = IntMap.keysSet <$> edges g
+
+-- | Retrieve graph values
+values :: Graph a -> STM (IntMap (TVar a))
+values g = fmap (\(NodeS v _) -> v) <$> valueEdges g
+
+-- | Retrieve node value TVar
+nodeValueT :: Graph a -> Node -> STM (TVar a)
+nodeValueT g n = flip (!) n <$> values g
+
+-- | Retrieve value of a node
+nodeValue :: Graph a -> Node -> STM a
+nodeValue g n = readTVar =<< nodeValueT g n
+
+-- | Retrieve filtered edges
+filterEdges :: Graph a -> (NodeSet -> Bool) -> STM NodeSet
+filterEdges g f = IntMap.keysSet . IntMap.filter f <$> (traverse readTVar =<< edges g)
+
+-- | Return outgoing edges endpoints
+tailEndpoints :: Graph a -> Node -> STM NodeSet
+tailEndpoints g n = readTVar =<< flip (!) n <$> edges g
+
+-- | Return incoming edges endpoints
+headEndpoints :: Graph a -> Node -> STM NodeSet
+headEndpoints g n = filterEdges g (IntSet.member n)
+      
+-- | Retrieve leaf nodes
+leaves :: Graph a -> STM NodeSet
+leaves g = filterEdges g IntSet.null
+   
+-- | Retrieve root nodes
+roots :: Graph a -> STM NodeSet
+roots g = IntMap.foldl IntSet.difference <$> (nodes g) <*> (traverse readTVar =<< edges g)
+   
+-- | Find the next free ID return it
 fetchFreeId :: Graph g -> STM Int
 fetchFreeId g = do
-   oldId <- readTVar (lastId g)
-   ks <- IntMap.keysSet <$> readTVar (nodes g)
+   oldId <- lastId g
+   ks <- nodes g
 
    let ids = iterate (+1) (oldId+1)
-   let newId = head $ dropWhile (flip IntSet.member ks) ids
-
-   writeTVar (lastId g) newId
-   return newId
+   return $ head $ dropWhile (flip IntSet.member ks) ids
 
 -- | Add a node in the graph
 addNode :: Graph a -> a -> NodeSet -> STM Node
-addNode g v deps = do
-   oldNodes <- readTVar (nodes g)
-   oldEdges <- readTVar (edges g)
+addNode g@(Graph g1) v deps = do
 
-   -- Get and update last ID
+   -- Create node with only valid edges
    nodeId <- fetchFreeId g
+   validDeps <- IntSet.intersection deps <$> nodes g
+   node <- NodeS <$> newTVar v <*> newTVar validDeps
 
-   -- Add node
-   nodValue <- newTVar v
-   writeTVar (nodes g) $ IntMap.insert nodeId nodValue oldNodes
-
-   -- Add valid edges
-   validDeps <- newTVar $ keysSet oldEdges `IntSet.intersection` deps
-
-   writeTVar (edges g) $ IntMap.insert nodeId validDeps oldEdges
+   -- Update the graph
+   g2 <- GraphS nodeId . IntMap.insert nodeId node <$> valueEdges g
+   writeTVar g1 g2
 
    return nodeId
 
@@ -81,73 +122,32 @@ filterNode n s = do
 
 -- | Remove a node from the graph
 removeNode :: Graph a -> Node -> STM ()
-removeNode g n = do
-   oldNodes <- readTVar (nodes g)
-   oldEdges <- readTVar (edges g)
+removeNode g@(Graph g1) n = do
+   (GraphS lsId vs) <- readTVar g1
 
    -- Remove node
-   writeTVar (nodes g) $ IntMap.delete n oldNodes
-
-   -- Remove node edges
-   let newEdges = IntMap.delete n oldEdges
-   writeTVar (edges g) newEdges
+   writeTVar g1 $ GraphS lsId (IntMap.delete n vs)
 
    -- Remove edges targeting the node
-   forM_ (IntMap.elems newEdges) (filterNode n)
+   es <- edges g
+   forM_ (IntMap.elems es) (filterNode n)
+
+
    
-
--- | Return the value associated to a node
-nodeValue :: Graph a -> Node -> STM a
-nodeValue g n = do
-   oldNodes <- readTVar (nodes g)
-   value <- readTVar $ oldNodes ! n
-   return $ value
-
-
 -- | Set the value of a node
 setNodeValue :: Graph a -> Node -> a -> STM ()
-setNodeValue g n v = do
-   oldNodes <- readTVar (nodes g)
-   writeTVar (oldNodes ! n) v
+setNodeValue g n v = flip writeTVar v =<< nodeValueT g n
    
 
 -- | Print a graph representation
 printGraph :: Show a => Graph a -> STM String
 printGraph g = do
-   oldNodes <- readTVar (nodes g)
-   oldEdges <- readTVar (edges g)
+   oldNodes <- valueEdges g
    
-   strs <- forM (IntMap.assocs oldNodes) $ \(k,v) -> do
+   strs <- forM (IntMap.assocs oldNodes) $ \(k, NodeS v ds) -> do
       value <- readTVar v
-      deps <- IntSet.toList <$> (readTVar $ oldEdges ! k)
+      deps <- IntSet.toList <$> readTVar ds
       return $ printf "%d --> %s\t%s\n" k (show deps) (show value)
 
    return $ concat strs
 
--- | Retrieve filtered edges
-filterEdges :: Graph a -> (NodeSet -> Bool) -> STM NodeSet
-filterEdges g f = do
-   oldEdges <- readTVar (edges g)
-   IntMap.keysSet . IntMap.filter f <$> traverse readTVar oldEdges
-
--- | Return outgoing edges endpoints
-tailEndpoints :: Graph a -> Node -> STM NodeSet
-tailEndpoints g n = do
-   oldEdges <- readTVar (edges g)
-   readTVar (oldEdges ! n)
-
-
--- | Return incoming edges endpoints
-headEndpoints :: Graph a -> Node -> STM NodeSet
-headEndpoints g n = filterEdges g (IntSet.member n)
-      
--- | Retrieve leaf nodes
-leaves :: Graph a -> STM NodeSet
-leaves g = filterEdges g IntSet.null
-   
--- | Retrieve root nodes
-roots :: Graph a -> STM NodeSet
-roots g = do
-   oldEdges <- readTVar (edges g)
-   IntMap.foldl IntSet.difference (IntMap.keysSet oldEdges) <$> traverse readTVar oldEdges
-   
