@@ -32,14 +32,15 @@ library
     ViperVM.Data
     ViperVM.Event
     ViperVM.Executer
+    ViperVM.Graph
     ViperVM.Kernel
     ViperVM.KernelInterface
     ViperVM.KernelSet
     ViperVM.Platform
+    ViperVM.Region
     ViperVM.Runtime
     ViperVM.Task
     ViperVM.Transfer
-    ViperVM.Region
 
     ViperVM.BufferManager
     ViperVM.RegionManager
@@ -83,7 +84,8 @@ library
     data-lens == 2.10.*,
     dynamic-linker-template ==0.1.*,
     haskell-src-meta ==0.6.*,
-    haskell-src-exts ==1.13.*
+    haskell-src-exts ==1.13.*,
+    stm ==2.4
 
   build-tools: 
     c2hs
@@ -127,6 +129,15 @@ executable RuntimeTest
     base,
     ViperVM
 
+executable GraphTest
+  main-is: GraphTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    containers,
+    stm,
+    ViperVM
 
 executable ParseTest
   main-is: ParseTest.hs
