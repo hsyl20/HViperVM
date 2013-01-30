@@ -17,8 +17,6 @@ import Text.Printf
 import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
 
-import Debug.Trace
-
 -- | The task graph structure
 data GraphS a = GraphS Int (IntMap (NodeS a))  -- ^ GraphS lastId nodeEdges
 data NodeS a = NodeS (TVar a) (TVar NodeSet)   -- ^ NodeS value edges
@@ -188,7 +186,7 @@ removeDeadNodes g lvs = do
    
    allNodes <- nodes g
    
-   let deadNodes = IntSet.difference allNodes (trace ("Valid: " ++ show validNodes) validNodes)
+   let deadNodes = IntSet.difference allNodes validNodes
    removeNodes g deadNodes
 
    where
