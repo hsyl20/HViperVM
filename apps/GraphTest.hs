@@ -32,18 +32,18 @@ main = do
 
    g2 <- atomically newGraph :: IO (Graph Task)
 
-   (node3,node4) <- atomically $ do
+   (dtrsm,dsymm,dsyrk,dgemm) <- atomically $ do
       n1 <- addNode g2 (Task "dtrsm") empty
       n2 <- addNode g2 (Task "dsymm") (fromList [n1])
       n3 <- addNode g2 (Task "dsyrk") empty
       n4 <- addNode g2 (Task "dgemm") (fromList [n1,n2,n3])
-      return (n1,n4)
+      return (n1,n2,n3,n4)
 
    putStrLn =<< atomically (printGraph g2)
 
-   tps <- toList <$> atomically (tailEndpoints g2 node4)
-   hps <- toList <$> atomically (headEndpoints g2 node3)
+   tps <- toList <$> atomically (tailEndpoints g2 dgemm)
    putStrLn $ "DGEMM tail endpoints: " ++ show tps
+   hps <- toList <$> atomically (headEndpoints g2 dtrsm)
    putStrLn $ "DTRSM head endpoints: " ++ show hps
 
    ls <- toList <$> atomically (leaves g2)
@@ -51,3 +51,8 @@ main = do
 
    rs <- toList <$> atomically (roots g2)
    putStrLn $ "Roots: " ++ show rs
+
+   putStrLn "Remove dead nodes to compute DSYMM and DSYRK"
+   putStrLn =<< (atomically $ do
+      removeDeadNodes g2 (fromList [dsymm,dsyrk])
+      printGraph g2)

@@ -1,19 +1,23 @@
 -- | STM Graph
 module ViperVM.Graph (
-   Graph, Node,
-   newGraph, addNode, addNode_, removeNode, printGraph, nodeValue, setNodeValue,
+   Graph, Node, NodeSet, nodes,
+   newGraph, addNode, addNode_, removeNode, removeNodes, printGraph, nodeValue, setNodeValue,
    tailEndpoints, headEndpoints, leaves, roots,
+   depthFirstTraverse, removeDeadNodes
 ) where
 
 import Control.Concurrent.STM
 import Control.Applicative
 import Control.Monad
 import Data.IntMap
+import Data.Foldable (foldlM)
 import Data.Traversable (traverse)
 import Data.IntSet
 import Text.Printf
 import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
+
+import Debug.Trace
 
 -- | The task graph structure
 data GraphS a = GraphS Int (IntMap (NodeS a))  -- ^ GraphS lastId nodeEdges
@@ -112,9 +116,13 @@ addNode_ g v ds = void $ addNode g v ds
 
 -- | Filter a set of nodes
 filterNode :: Node -> TVar NodeSet -> STM ()
-filterNode n s = do
+filterNode n = filterNodes (IntSet.singleton n)
+
+-- | Filter a set of nodes
+filterNodes :: NodeSet -> TVar NodeSet -> STM ()
+filterNodes ns s = do
    old <- readTVar s
-   let new = IntSet.filter (/=n) old
+   let new = IntSet.difference old ns
    if old /= new
       then writeTVar s new
       else return ()
@@ -131,6 +139,20 @@ removeNode g@(Graph g1) n = do
    -- Remove edges targeting the node
    es <- edges g
    forM_ (IntMap.elems es) (filterNode n)
+
+
+-- | Remove several nodes from the graph
+removeNodes :: Graph a -> NodeSet -> STM ()
+removeNodes g@(Graph g1) ns = do
+   (GraphS lsId vs) <- readTVar g1
+
+   -- Remove nodes
+   let vs2 = IntMap.filterWithKey (\k _ -> IntSet.notMember k ns) vs
+   writeTVar g1 $ GraphS lsId vs2
+
+   -- Remove edges targeting the nodes
+   es <- edges g
+   forM_ (IntMap.elems es) (filterNodes ns)
 
 
    
@@ -151,3 +173,29 @@ printGraph g = do
 
    return $ concat strs
 
+-- | Traverse a graph using a depth first strategy
+depthFirstTraverse :: Graph a -> (b -> Node -> STM b) -> b -> Node -> STM b
+depthFirstTraverse g f d n = do
+   nd <- f d n
+   eps <- IntSet.elems <$> tailEndpoints g n
+   foldlM (depthFirstTraverse g f) nd eps
+
+-- | Remove nodes not linked to the given nodes
+removeDeadNodes :: Graph a -> NodeSet -> STM ()
+removeDeadNodes g lvs = do
+   
+   validNodes <- f IntSet.empty lvs
+   
+   allNodes <- nodes g
+   
+   let deadNodes = IntSet.difference allNodes (trace ("Valid: " ++ show validNodes) validNodes)
+   removeNodes g deadNodes
+
+   where
+      f :: NodeSet -> NodeSet -> STM NodeSet
+      f val ls | IntSet.null ls     = return val 
+               | otherwise          = foldlM h val (IntSet.elems ls)
+
+      h :: NodeSet -> Node -> STM NodeSet
+      h val l | IntSet.member l val = return val 
+              | otherwise           = f (IntSet.insert l val) =<< tailEndpoints g l
