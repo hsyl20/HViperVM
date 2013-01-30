@@ -17,12 +17,15 @@ import Text.Printf
 import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
 
+import ViperVM.STM.TIntSet
+
 -- | The task graph structure
 data GraphS a = GraphS Int (IntMap (NodeS a))  -- ^ GraphS lastId nodeEdges
-data NodeS a = NodeS (TVar a) (TVar NodeSet)   -- ^ NodeS value edges
+data NodeS a = NodeS (TVar a) TNodeSet         -- ^ NodeS value edges
 
 type Node = Int
 type NodeSet = IntSet
+type TNodeSet = TIntSet
 
 newtype Graph a = Graph (TVar (GraphS a))
 
@@ -43,7 +46,7 @@ valueEdges (Graph g) = do
    return ns
 
 -- | Retrieve graph edges
-edges :: Graph a -> STM (IntMap (TVar NodeSet))
+edges :: Graph a -> STM (IntMap TIntSet)
 edges g = fmap (\(NodeS _ s) -> s) <$> valueEdges g
 
 -- | Retrieve graph nodes
@@ -113,7 +116,7 @@ addNode_ g v ds = void $ addNode g v ds
 
 
 -- | Filter a set of nodes
-filterNode :: Node -> TVar NodeSet -> STM ()
+filterNode :: Node -> TNodeSet -> STM ()
 filterNode n = filterNodes (IntSet.singleton n)
 
 -- | Filter a set of nodes

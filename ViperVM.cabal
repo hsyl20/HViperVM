@@ -43,6 +43,10 @@ library
     ViperVM.Task
     ViperVM.Transfer
 
+    ViperVM.STM.Common
+    ViperVM.STM.TSet
+    ViperVM.STM.TIntSet
+
     ViperVM.BufferManager
     ViperVM.RegionManager
     ViperVM.TransferManager  
