@@ -32,7 +32,7 @@ outputData (TPAllocate d) = Just d
 
 -- | Return output datas for a list of parameters
 outputDatas :: [TaskParameter] -> [Data]
-outputDatas ps = catMaybes $ map outputData ps
+outputDatas = mapMaybe outputData
 
 -- | Return read only data from a parameter
 roData :: TaskParameter -> Maybe Data
@@ -41,7 +41,7 @@ roData _ = Nothing
 
 -- | Return read only data list
 roDatas :: [TaskParameter] -> [Data]
-roDatas ps = catMaybes $ map roData ps
+roDatas = mapMaybe roData
 
 -- | Return write-only data from a parameter
 woData :: TaskParameter -> Maybe Data
@@ -50,7 +50,7 @@ woData _ = Nothing
 
 -- | Return write-only data list
 woDatas :: [TaskParameter] -> [Data]
-woDatas ps = catMaybes $ map woData ps
+woDatas = mapMaybe woData
 
 -- | Return read-write input data
 rwInputData :: TaskParameter -> Maybe Data
@@ -59,7 +59,7 @@ rwInputData _ = Nothing
 
 -- | Return read-write input data list
 rwInputDatas :: [TaskParameter] -> [Data]
-rwInputDatas ps = catMaybes $ map rwInputData ps
+rwInputDatas = mapMaybe rwInputData
 
 -- | Return read-write output data
 rwOutputData :: TaskParameter -> Maybe Data
@@ -68,4 +68,4 @@ rwOutputData _ = Nothing
 
 -- | Return read-write ouput data list
 rwOutputDatas :: [TaskParameter] -> [Data]
-rwOutputDatas ps = catMaybes $ map rwOutputData ps
+rwOutputDatas = mapMaybe rwOutputData

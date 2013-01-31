@@ -31,13 +31,12 @@ eagerKernelCompiler compiler (TaskSubmitted task) = do
   return ()
 
   where
-    callback channel k procs cced = do
-      writeChan channel $ KernelCompiled k procs cced
+    callback channel k procs cced = writeChan channel $ KernelCompiled k procs cced
 
 -- When the application wants to shutdown the runtime
 eagerKernelCompiler compiler (AppQuit _) = do
   logInfoR "Waiting for compilations to terminate..."
-  v <- lift $ newEmptyMVar
+  v <- lift newEmptyMVar
   lift $ shutdown compiler (putMVar v ())
   lift $ readMVar v
   logInfoR "Compilations completed."

@@ -17,8 +17,7 @@ execute (CLProcessor lib ctx cq dev) (CLCompiledKernel ker clker) (CLKernelConfi
    -- TODO: OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
    -- putMVar () (mutex ker)
 
-   forM_ (parameters `zip` [0..]) $ \(p,idx) -> do
-      setCLKernelArg lib clker idx p
+   forM_ ([0..] `zip` parameters) $ uncurry (setCLKernelArg lib clker)
 
    let deps = []
    ev <- clEnqueueNDRangeKernel lib cq clker globalDim localDim deps

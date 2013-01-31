@@ -29,6 +29,7 @@ import qualified ViperVM.KernelManager as KernelManager
 import Control.Applicative
 import Control.Concurrent.Chan
 import Control.Monad.State
+import Control.Arrow ((***))
 
 import Data.Lens.Lazy
 import Data.Lens.Template
@@ -308,13 +309,11 @@ isDataAllocatedR :: Data -> Memory -> R Bool
 isDataAllocatedR d m = do
   insts <- Map.findWithDefault [] d <$> gets (invalidDataInstances ^$)
   mems <- traverse getDataInstanceMemoryR insts
-  return $ any (== m) mems
+  return $ elem m mems
 
 -- | Indicate if a data has a allocated (not valid) instance in any memory of the given list
 isDataAllocatedAnyR :: Data -> [Memory] -> R Bool
-isDataAllocatedAnyR d ms = do
-  rs <- traverse (isDataAllocatedR d) ms
-  return $ any id rs
+isDataAllocatedAnyR d ms = or <$> traverse (isDataAllocatedR d) ms
 
 -- | Get instances that can be detached, either because there are other
 -- instances or because the data won't be used anymore by any other task
@@ -356,7 +355,7 @@ submitTransfer transfer@(Transfer link _ _ _ _) = do
   lift $ writeChan ch transfer
 
 partitionM :: Applicative m => (a -> m Bool) -> [a] -> m ([a],[a])
-partitionM p xs = ( \ (a,b) -> (map fst a, map fst b)) . List.partition snd . zip xs <$> traverse p xs
+partitionM p xs = (map fst *** map fst) . List.partition snd . zip xs <$> traverse p xs
 
 -- | Execute an action and return its start and end times
 timeActionR :: IO a -> R (a,TimedAction)
@@ -368,6 +367,6 @@ setEventR ev v = lift $ setEvent ev v
 
 -- | Convert kernel parameter into task parameter, allocating data when necessary
 kpToTp :: KernelParameter -> R TaskParameter
-kpToTp (KPReadOnly d) = return $ (TPReadOnly d)
+kpToTp (KPReadOnly d) = return (TPReadOnly d)
 kpToTp (KPReadWrite d) = TPReadWrite d <$> (allocateDataR =<< descriptorR d)
 kpToTp (KPAllocate dd) = TPAllocate <$> allocateDataR dd

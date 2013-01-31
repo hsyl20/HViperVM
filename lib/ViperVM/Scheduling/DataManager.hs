@@ -9,7 +9,7 @@ import ViperVM.Structures
 import ViperVM.Task
 import ViperVM.Region
 
-import Data.Foldable (traverse_)
+import Data.Foldable (for_,traverse_)
 import Text.Printf
 
 
@@ -36,11 +36,10 @@ dataManagerScheduler (AppWaitForData d ev) = do
     
 
 -- Indicate data that have been computed upon task completion
-dataManagerScheduler (TaskComplete (Task _ params)) = do
-  flip traverse_ (outputDatas params) $ \d -> do
+dataManagerScheduler (TaskComplete (Task _ params)) = for_ (outputDatas params) $ \d -> do
     postMessageR (DataComputed d)
     evs <- getDataEventsR d
-    traverse_ (flip setEventR ()) evs
+    traverse_ (`setEventR` ()) evs
 
 
 dataManagerScheduler _ = voidR

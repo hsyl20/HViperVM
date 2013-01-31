@@ -43,7 +43,7 @@ updateRequestsR f = do
 
 -- | Remove compilation requests that have been fulfilled
 updateCompilationRequestsR :: R ()
-updateCompilationRequestsR = do
+updateCompilationRequestsR = 
    return () --FIXME
     {-cks <- compiledKernelsR
     updateRequestsR (f cks)
@@ -85,8 +85,7 @@ storeTaskRequestsR t reqs = do
   
 -- | Store a request if it doesn't already exist and associate a task to it
 storeRequestTaskR :: Task -> TaskRequest -> R ()
-storeRequestTaskR t r = do
-  modify(requestTasks ^%= Map.alter f r)
+storeRequestTaskR t r = modify(requestTasks ^%= Map.alter f r)
   where
     f (Just ts) = Just (t:ts)
     f Nothing = Just [t]
@@ -111,17 +110,17 @@ determineTaskRequests proc task = do
 
   -- Check that a kernel for the given proc has been compiled
   cced <- traverse (getCompiledKernelR proc) ks
-  let compileReqs = if null (catMaybes cced) then [RequestCompilation ks proc] else []
+  let compileReqs = [RequestCompilation ks proc | null (catMaybes cced)]
 
   -- Check allocated output data
   let outputs = woDatas params
-  isAllocatedOutput <- traverse (flip isDataAllocatedAnyR mems) outputs
+  isAllocatedOutput <- traverse (`isDataAllocatedAnyR` mems) outputs
   let allocReqs = map (RequestAllocation mems) $ catMaybes $ zipWith (\x y -> if x then Just y else Nothing) isAllocatedOutput outputs
 
   -- Checks for read-write data: we need to detect if an instance of the input
   -- data can be detached
   let rwInputs = rwInputDatas params
-  detachableInstances <- traverse (flip getDetachableInstancesAnyR mems) rwInputs
+  detachableInstances <- traverse (`getDetachableInstancesAnyR` mems) rwInputs
   let duplicateReqs = map (RequestDuplication mems) $ catMaybes $ zipWith (\x y -> if Set.null x then Just y else Nothing) detachableInstances rwInputs
 
   let requests = Set.fromList $ computeReqs ++ transferReqs ++ compileReqs ++ allocReqs ++ duplicateReqs

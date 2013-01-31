@@ -55,6 +55,6 @@ concurrentRegions mgr buffer _ = regions mgr buffer
 
 -- | Unlock a region
 unlock :: RegionManager -> Buffer -> Region -> AccessMode -> RegionManager
-unlock (RegionManager m) b r mode = RegionManager $ Map.update (wrap . (List.delete (LockedRegion r mode))) b m
+unlock (RegionManager m) b r mode = RegionManager $ Map.update (wrap . List.delete (LockedRegion r mode)) b m
    where
       wrap s = if List.null s then Nothing else Just s

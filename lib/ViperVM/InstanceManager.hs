@@ -26,12 +26,12 @@ instances (InstanceManager m) d = fromMaybe [] (Map.lookup d m)
 
 -- | Associate an instance to a data
 associate :: InstanceManager -> Data -> DataInstance -> InstanceManager
-associate (InstanceManager m) d inst = InstanceManager $ Map.update (wrap . ((:) inst)) d m
+associate (InstanceManager m) d inst = InstanceManager $ Map.update (wrap . (:) inst) d m
    where
       wrap s = if List.null s then Nothing else Just s
 
 -- | Dissociate an instance from a data
 dissociate :: InstanceManager -> Data -> DataInstance -> InstanceManager
-dissociate (InstanceManager m) d inst = InstanceManager $ Map.update (wrap . (List.delete inst)) d m
+dissociate (InstanceManager m) d inst = InstanceManager $ Map.update (wrap . List.delete inst) d m
    where
       wrap s = if List.null s then Nothing else Just s

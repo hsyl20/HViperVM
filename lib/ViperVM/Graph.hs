@@ -83,7 +83,7 @@ leaves g = filterEdges g IntSet.null
    
 -- | Retrieve root nodes
 roots :: Graph a -> STM NodeSet
-roots g = IntMap.foldl IntSet.difference <$> (nodes g) <*> (traverse readTVar =<< edges g)
+roots g = IntMap.foldl IntSet.difference <$> nodes g <*> (traverse readTVar =<< edges g)
    
 -- | Find the next free ID return it
 fetchFreeId :: Graph g -> STM Int
@@ -92,7 +92,7 @@ fetchFreeId g = do
    ks <- nodes g
 
    let ids = iterate (+1) (oldId+1)
-   return $ head $ dropWhile (flip IntSet.member ks) ids
+   return $ head $ dropWhile (`IntSet.member` ks) ids
 
 -- | Add a node in the graph
 addNode :: Graph a -> a -> NodeSet -> STM Node
@@ -124,10 +124,7 @@ filterNodes :: NodeSet -> TVar NodeSet -> STM ()
 filterNodes ns s = do
    old <- readTVar s
    let new = IntSet.difference old ns
-   if old /= new
-      then writeTVar s new
-      else return ()
-
+   when (old /= new) $ writeTVar s new
 
 -- | Remove a node from the graph
 removeNode :: Graph a -> Node -> STM ()

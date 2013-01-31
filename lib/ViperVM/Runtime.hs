@@ -4,18 +4,45 @@ module ViperVM.Runtime (
   submitTask,
   waitForData,
   -- Events
-  waitEvent,sync
+  waitEvent,sync,
+  createRuntime, Msg(..)
   ) where
 
+import ViperVM.Platform
 import ViperVM.Data
+import ViperVM.DataGraph
+import ViperVM.Graph
 import ViperVM.Event
 import ViperVM.StartStop
 import ViperVM.Structures (Message(..), Runtime(..))
 import ViperVM.KernelSet
 
 import Control.Concurrent
+import Control.Concurrent.STM
 import Data.Word
+import Data.Traversable
 import Foreign.Ptr
+
+data Msg = Hi
+
+type Scheduler = TChan Msg -> DataGraph -> STM (IO ())
+
+-- | Create a new runtime system
+createRuntime :: Platform -> [Scheduler] -> IO (TChan Msg)
+createRuntime pf scheds = do
+
+   ch <- newBroadcastTChanIO
+
+   schedsIO <- atomically $ do
+      g <- newGraph
+      forM scheds $ \s -> do
+         pch <- dupTChan ch
+         s pch g
+
+   sequence_ schedsIO
+   return ch
+
+
 
 -- | Send a command to the runtime and get an asynchronous response
 sendRuntimeCmd :: Runtime -> (Event a -> Message) -> IO (Event a)
