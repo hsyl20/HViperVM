@@ -144,14 +144,14 @@ clCreateContext :: OpenCLLibrary -> [CLContextProperty] -> [CLDeviceID] -> (Stri
 clCreateContext lib [] devs f = withArray devs $ \pdevs ->
   wrapPError $ \perr -> do
     fptr <- wrapContextCallback $ mkContextCallback f
-    raw_clCreateContext lib nullPtr cndevs pdevs fptr nullPtr perr
+    rawClCreateContext lib nullPtr cndevs pdevs fptr nullPtr perr
     where
       cndevs = fromIntegral . length $ devs
 clCreateContext lib props devs f = withArray devs $ \pdevs ->
   wrapPError $ \perr -> do
     fptr <- wrapContextCallback $ mkContextCallback f
     withArray (packContextProperties props) $ \pprops ->
-      raw_clCreateContext lib pprops cndevs pdevs fptr nullPtr perr    
+      rawClCreateContext lib pprops cndevs pdevs fptr nullPtr perr    
     where
       cndevs = fromIntegral . length $ devs
 
@@ -161,13 +161,13 @@ clCreateContextFromType :: OpenCLLibrary -> [CLContextProperty] -> [CLDeviceType
                            -> (String -> IO ()) -> IO CLContext
 clCreateContextFromType lib [] xs f = wrapPError $ \perr -> do
   fptr <- wrapContextCallback $ mkContextCallback f
-  raw_clCreateContextFromType lib nullPtr types fptr nullPtr perr
+  rawClCreateContextFromType lib nullPtr types fptr nullPtr perr
     where
       types = bitmaskFromFlags xs
 clCreateContextFromType lib props xs f = wrapPError $ \perr -> do
   fptr <- wrapContextCallback $ mkContextCallback f
   withArray (packContextProperties props) $ \pprops -> 
-    raw_clCreateContextFromType lib pprops types fptr nullPtr perr
+    rawClCreateContextFromType lib pprops types fptr nullPtr perr
     where
       types = bitmaskFromFlags xs
 
@@ -181,7 +181,7 @@ clCreateContextFromType lib props xs f = wrapPError $ \perr -> do
 -- Returns 'True' if the function is executed successfully, or 'False' if 
 -- context is not a valid OpenCL context.
 clRetainContext :: OpenCLLibrary -> CLContext -> IO Bool
-clRetainContext lib ctx = wrapCheckSuccess $ raw_clRetainContext lib ctx 
+clRetainContext lib ctx = wrapCheckSuccess $ rawClRetainContext lib ctx 
 
 -- | Decrement the context reference count.
 -- After the context reference count becomes zero and all the objects attached 
@@ -190,11 +190,11 @@ clRetainContext lib ctx = wrapCheckSuccess $ raw_clRetainContext lib ctx
 -- Returns 'True' if the function is executed successfully, or 'False' if 
 -- context is not a valid OpenCL context.
 clReleaseContext :: OpenCLLibrary -> CLContext -> IO Bool
-clReleaseContext lib ctx = wrapCheckSuccess $ raw_clReleaseContext lib ctx 
+clReleaseContext lib ctx = wrapCheckSuccess $ rawClReleaseContext lib ctx 
 
 getContextInfoSize :: OpenCLLibrary -> CLContext -> CLContextInfo_ -> IO CSize
 getContextInfoSize lib ctx infoid = alloca $ \(value_size :: Ptr CSize) -> do
-  whenSuccess (raw_clGetContextInfo lib ctx infoid 0 nullPtr value_size)
+  whenSuccess (rawClGetContextInfo lib ctx infoid 0 nullPtr value_size)
     $ peek value_size
 
 #c
@@ -214,7 +214,7 @@ enum CLContextInfo {
 clGetContextReferenceCount :: OpenCLLibrary -> CLContext -> IO CLuint
 clGetContextReferenceCount lib ctx =
     wrapGetInfo (\(dat :: Ptr CLuint) ->
-        raw_clGetContextInfo lib ctx infoid size (castPtr dat)) id
+        rawClGetContextInfo lib ctx infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_CONTEXT_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0::CLuint)
@@ -228,7 +228,7 @@ clGetContextDevices lib ctx = do
   let n = (fromIntegral size) `div` elemSize 
     
   allocaArray n $ \(buff :: Ptr CLDeviceID) -> do
-    whenSuccess (raw_clGetContextInfo lib ctx infoid size (castPtr buff) nullPtr)
+    whenSuccess (rawClGetContextInfo lib ctx infoid size (castPtr buff) nullPtr)
       $ peekArray n buff
     where
       infoid = getCLValue CL_CONTEXT_DEVICES
@@ -242,7 +242,7 @@ clGetContextProperties lib ctx = do
   if n == 0 
     then return []
     else allocaArray n $ \(buff :: Ptr CLContextProperty_) ->
-      whenSuccess (raw_clGetContextInfo lib ctx infoid size (castPtr buff) nullPtr)
+      whenSuccess (rawClGetContextInfo lib ctx infoid size (castPtr buff) nullPtr)
         $ fmap unpackContextProperties $ peekArray n buff
     where
       infoid = getCLValue CL_CONTEXT_PROPERTIES

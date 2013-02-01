@@ -66,7 +66,7 @@ clWaitForEvents :: OpenCLLibrary -> [CLEvent] -> IO Bool
 clWaitForEvents _ [] = return False
 clWaitForEvents lib xs = allocaArray nevents $ \pevents -> do
   pokeArray pevents xs
-  wrapCheckSuccess $ raw_clWaitForEvents lib (fromIntegral nevents) pevents
+  wrapCheckSuccess $ rawClWaitForEvents lib (fromIntegral nevents) pevents
     where
       nevents = length xs
   
@@ -75,7 +75,7 @@ clWaitForEvents lib xs = allocaArray nevents $ \pevents -> do
 -- Returns 'True' if the function is executed successfully. It returns 'False' 
 -- if event is not a valid event object.
 clRetainEvent :: OpenCLLibrary -> CLEvent -> IO Bool
-clRetainEvent lib ev = wrapCheckSuccess $ raw_clRetainEvent lib ev
+clRetainEvent lib ev = wrapCheckSuccess $ rawClRetainEvent lib ev
 
 -- | Decrements the event reference count.
 -- Decrements the event reference count. The event object is deleted once the 
@@ -85,7 +85,7 @@ clRetainEvent lib ev = wrapCheckSuccess $ raw_clRetainEvent lib ev
 -- Returns 'True' if the function is executed successfully. It returns 'False' 
 -- if event is not a valid event object.
 clReleaseEvent :: OpenCLLibrary -> CLEvent -> IO Bool
-clReleaseEvent lib ev = wrapCheckSuccess $ raw_clReleaseEvent lib ev
+clReleaseEvent lib ev = wrapCheckSuccess $ rawClReleaseEvent lib ev
 
 #c
 enum CLEventInfo {
@@ -104,7 +104,7 @@ enum CLEventInfo {
 clGetEventCommandQueue :: OpenCLLibrary -> CLEvent -> IO CLCommandQueue
 clGetEventCommandQueue lib ev =
     wrapGetInfo (\(dat :: Ptr CLCommandQueue) ->
-        raw_clGetEventInfo lib ev infoid size (castPtr dat)) id
+        rawClGetEventInfo lib ev infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_EVENT_COMMAND_QUEUE
       size = fromIntegral $ sizeOf (nullPtr::CLCommandQueue)
@@ -115,7 +115,7 @@ clGetEventCommandQueue lib ev =
 clGetEventCommandType :: OpenCLLibrary -> CLEvent -> IO CLCommandType
 clGetEventCommandType lib ev =
     wrapGetInfo (\(dat :: Ptr CLCommandType_) ->
-        raw_clGetEventInfo lib ev infoid size (castPtr dat)) getEnumCL
+        rawClGetEventInfo lib ev infoid size (castPtr dat)) getEnumCL
     where 
       infoid = getCLValue CL_EVENT_COMMAND_TYPE
       size = fromIntegral $ sizeOf (0::CLCommandType_)
@@ -128,7 +128,7 @@ clGetEventCommandType lib ev =
 clGetEventReferenceCount :: OpenCLLibrary -> CLEvent -> IO CLint
 clGetEventReferenceCount lib ev =
     wrapGetInfo (\(dat :: Ptr CLint) ->
-        raw_clGetEventInfo lib ev infoid size (castPtr dat)) id
+        rawClGetEventInfo lib ev infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_EVENT_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0::CLint)
@@ -140,7 +140,7 @@ clGetEventReferenceCount lib ev =
 clGetEventCommandExecutionStatus :: OpenCLLibrary -> CLEvent -> IO CLCommandExecutionStatus
 clGetEventCommandExecutionStatus lib ev =
     wrapGetInfo (\(dat :: Ptr CLint) ->
-        raw_clGetEventInfo lib ev infoid size (castPtr dat)) getCommandExecutionStatus
+        rawClGetEventInfo lib ev infoid size (castPtr dat)) getCommandExecutionStatus
     where 
       infoid = getCLValue CL_EVENT_COMMAND_EXECUTION_STATUS
       size = fromIntegral $ sizeOf (0::CLint)
@@ -171,7 +171,7 @@ not a valid event object.
 clGetEventProfilingInfo :: OpenCLLibrary -> CLEvent -> CLProfilingInfo -> IO CLulong
 clGetEventProfilingInfo lib ev prof =
     wrapGetInfo (\(dat :: Ptr CLulong) ->
-        raw_clGetEventProfilingInfo lib ev infoid size (castPtr dat)) id
+        rawClGetEventProfilingInfo lib ev infoid size (castPtr dat)) id
     where 
       infoid = getCLValue prof
       size = fromIntegral $ sizeOf (0::CLulong)

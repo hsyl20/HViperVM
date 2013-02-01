@@ -89,7 +89,7 @@ import ViperVM.Backends.OpenCL.Types(
 -- -----------------------------------------------------------------------------
 getNumPlatforms :: OpenCLLibrary -> IO CLuint
 getNumPlatforms lib = alloca $ \(num_platforms :: Ptr CLuint) -> do 
-  err <- wrapCheckSuccess (raw_clGetPlatformIDs lib 0 nullPtr num_platforms)
+  err <- wrapCheckSuccess (rawClGetPlatformIDs lib 0 nullPtr num_platforms)
   if err
     then peek num_platforms
     else return 0 -- the ICD may return an error CL_PLATFORM_NOT_FOUND_KHR...
@@ -102,12 +102,12 @@ clGetPlatformIDs lib = do
   if nplats == 0
     then return []
     else allocaArray (fromIntegral nplats) $ \(plats :: Ptr CLPlatformID) -> do
-           whenSuccess(raw_clGetPlatformIDs lib nplats plats nullPtr)
+           whenSuccess(rawClGetPlatformIDs lib nplats plats nullPtr)
              $ peekArray (fromIntegral nplats) plats
   
 getPlatformInfoSize :: OpenCLLibrary -> CLPlatformID -> CLuint -> IO CSize
 getPlatformInfoSize lib platform infoid = alloca $ \(value_size :: Ptr CSize) -> do
-  whenSuccess (raw_clGetPlatformInfo lib platform infoid 0 nullPtr value_size) 
+  whenSuccess (rawClGetPlatformInfo lib platform infoid 0 nullPtr value_size) 
     $ peek value_size
   
 -- | Get specific information about the OpenCL platform. It returns Nothing if
@@ -116,7 +116,7 @@ clGetPlatformInfo :: OpenCLLibrary -> CLPlatformInfo -> CLPlatformID -> IO Strin
 clGetPlatformInfo lib infoid platform = do
   sval <- getPlatformInfoSize lib platform infocl
   allocaArray (fromIntegral sval) $ \(buff :: CString) -> do
-    whenSuccess (raw_clGetPlatformInfo lib platform infocl sval (castPtr buff) nullPtr)
+    whenSuccess (rawClGetPlatformInfo lib platform infocl sval (castPtr buff) nullPtr)
       $ peekCString buff
     where
       infocl = getCLValue infoid
@@ -124,7 +124,7 @@ clGetPlatformInfo lib infoid platform = do
 -- -----------------------------------------------------------------------------
 getNumDevices :: OpenCLLibrary -> CLPlatformID -> CLDeviceType_ -> IO CLuint
 getNumDevices lib platform dtype = alloca $ \(num_devices :: Ptr CLuint) -> do
-  whenSuccess (raw_clGetDeviceIDs lib platform dtype 0 nullPtr num_devices)
+  whenSuccess (rawClGetDeviceIDs lib platform dtype 0 nullPtr num_devices)
     $ peek num_devices
 
 -- | Obtain the list of devices available on a platform. Returns the list if 
@@ -135,47 +135,47 @@ clGetDeviceIDs :: OpenCLLibrary -> CLDeviceType -> CLPlatformID -> IO [CLDeviceI
 clGetDeviceIDs lib dtype platform = do
   ndevs <- getNumDevices lib platform dval
   allocaArray (fromIntegral ndevs) $ \(devs :: Ptr CLDeviceID) -> do
-    whenSuccess (raw_clGetDeviceIDs lib platform dval ndevs devs nullPtr)
+    whenSuccess (rawClGetDeviceIDs lib platform dval ndevs devs nullPtr)
       $ peekArray (fromIntegral ndevs) devs
     where
       dval = getCLValue dtype
 
 getDeviceInfoSize :: OpenCLLibrary -> CLDeviceID -> CLDeviceInfo_ -> IO CSize
 getDeviceInfoSize lib device infoid = alloca $ \(value_size :: Ptr CSize) -> do
-  whenSuccess (raw_clGetDeviceInfo lib device infoid 0 nullPtr value_size)
+  whenSuccess (rawClGetDeviceInfo lib device infoid 0 nullPtr value_size)
     $ peek value_size
   
 getDeviceInfoString :: OpenCLLibrary -> CLDeviceInfo_ -> CLDeviceID -> IO String
 getDeviceInfoString lib infoid device = do
   n <- getDeviceInfoSize lib device infoid
   allocaArray (fromIntegral n) $ \(buff :: CString) -> do
-    whenSuccess (raw_clGetDeviceInfo lib device infoid n (castPtr buff) nullPtr)
+    whenSuccess (rawClGetDeviceInfo lib device infoid n (castPtr buff) nullPtr)
       $ peekCString buff
   
 getDeviceInfoUint :: OpenCLLibrary -> CLDeviceInfo_ -> CLDeviceID -> IO CLuint
 getDeviceInfoUint lib infoid device = alloca $ \(dat :: Ptr CLuint) -> do
-  whenSuccess (raw_clGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
+  whenSuccess (rawClGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
     $ peek dat
     where 
       size = fromIntegral $ sizeOf (0::CLuint)
 
 getDeviceInfoUlong :: OpenCLLibrary -> CLDeviceInfo_ -> CLDeviceID -> IO CLulong
 getDeviceInfoUlong lib infoid device = alloca $ \(dat :: Ptr CLulong) -> do
-  whenSuccess (raw_clGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
+  whenSuccess (rawClGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
     $ peek dat
     where 
       size = fromIntegral $ sizeOf (0::CLulong)
 
 getDeviceInfoSizet :: OpenCLLibrary -> CLDeviceInfo_ -> CLDeviceID -> IO CSize
 getDeviceInfoSizet lib infoid device = alloca $ \(dat :: Ptr CSize) -> do
-  whenSuccess (raw_clGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
+  whenSuccess (rawClGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
     $ peek dat
     where 
       size = fromIntegral $ sizeOf (0::CSize)
   
 getDeviceInfoBool :: OpenCLLibrary -> CLDeviceInfo_ -> CLDeviceID -> IO Bool
 getDeviceInfoBool lib infoid device = alloca $ \(dat :: Ptr CLbool) -> do
-  whenSuccess (raw_clGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
+  whenSuccess (rawClGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
     $ peek dat >>= return . (/=0)
     where 
       size = fromIntegral $ sizeOf (0::CLbool)
@@ -537,7 +537,7 @@ clGetDeviceMaxWorkItemSizes :: OpenCLLibrary -> CLDeviceID -> IO [CSize]
 clGetDeviceMaxWorkItemSizes lib device = do
   n <- clGetDeviceMaxWorkItemDimensions lib device
   allocaArray (fromIntegral n) $ \(buff :: Ptr CSize) -> do
-    whenSuccess (raw_clGetDeviceInfo lib device infoid (size n) (castPtr buff) nullPtr)
+    whenSuccess (rawClGetDeviceInfo lib device infoid (size n) (castPtr buff) nullPtr)
       $ peekArray (fromIntegral n) buff
     where
       infoid = getCLValue CL_DEVICE_MAX_WORK_ITEM_SIZES
@@ -577,7 +577,7 @@ clGetDeviceName lib = (getDeviceInfoString lib) . getCLValue $ CL_DEVICE_NAME
 -- This function execute OpenCL clGetDeviceInfo with 'CL_DEVICE_PLATFORM'.
 clGetDevicePlatform :: OpenCLLibrary -> CLDeviceID -> IO CLPlatformID
 clGetDevicePlatform lib device = alloca $ \(dat :: Ptr CLPlatformID) -> do
-  whenSuccess (raw_clGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
+  whenSuccess (rawClGetDeviceInfo lib device infoid size (castPtr dat) nullPtr)
     $ peek dat
     where 
       infoid = getCLValue CL_DEVICE_PLATFORM

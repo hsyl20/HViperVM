@@ -50,7 +50,7 @@ taskManagerScheduler (AppTaskSubmit ks@(KernelSet ki _) ds r) = do
 
 -- | When a task is ready to be executed on a proc, a kernel is selected
 -- and the asynchronous execution is planned
-taskManagerScheduler (TaskReady task@(Task ks params)) = do
+taskManagerScheduler (TaskReady task@(Task ks params)) = 
   logInfoR $ printf "Task %s ready to be executed! (TODO)" (show task)
 
 {- FIXME

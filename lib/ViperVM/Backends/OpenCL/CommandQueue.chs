@@ -122,7 +122,7 @@ complete before reads or writes to the memory object(s) occur.
 clCreateCommandQueue :: OpenCLLibrary -> CLContext -> CLDeviceID -> [CLCommandQueueProperty] 
                      -> IO CLCommandQueue
 clCreateCommandQueue lib ctx did xs = wrapPError $ \perr -> do
-  raw_clCreateCommandQueue lib ctx did props perr
+  rawClCreateCommandQueue lib ctx did props perr
     where
       props = bitmaskFromFlags xs
 
@@ -136,7 +136,7 @@ longer being valid.  Returns 'True' if the function is executed successfully. It
 returns 'False' if command_queue is not a valid command-queue.  
 -}
 clRetainCommandQueue :: OpenCLLibrary -> CLCommandQueue -> IO Bool
-clRetainCommandQueue lib = wrapCheckSuccess . (raw_clRetainCommandQueue lib)
+clRetainCommandQueue lib = wrapCheckSuccess . (rawClRetainCommandQueue lib)
 
 -- | Decrements the command_queue reference count.
 -- After the command_queue reference count becomes zero and all commands queued 
@@ -145,7 +145,7 @@ clRetainCommandQueue lib = wrapCheckSuccess . (raw_clRetainCommandQueue lib)
 -- Returns 'True' if the function is executed successfully. It returns 'False'
 -- if command_queue is not a valid command-queue.
 clReleaseCommandQueue :: OpenCLLibrary -> CLCommandQueue -> IO Bool
-clReleaseCommandQueue lib = wrapCheckSuccess . (raw_clReleaseCommandQueue lib)
+clReleaseCommandQueue lib = wrapCheckSuccess . (rawClReleaseCommandQueue lib)
 
 #c
 enum CLCommandQueueInfo {
@@ -163,7 +163,7 @@ enum CLCommandQueueInfo {
 clGetCommandQueueContext :: OpenCLLibrary -> CLCommandQueue -> IO CLContext
 clGetCommandQueueContext lib cq =
     wrapGetInfo (\(dat :: Ptr CLContext) ->
-        raw_clGetCommandQueueInfo lib cq infoid size (castPtr dat)) id
+        rawClGetCommandQueueInfo lib cq infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_QUEUE_CONTEXT
       size = fromIntegral $ sizeOf (nullPtr::CLContext)
@@ -174,7 +174,7 @@ clGetCommandQueueContext lib cq =
 clGetCommandQueueDevice :: OpenCLLibrary -> CLCommandQueue -> IO CLDeviceID
 clGetCommandQueueDevice lib cq =
     wrapGetInfo (\(dat :: Ptr CLDeviceID) ->
-        raw_clGetCommandQueueInfo lib cq infoid size (castPtr dat)) id
+        rawClGetCommandQueueInfo lib cq infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_QUEUE_DEVICE
       size = fromIntegral $ sizeOf (nullPtr::CLDeviceID)
@@ -189,7 +189,7 @@ clGetCommandQueueDevice lib cq =
 clGetCommandQueueReferenceCount :: OpenCLLibrary -> CLCommandQueue -> IO CLuint
 clGetCommandQueueReferenceCount lib cq =
     wrapGetInfo (\(dat :: Ptr CLuint) ->
-        raw_clGetCommandQueueInfo lib cq infoid size (castPtr dat)) id
+        rawClGetCommandQueueInfo lib cq infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_QUEUE_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0::CLuint)
@@ -204,7 +204,7 @@ clGetCommandQueueReferenceCount lib cq =
 clGetCommandQueueProperties :: OpenCLLibrary -> CLCommandQueue -> IO [CLCommandQueueProperty]
 clGetCommandQueueProperties lib cq =
     wrapGetInfo (\(dat :: Ptr CLCommandQueueProperty_) ->
-        raw_clGetCommandQueueInfo lib cq infoid size (castPtr dat)) bitmaskToCommandQueueProperties
+        rawClGetCommandQueueInfo lib cq infoid size (castPtr dat)) bitmaskToCommandQueueProperties
     where 
       infoid = getCLValue CL_QUEUE_PROPERTIES
       size = fromIntegral $ sizeOf (0::CLCommandQueueProperty_)
@@ -235,7 +235,7 @@ clSetCommandQueueProperty lib cq xs val = alloca
                                         -> whenSuccess (f dat)
                                            $ fmap bitmaskToCommandQueueProperties $ peek dat
     where
-      f = raw_clSetCommandQueueProperty lib cq props (fromBool val)
+      f = rawClSetCommandQueueProperty lib cq props (fromBool val)
       props = bitmaskFromFlags xs
 
 -- -----------------------------------------------------------------------------
@@ -294,7 +294,7 @@ by the OpenCL implementation on the host.
 -}
 clEnqueueReadBuffer :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> a -> a
                        -> Ptr () -> [CLEvent] -> IO CLEvent
-clEnqueueReadBuffer lib cq mem check off size dat = clEnqueue (raw_clEnqueueReadBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
+clEnqueueReadBuffer lib cq mem check off size dat = clEnqueue (rawClEnqueueReadBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
 
 {-| Enqueue commands to write to a buffer object from host memory.Calling
 clEnqueueWriteBuffer to update the latest bits in a region of the buffer object
@@ -338,7 +338,7 @@ by the OpenCL implementation on the host.
 -}
 clEnqueueWriteBuffer :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> a -> a
                        -> Ptr () -> [CLEvent] -> IO CLEvent
-clEnqueueWriteBuffer lib cq mem check off size dat = clEnqueue (raw_clEnqueueWriteBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
+clEnqueueWriteBuffer lib cq mem check off size dat = clEnqueue (rawClEnqueueWriteBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
 
 {-| Enqueues a command to read from a 2D or 3D image object to host memory.
 
@@ -450,7 +450,7 @@ clEnqueueReadImage :: Integral a
 clEnqueueReadImage lib cq mem check (orix,oriy,oriz) (regx,regy,regz) rp sp dat xs = 
   withArray (fmap fromIntegral [orix,oriy,oriz]) $ \pori -> 
   withArray (fmap fromIntegral [regx,regy,regz]) $ \preg -> 
-  clEnqueue (raw_clEnqueueReadImage lib cq mem (fromBool check) pori preg (fromIntegral rp) (fromIntegral sp) dat) xs
+  clEnqueue (rawClEnqueueReadImage lib cq mem (fromBool check) pori preg (fromIntegral rp) (fromIntegral sp) dat) xs
                        
 {-| Enqueues a command to write from a 2D or 3D image object to host memory.
 
@@ -565,7 +565,7 @@ clEnqueueWriteImage :: Integral a
 clEnqueueWriteImage lib cq mem check (orix,oriy,oriz) (regx,regy,regz) rp sp dat xs = 
   withArray (fmap fromIntegral [orix,oriy,oriz]) $ \pori -> 
   withArray (fmap fromIntegral [regx,regy,regz]) $ \preg -> 
-  clEnqueue (raw_clEnqueueWriteImage lib cq mem (fromBool check) pori preg (fromIntegral rp) (fromIntegral sp) dat) xs
+  clEnqueue (rawClEnqueueWriteImage lib cq mem (fromBool check) pori preg (fromIntegral rp) (fromIntegral sp) dat) xs
                        
 {-| Enqueues a command to copy image objects.
 
@@ -657,7 +657,7 @@ clEnqueueCopyImage lib cq src dst (src_orix,src_oriy,src_oriz) (dst_orix,dst_ori
   withArray (fmap fromIntegral [src_orix,src_oriy,src_oriz]) $ \psrc_ori -> 
   withArray (fmap fromIntegral [dst_orix,dst_oriy,dst_oriz]) $ \pdst_ori -> 
   withArray (fmap fromIntegral [regx,regy,regz]) $ \preg -> 
-  clEnqueue (raw_clEnqueueCopyImage lib cq src dst psrc_ori pdst_ori preg) xs
+  clEnqueue (rawClEnqueueCopyImage lib cq src dst psrc_ori pdst_ori preg) xs
 
 
 {-| Enqueues a command to copy an image object to a buffer object.
@@ -739,7 +739,7 @@ clEnqueueCopyImageToBuffer :: Integral a
 clEnqueueCopyImageToBuffer lib cq src dst (src_orix,src_oriy,src_oriz) (regx,regy,regz) offset xs =
   withArray (fmap fromIntegral [src_orix,src_oriy,src_oriz]) $ \psrc_ori -> 
   withArray (fmap fromIntegral [regx,regy,regz]) $ \preg -> 
-  clEnqueue (raw_clEnqueueCopyImageToBuffer lib cq src dst psrc_ori preg (fromIntegral offset)) xs
+  clEnqueue (rawClEnqueueCopyImageToBuffer lib cq src dst psrc_ori preg (fromIntegral offset)) xs
 
 {-| Enqueues a command to copy a buffer object to an image object.
 
@@ -820,7 +820,7 @@ clEnqueueCopyBufferToImage :: Integral a
 clEnqueueCopyBufferToImage lib cq src dst offset (dst_orix,dst_oriy,dst_oriz) (regx,regy,regz) xs =
   withArray (fmap fromIntegral [dst_orix,dst_oriy,dst_oriz]) $ \pdst_ori -> 
   withArray (fmap fromIntegral [regx,regy,regz]) $ \preg -> 
-  clEnqueue (raw_clEnqueueCopyBufferToImage lib cq src dst (fromIntegral offset) pdst_ori preg) xs
+  clEnqueue (rawClEnqueueCopyBufferToImage lib cq src dst (fromIntegral offset) pdst_ori preg) xs
 
 {-| Enqueues a command to map a region of the buffer object given by buffer into
 the host address space and returns a pointer to this mapped region.
@@ -920,7 +920,7 @@ clEnqueueMapBuffer :: Integral a => OpenCLLibrary
                       -> IO (CLEvent, Ptr ())
 clEnqueueMapBuffer lib cq mem check xs offset cb [] = 
   alloca $ \pevent -> do
-    val <- wrapPError $ \perr -> raw_clEnqueueMapBuffer lib cq mem (fromBool check) flags (fromIntegral offset) (fromIntegral cb) 0 nullPtr pevent perr
+    val <- wrapPError $ \perr -> rawClEnqueueMapBuffer lib cq mem (fromBool check) flags (fromIntegral offset) (fromIntegral cb) 0 nullPtr pevent perr
     event <- peek pevent
     return (event, val)
     
@@ -930,7 +930,7 @@ clEnqueueMapBuffer lib cq mem check xs offset cb events =
   allocaArray nevents $ \pevents -> do
     pokeArray pevents events
     alloca $ \pevent -> do
-      val <- wrapPError $ \perr -> raw_clEnqueueMapBuffer lib cq mem (fromBool check) flags (fromIntegral offset) (fromIntegral cb) cnevents pevents pevent perr
+      val <- wrapPError $ \perr -> rawClEnqueueMapBuffer lib cq mem (fromBool check) flags (fromIntegral offset) (fromIntegral cb) cnevents pevents pevent perr
       event <- peek pevent
       return (event, val)
     where
@@ -1061,7 +1061,7 @@ clEnqueueMapImage lib cq mem check xs (orix,oriy,oriz) (regx,regy,regz) [] =
   withArray (fmap fromIntegral [orix,oriy,oriz]) $ \pori -> 
   withArray (fmap fromIntegral [regx,regy,regz]) $ \preg -> 
   alloca $ \pevent -> do
-    val <- wrapPError $ \perr -> raw_clEnqueueMapImage lib cq mem (fromBool check) flags pori preg ppitch pslice 0 nullPtr pevent perr
+    val <- wrapPError $ \perr -> rawClEnqueueMapImage lib cq mem (fromBool check) flags pori preg ppitch pslice 0 nullPtr pevent perr
     event <- peek pevent
     pitch <- peek ppitch
     slice <- peek pslice
@@ -1077,7 +1077,7 @@ clEnqueueMapImage lib cq mem check xs (orix,oriy,oriz) (regx,regy,regz) events =
   allocaArray nevents $ \pevents -> do
     pokeArray pevents events
     alloca $ \pevent -> do
-      val <- wrapPError $ \perr -> raw_clEnqueueMapImage lib cq mem (fromBool check) flags pori preg ppitch pslice cnevents pevents pevent perr
+      val <- wrapPError $ \perr -> rawClEnqueueMapImage lib cq mem (fromBool check) flags pori preg ppitch pslice cnevents pevents pevent perr
       event <- peek pevent
       pitch <- peek ppitch
       slice <- peek pslice
@@ -1151,7 +1151,7 @@ clEnqueueUnmapMemObject :: OpenCLLibrary
                                         -- must be the same.
 
                            -> IO CLEvent
-clEnqueueUnmapMemObject lib cq mem pp = clEnqueue (raw_clEnqueueUnmapMemObject lib cq mem pp)
+clEnqueueUnmapMemObject lib cq mem pp = clEnqueue (rawClEnqueueUnmapMemObject lib cq mem pp)
 
 -- -----------------------------------------------------------------------------
 {-| Enqueues a command to execute a kernel on a device. Each work-item is
@@ -1222,7 +1222,7 @@ the OpenCL implementation on the host.
 clEnqueueNDRangeKernel :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLKernel -> [a] -> [a] 
                           -> [CLEvent] -> IO CLEvent
 clEnqueueNDRangeKernel lib cq krn gws lws events = withArray (map fromIntegral gws) $ \pgws -> withMaybeArray (map fromIntegral lws) $ \plws -> do
-  clEnqueue (raw_clEnqueueNDRangeKernel lib cq krn num nullPtr pgws plws) events
+  clEnqueue (rawClEnqueueNDRangeKernel lib cq krn num nullPtr pgws plws) events
     where
       num = fromIntegral $ length gws
 
@@ -1265,7 +1265,7 @@ kernel.
 by the OpenCL implementation on the host.
 -}
 clEnqueueTask :: OpenCLLibrary -> CLCommandQueue -> CLKernel -> [CLEvent] -> IO CLEvent
-clEnqueueTask lib cq krn = clEnqueue (raw_clEnqueueTask lib cq krn)
+clEnqueueTask lib cq krn = clEnqueue (rawClEnqueueTask lib cq krn)
   
 {-| Enqueues a command to execute a native C/C++ function not compiled using the
 OpenCL compiler. A native user function can only be executed on a command-queue
@@ -1317,7 +1317,7 @@ clEnqueueNativeKernel lib cq f dat sz xs ys evs =
   withMaybeArray xs $ \pmem -> 
   withMaybeArray ys $ \pbuff -> do
     fptr <- wrapNativeKernelCallback f
-    clEnqueue (raw_clEnqueueNativeKernel lib cq fptr dat sz 
+    clEnqueue (rawClEnqueueNativeKernel lib cq fptr dat sz 
                (fromIntegral . length $ xs) pmem pbuff) evs
                           
 -- -----------------------------------------------------------------------------
@@ -1330,7 +1330,7 @@ clEnqueueNativeKernel lib cq f dat sz xs ys evs =
 -- required by the OpenCL implementation on the host.
 clEnqueueMarker :: OpenCLLibrary -> CLCommandQueue -> IO CLEvent
 clEnqueueMarker lib cq = alloca $ \event 
-                              -> whenSuccess (raw_clEnqueueMarker lib cq event)
+                              -> whenSuccess (rawClEnqueueMarker lib cq event)
                                  $ peek event
          
 {-| Enqueues a wait for a specific event or a list of events to complete before
@@ -1354,11 +1354,11 @@ by the OpenCL implementation on the host.
 -}
 clEnqueueWaitForEvents :: OpenCLLibrary -> CLCommandQueue -> [CLEvent] -> IO ()
 clEnqueueWaitForEvents lib cq [] = whenSuccess 
-                               (raw_clEnqueueWaitForEvents lib cq 0 nullPtr)
+                               (rawClEnqueueWaitForEvents lib cq 0 nullPtr)
                                $ return ()
 clEnqueueWaitForEvents lib cq events = allocaArray nevents $ \pevents -> do
   pokeArray pevents events
-  whenSuccess (raw_clEnqueueWaitForEvents lib cq cnevents pevents)
+  whenSuccess (rawClEnqueueWaitForEvents lib cq cnevents pevents)
     $ return ()
     where
       nevents = length events
@@ -1371,7 +1371,7 @@ clEnqueueWaitForEvents lib cq events = allocaArray nevents $ \pevents -> do
 -- 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
 -- by the OpenCL implementation on the host.
 clEnqueueBarrier :: OpenCLLibrary -> CLCommandQueue -> IO ()
-clEnqueueBarrier lib cq = whenSuccess (raw_clEnqueueBarrier lib cq) $ return ()
+clEnqueueBarrier lib cq = whenSuccess (rawClEnqueueBarrier lib cq) $ return ()
   
 -- -----------------------------------------------------------------------------
 {-| Issues all previously queued OpenCL commands in a command-queue to the
@@ -1396,7 +1396,7 @@ implicit flush of the command-queue where the commands that refer to these event
 objects are enqueued.
 -}
 clFlush :: OpenCLLibrary -> CLCommandQueue -> IO Bool
-clFlush lib = wrapCheckSuccess . (raw_clFlush lib)
+clFlush lib = wrapCheckSuccess . (rawClFlush lib)
              
 -- | Blocks until all previously queued OpenCL commands in a command-queue are 
 -- issued to the associated device and have completed.
@@ -1408,6 +1408,6 @@ clFlush lib = wrapCheckSuccess . (raw_clFlush lib)
 -- a failure to allocate resources required by the OpenCL implementation on the 
 -- host.
 clFinish :: OpenCLLibrary -> CLCommandQueue -> IO Bool
-clFinish lib = wrapCheckSuccess . (raw_clFinish lib)
+clFinish lib = wrapCheckSuccess . (rawClFinish lib)
              
 -- -----------------------------------------------------------------------------

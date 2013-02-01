@@ -6,7 +6,7 @@ import Language.Haskell.Exts.Syntax
 import Data.Maybe (listToMaybe)
 
 parse :: String -> Either String Module
-parse s = parseHsModule s
+parse = parseHsModule
 
 
 moduleDecl :: Module -> [Decl]
@@ -23,6 +23,6 @@ execute m fn = do
   let decls = moduleDecl m
   let typ = listToMaybe $ filter (\x -> declIdent x == Ident fn) decls
 
-  putStrLn (show typ)
+  print typ
 
   return ()

@@ -134,9 +134,9 @@ processOptions cliArgs =
 -- We assume all of the arguments are files to process
 processArgs :: [ CliFlag ] -> [ String ] -> IO ()
 processArgs flags files
-  | elem CliHelp flags    = getProgName >>= (putStrLn . helpMessage)
-  | elem CliVersion flags = getProgName >>= (putStrLn . versionMessage)
-  | otherwise             = mapM_ (processFile outputDir printMode) files
+  | CliHelp `elem` flags   = getProgName >>= (putStrLn . helpMessage)
+  | CliVersion`elem` flags = getProgName >>= (putStrLn . versionMessage)
+  | otherwise              = mapM_ (processFile outputDir printMode) files
   where
   outputDir = case [ dir | CliOutputDir dir <- flags ] of
                 [] -> Nothing

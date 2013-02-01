@@ -87,7 +87,7 @@ by the OpenCL implementation on the host.
 -}
 clCreateBuffer :: Integral a => OpenCLLibrary -> CLContext -> [CLMemFlag] -> (a, Ptr ()) -> IO CLMem
 clCreateBuffer lib ctx xs (sbuff,buff) = wrapPError $ \perr -> do
-  raw_clCreateBuffer lib ctx flags (fromIntegral sbuff) buff perr
+  rawClCreateBuffer lib ctx flags (fromIntegral sbuff) buff perr
     where
       flags = bitmaskFromFlags xs
 
@@ -104,7 +104,7 @@ clCreateBuffer lib ctx xs (sbuff,buff) = wrapPError $ \perr -> do
 -}
 clCreateFromGLBuffer :: Integral a => OpenCLLibrary -> CLContext -> [CLMemFlag] -> a -> IO CLMem
 clCreateFromGLBuffer lib ctx xs glObj = wrapPError $ \perr -> do
-  raw_clCreateFromGLBuffer lib ctx flags cglObj perr
+  rawClCreateFromGLBuffer lib ctx flags cglObj perr
     where flags = bitmaskFromFlags xs
           cglObj = fromIntegral glObj
     
@@ -114,7 +114,7 @@ clCreateFromGLBuffer lib ctx xs glObj = wrapPError $ \perr -> do
 -- have finished, the memory object is deleted. It returns 'False' if memobj is
 -- not a valid memory object.
 clRetainMemObject :: OpenCLLibrary -> CLMem -> IO Bool
-clRetainMemObject lib mem = wrapCheckSuccess $ raw_clRetainMemObject lib mem
+clRetainMemObject lib mem = wrapCheckSuccess $ rawClRetainMemObject lib mem
 
 -- | Decrements the memory object reference count. After the memobj reference
 -- count becomes zero and commands queued for execution on a command-queue(s)
@@ -122,7 +122,7 @@ clRetainMemObject lib mem = wrapCheckSuccess $ raw_clRetainMemObject lib mem
 -- if the function is executed successfully. It returns 'False' if memobj is not
 -- a valid memory object.
 clReleaseMemObject :: OpenCLLibrary -> CLMem -> IO Bool
-clReleaseMemObject lib mem = wrapCheckSuccess $ raw_clReleaseMemObject lib mem
+clReleaseMemObject lib mem = wrapCheckSuccess $ rawClReleaseMemObject lib mem
 
 -- -----------------------------------------------------------------------------
 {-| Creates a 2D image object.
@@ -193,7 +193,7 @@ clCreateImage2D :: Integral a => OpenCLLibrary -> CLContext -- ^ A valid OpenCL 
                              -- linear sequence of image elements.
                    -> IO CLMem
 clCreateImage2D lib ctx xs fmt iw ih irp ptr = wrapPError $ \perr -> with fmt $ \pfmt -> do
-  raw_clCreateImage2D lib ctx flags pfmt ciw cih cirp ptr perr
+  rawClCreateImage2D lib ctx flags pfmt ciw cih cirp ptr perr
     where
       flags = bitmaskFromFlags xs
       ciw = fromIntegral iw
@@ -281,7 +281,7 @@ clCreateImage3D :: Integral a => OpenCLLibrary
                              -- a linear sequence of image elements.
                    -> IO CLMem
 clCreateImage3D lib ctx xs fmt iw ih idepth irp isp ptr = wrapPError $ \perr -> with fmt $ \pfmt -> do
-  raw_clCreateImage3D lib ctx flags pfmt ciw cih cid cirp cisp ptr perr
+  rawClCreateImage3D lib ctx flags pfmt ciw cih cid cirp cisp ptr perr
     where
       flags = bitmaskFromFlags xs
       ciw = fromIntegral iw
@@ -341,7 +341,7 @@ clCreateFromGLTexture2D :: (Integral a, Integral b, Integral c) =>
                         -> c -- ^ The GL texture object name.
                         -> IO CLMem
 clCreateFromGLTexture2D lib ctx xs texType mipLevel tex = 
-  wrapPError $ raw_clCreateFromGLTexture2D lib ctx flags cTexType cMip cTex
+  wrapPError $ rawClCreateFromGLTexture2D lib ctx flags cTexType cMip cTex
     where flags = bitmaskFromFlags xs
           cTexType = fromIntegral texType
           cMip = fromIntegral mipLevel
@@ -349,7 +349,7 @@ clCreateFromGLTexture2D lib ctx xs texType mipLevel tex =
       
 getNumSupportedImageFormats :: OpenCLLibrary -> CLContext -> [CLMemFlag] -> CLMemObjectType -> IO CLuint
 getNumSupportedImageFormats lib ctx xs mtype = alloca $ \(value_size :: Ptr CLuint) -> do
-  whenSuccess (raw_clGetSupportedImageFormats lib ctx flags (getCLValue mtype) 0 nullPtr value_size)
+  whenSuccess (rawClGetSupportedImageFormats lib ctx flags (getCLValue mtype) 0 nullPtr value_size)
     $ peek value_size
     where
       flags = bitmaskFromFlags xs
@@ -382,7 +382,7 @@ clGetSupportedImageFormats :: OpenCLLibrary
 clGetSupportedImageFormats lib ctx xs mtype = do
   num <- getNumSupportedImageFormats lib ctx xs mtype
   allocaArray (fromIntegral num) $ \(buff :: Ptr CLImageFormat) -> do
-    whenSuccess (raw_clGetSupportedImageFormats lib ctx flags (getCLValue mtype) num (castPtr buff) nullPtr)
+    whenSuccess (rawClGetSupportedImageFormats lib ctx flags (getCLValue mtype) num (castPtr buff) nullPtr)
       $ peekArray (fromIntegral num) buff
     where
       flags = bitmaskFromFlags xs
@@ -408,7 +408,7 @@ enum CLImageInfo {
 clGetImageFormat :: OpenCLLibrary -> CLMem -> IO CLImageFormat
 clGetImageFormat lib mem =
   wrapGetInfo (\(dat :: Ptr CLImageFormat) ->
-                raw_clGetImageInfo lib mem infoid size (castPtr dat)) id
+                rawClGetImageInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_IMAGE_FORMAT
       size = fromIntegral $ sizeOf (undefined :: CLImageFormat)
@@ -421,7 +421,7 @@ clGetImageFormat lib mem =
 clGetImageElementSize :: OpenCLLibrary -> CLMem -> IO CSize      
 clGetImageElementSize lib mem =
   wrapGetInfo (\(dat :: Ptr CSize) ->
-                raw_clGetImageInfo lib mem infoid size (castPtr dat)) id
+                rawClGetImageInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_IMAGE_ELEMENT_SIZE
       size = fromIntegral $ sizeOf (undefined :: CSize)
@@ -433,7 +433,7 @@ clGetImageElementSize lib mem =
 clGetImageRowPitch :: OpenCLLibrary -> CLMem -> IO CSize      
 clGetImageRowPitch lib mem = 
   wrapGetInfo (\(dat :: Ptr CSize) ->
-                raw_clGetImageInfo lib mem infoid size (castPtr dat)) id
+                rawClGetImageInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_IMAGE_ROW_PITCH
       size = fromIntegral $ sizeOf (undefined :: CSize)
@@ -445,7 +445,7 @@ clGetImageRowPitch lib mem =
 clGetImageSlicePitch :: OpenCLLibrary -> CLMem -> IO CSize      
 clGetImageSlicePitch lib mem = 
   wrapGetInfo (\(dat :: Ptr CSize) ->
-                raw_clGetImageInfo lib mem infoid size (castPtr dat)) id
+                rawClGetImageInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_IMAGE_SLICE_PITCH
       size = fromIntegral $ sizeOf (undefined :: CSize)      
@@ -456,7 +456,7 @@ clGetImageSlicePitch lib mem =
 clGetImageWidth :: OpenCLLibrary -> CLMem -> IO CSize      
 clGetImageWidth lib mem = 
   wrapGetInfo (\(dat :: Ptr CSize) ->
-                raw_clGetImageInfo lib mem infoid size (castPtr dat)) id
+                rawClGetImageInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_IMAGE_WIDTH
       size = fromIntegral $ sizeOf (undefined :: CSize)
@@ -467,7 +467,7 @@ clGetImageWidth lib mem =
 clGetImageHeight :: OpenCLLibrary -> CLMem -> IO CSize      
 clGetImageHeight lib mem = 
   wrapGetInfo (\(dat :: Ptr CSize) ->
-                raw_clGetImageInfo lib mem infoid size (castPtr dat)) id
+                rawClGetImageInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_IMAGE_HEIGHT
       size = fromIntegral $ sizeOf (undefined :: CSize)
@@ -478,7 +478,7 @@ clGetImageHeight lib mem =
 clGetImageDepth :: OpenCLLibrary -> CLMem -> IO CSize      
 clGetImageDepth lib mem = 
   wrapGetInfo (\(dat :: Ptr CSize) ->
-                raw_clGetImageInfo lib mem infoid size (castPtr dat)) id
+                rawClGetImageInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_IMAGE_DEPTH
       size = fromIntegral $ sizeOf (undefined :: CSize)
@@ -503,7 +503,7 @@ enum CLMemInfo {
 clGetMemType :: OpenCLLibrary -> CLMem -> IO CLMemObjectType
 clGetMemType lib mem =
     wrapGetInfo (\(dat :: Ptr CLMemObjectType_) ->
-        raw_clGetMemObjectInfo lib mem infoid size (castPtr dat)) getEnumCL
+        rawClGetMemObjectInfo lib mem infoid size (castPtr dat)) getEnumCL
     where 
       infoid = getCLValue CL_MEM_TYPE
       size = fromIntegral $ sizeOf (0::CLMemObjectType_)
@@ -514,7 +514,7 @@ clGetMemType lib mem =
 clGetMemFlags :: OpenCLLibrary -> CLMem -> IO [CLMemFlag]
 clGetMemFlags lib mem =
     wrapGetInfo (\(dat :: Ptr CLMemFlags_)->
-        raw_clGetMemObjectInfo lib mem infoid size (castPtr dat)) bitmaskToMemFlags
+        rawClGetMemObjectInfo lib mem infoid size (castPtr dat)) bitmaskToMemFlags
     where 
       infoid = getCLValue CL_MEM_FLAGS
       size = fromIntegral $ sizeOf (0::CLMemFlags_)
@@ -525,7 +525,7 @@ clGetMemFlags lib mem =
 clGetMemSize :: OpenCLLibrary -> CLMem -> IO CSize
 clGetMemSize lib mem =
     wrapGetInfo (\(dat :: Ptr CSize)->
-        raw_clGetMemObjectInfo lib mem infoid size (castPtr dat)) id
+        rawClGetMemObjectInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_MEM_SIZE
       size = fromIntegral $ sizeOf (0::CSize)
@@ -536,7 +536,7 @@ clGetMemSize lib mem =
 clGetMemHostPtr :: OpenCLLibrary -> CLMem -> IO (Ptr ())
 clGetMemHostPtr lib mem =
     wrapGetInfo (\(dat :: Ptr (Ptr ()))->
-        raw_clGetMemObjectInfo lib mem infoid size (castPtr dat)) id
+        rawClGetMemObjectInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_MEM_HOST_PTR
       size = fromIntegral $ sizeOf (nullPtr::Ptr ())
@@ -549,7 +549,7 @@ clGetMemHostPtr lib mem =
 clGetMemMapCount :: OpenCLLibrary -> CLMem -> IO CLuint
 clGetMemMapCount lib mem =
     wrapGetInfo (\(dat :: Ptr CLuint)->
-        raw_clGetMemObjectInfo lib mem infoid size (castPtr dat)) id
+        rawClGetMemObjectInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_MEM_MAP_COUNT
       size = fromIntegral $ sizeOf (0 :: CLuint)
@@ -562,7 +562,7 @@ clGetMemMapCount lib mem =
 clGetMemReferenceCount :: OpenCLLibrary -> CLMem -> IO CLuint
 clGetMemReferenceCount lib mem =
     wrapGetInfo (\(dat :: Ptr CLuint)->
-        raw_clGetMemObjectInfo lib mem infoid size (castPtr dat)) id
+        rawClGetMemObjectInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_MEM_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0 :: CLuint)
@@ -573,7 +573,7 @@ clGetMemReferenceCount lib mem =
 clGetMemContext :: OpenCLLibrary -> CLMem -> IO CLContext
 clGetMemContext lib mem =
     wrapGetInfo (\(dat :: Ptr CLContext)->
-        raw_clGetMemObjectInfo lib mem infoid size (castPtr dat)) id
+        rawClGetMemObjectInfo lib mem infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_MEM_CONTEXT
       size = fromIntegral $ sizeOf (0 :: CLuint)
@@ -605,13 +605,13 @@ by the OpenCL implementation on the host.
 clCreateSampler :: OpenCLLibrary -> CLContext -> Bool -> CLAddressingMode -> CLFilterMode 
                    -> IO CLSampler
 clCreateSampler lib ctx norm am fm = wrapPError $ \perr -> do
-  raw_clCreateSampler lib ctx (fromBool norm) (getCLValue am) (getCLValue fm) perr
+  rawClCreateSampler lib ctx (fromBool norm) (getCLValue am) (getCLValue fm) perr
 
 -- | Increments the sampler reference count. 'clCreateSampler' does an implicit
 -- retain. Returns 'True' if the function is executed successfully. It returns
 -- 'False' if sampler is not a valid sampler object.
 clRetainSampler :: OpenCLLibrary -> CLSampler -> IO Bool
-clRetainSampler lib mem = wrapCheckSuccess $ raw_clRetainSampler lib mem
+clRetainSampler lib mem = wrapCheckSuccess $ rawClRetainSampler lib mem
 
 -- | Decrements the sampler reference count. The sampler object is deleted after
 -- the reference count becomes zero and commands queued for execution on a
@@ -619,7 +619,7 @@ clRetainSampler lib mem = wrapCheckSuccess $ raw_clRetainSampler lib mem
 -- 'True' if the function is executed successfully. It returns 'False' if
 -- sampler is not a valid sampler object.
 clReleaseSampler :: OpenCLLibrary -> CLSampler -> IO Bool
-clReleaseSampler lib mem = wrapCheckSuccess $ raw_clReleaseSampler lib mem
+clReleaseSampler lib mem = wrapCheckSuccess $ rawClReleaseSampler lib mem
 
 #c
 enum CLSamplerInfo {
@@ -641,7 +641,7 @@ enum CLSamplerInfo {
 clGetSamplerReferenceCount :: OpenCLLibrary -> CLSampler -> IO CLuint
 clGetSamplerReferenceCount lib sam =
     wrapGetInfo (\(dat :: Ptr CLuint)->
-        raw_clGetSamplerInfo lib sam infoid size (castPtr dat)) id
+        rawClGetSamplerInfo lib sam infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_SAMPLER_REFERENCE_COUNT
       size = fromIntegral $ sizeOf (0 :: CLuint)
@@ -652,7 +652,7 @@ clGetSamplerReferenceCount lib sam =
 clGetSamplerContext :: OpenCLLibrary -> CLSampler -> IO CLContext
 clGetSamplerContext lib sam =
     wrapGetInfo (\(dat :: Ptr CLContext)->
-        raw_clGetSamplerInfo lib sam infoid size (castPtr dat)) id
+        rawClGetSamplerInfo lib sam infoid size (castPtr dat)) id
     where 
       infoid = getCLValue CL_SAMPLER_CONTEXT
       size = fromIntegral $ sizeOf (nullPtr :: CLContext)
@@ -664,7 +664,7 @@ clGetSamplerContext lib sam =
 clGetSamplerAddressingMode :: OpenCLLibrary -> CLSampler -> IO CLAddressingMode
 clGetSamplerAddressingMode lib sam =
     wrapGetInfo (\(dat :: Ptr CLAddressingMode_)->
-        raw_clGetSamplerInfo lib sam infoid size (castPtr dat)) getEnumCL
+        rawClGetSamplerInfo lib sam infoid size (castPtr dat)) getEnumCL
     where 
       infoid = getCLValue CL_SAMPLER_ADDRESSING_MODE
       size = fromIntegral $ sizeOf (0 :: CLAddressingMode_)
@@ -675,7 +675,7 @@ clGetSamplerAddressingMode lib sam =
 clGetSamplerFilterMode :: OpenCLLibrary -> CLSampler -> IO CLFilterMode
 clGetSamplerFilterMode lib sam =
     wrapGetInfo (\(dat :: Ptr CLFilterMode_)->
-        raw_clGetSamplerInfo lib sam infoid size (castPtr dat)) getEnumCL
+        rawClGetSamplerInfo lib sam infoid size (castPtr dat)) getEnumCL
     where 
       infoid = getCLValue CL_SAMPLER_FILTER_MODE
       size = fromIntegral $ sizeOf (0 :: CLFilterMode_)
@@ -688,7 +688,7 @@ clGetSamplerFilterMode lib sam =
 clGetSamplerNormalizedCoords :: OpenCLLibrary -> CLSampler -> IO Bool
 clGetSamplerNormalizedCoords lib sam =
     wrapGetInfo (\(dat :: Ptr CLbool)->
-        raw_clGetSamplerInfo lib sam infoid size (castPtr dat)) (/=0)
+        rawClGetSamplerInfo lib sam infoid size (castPtr dat)) (/=0)
     where 
       infoid = getCLValue CL_SAMPLER_NORMALIZED_COORDS
       size = fromIntegral $ sizeOf (0 :: CLbool)

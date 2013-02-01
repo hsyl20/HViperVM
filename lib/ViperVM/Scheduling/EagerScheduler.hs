@@ -28,7 +28,7 @@ eagerScheduler (TaskSubmitted task) = do
 
   -- Filter invalid processors and select the first valid one
   valid <- lift $ filterM (\p -> 
-    liftM (any id) $ mapM (canExecute p) ks) sorted
+    liftM or $ mapM (canExecute p) ks) sorted
 
   -- TODO: support the case where no processor can execute the task
   let proc = fromJust $ listToMaybe valid
