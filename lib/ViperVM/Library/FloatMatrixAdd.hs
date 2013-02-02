@@ -7,7 +7,6 @@ import ViperVM.Kernel
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
 import ViperVM.Data
-import ViperVM.DataManager
 import ViperVM.Buffer
 import ViperVM.Region
 
@@ -45,7 +44,7 @@ floatMatrixAddCLConfig dis = CLKernelConfiguration gDim lDim params
 floatMatrixAddInterface :: KernelInterface
 floatMatrixAddInterface = KernelInterface {
   name = "Float Matrix Addition",
-  makeParameters = \mgr [a,b] -> [KPReadOnly a, KPReadOnly b, KPAllocate (descriptor mgr a)],
+  makeParameters = \ [a,b] -> [KPReadOnly a, KPReadOnly b, KPReadOnly a],
   makeResult = \[_,_,c] -> [c]
 }
 

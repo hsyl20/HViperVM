@@ -5,7 +5,7 @@ import ViperVM.Buffer
 import ViperVM.Region
 
 ----------------------------------------------------
-type Data = Word
+type Data = Int
 
 data Primitive = PrimFloat | PrimDouble
                  deriving (Eq,Ord)

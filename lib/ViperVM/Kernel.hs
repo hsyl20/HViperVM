@@ -4,7 +4,7 @@ module ViperVM.Kernel where
 
 import qualified ViperVM.Backends.OpenCL.Types as CL
 import ViperVM.Backends.OpenCL
-import ViperVM.Platform ( Processor(..) )
+import ViperVM.Platform.Processor ( Processor(..) )
 import ViperVM.Data (DataInstance,DataDesc)
 
 import Data.List (sortBy, groupBy )

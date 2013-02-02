@@ -1,6 +1,6 @@
 -- | STM Graph
 module ViperVM.Graph (
-   Graph, Node, NodeSet, nodes,
+   Graph, Node, NodeSet, TNodeSet, nodes,
    newGraph, addNode, addNode_, removeNode, removeNodes, printGraph, nodeValue, setNodeValue,
    tailEndpoints, headEndpoints, leaves, roots,
    depthFirstTraverse, removeDeadNodes

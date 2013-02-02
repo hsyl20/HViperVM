@@ -1,73 +1,81 @@
 module ViperVM.Runtime (
-  startRuntime, stopRuntime,
-  mapVector,
-  submitTask,
-  waitForData,
-  -- Events
-  waitEvent,sync,
-  createRuntime, Msg(..)
-  ) where
+   Runtime, RNode(..) 
+) where
 
-import ViperVM.Platform
-import ViperVM.Data
-import ViperVM.DataGraph
 import ViperVM.Graph
-import ViperVM.Event
-import ViperVM.StartStop
-import ViperVM.Structures (Message(..), Runtime(..))
-import ViperVM.KernelSet
+import ViperVM.Data
+import ViperVM.Task
+import ViperVM.STM.TIntSet
+import qualified ViperVM.Platform as Pf
+import ViperVM.Platform.Memory
+import ViperVM.Platform.Processor
+import ViperVM.Platform.Link
+import ViperVM.Platform (Platform)
 
-import Control.Concurrent
 import Control.Concurrent.STM
-import Data.Word
-import Data.Traversable
-import Foreign.Ptr
+import Control.Monad
+import Control.Applicative ( (<$>), (<*>))
 
-data Msg = Hi
+-- | Contain the whole state of the runtime system using STM
+data Runtime = Runtime {
+      -- Whole graph
+      graph :: Graph RNode,
+      -- Indexes
+      processors :: TNodeSet,
+      memories :: TNodeSet
+   }
 
-type Scheduler = TChan Msg -> DataGraph -> STM (IO ())
+-- | A node of the runtime graph
+data RNode =
+   MemoryNode Memory |
+   ProcessorNode Processor |
+   LinkNode Link |
+   DataNode {
+      desc :: DataDesc,
+      dataInstances :: TNodeSet,
+      transfers :: TNodeSet
+   } |
+   DataInstanceNode DataInstance |
+   DataTransferNode {
+      link :: Node,
+      source :: Node,
+      target :: Node,
+      parentData :: Node
+   } |
+   TaskNode {
+      task :: Task,
+      taskInstances :: TNodeSet,
+      candidates :: TNodeSet
+   } |
+   TaskInstanceNode {
+      parentTask :: Node,
+      params :: TNodeSet,
+      processor :: Node
+   }
 
--- | Create a new runtime system
-createRuntime :: Platform -> [Scheduler] -> IO (TChan Msg)
-createRuntime pf scheds = do
+createRuntime :: Platform -> IO Runtime
+createRuntime pf = atomically $ do
 
-   ch <- newBroadcastTChanIO
+   g <- newGraph
+   r <- Runtime g <$> empty <*> empty
+   
+   forM_ (Pf.processors pf) (addProcessor r)
+   forM_ (Pf.memories pf) (addMemory r)
+--   forM (Pf.links pf) (addLink r)
 
-   schedsIO <- atomically $ do
-      g <- newGraph
-      forM scheds $ \s -> do
-         pch <- dupTChan ch
-         s pch g
-
-   sequence_ schedsIO
-   return ch
+   return r
 
 
+-- | Add a processor in the runtime
+addProcessor :: Runtime -> Processor -> STM Node
+addProcessor r p = do
+   n <- addNode (graph r) (ProcessorNode p) =<< readTVar =<< empty
+   insert n (processors r)
+   return n
 
--- | Send a command to the runtime and get an asynchronous response
-sendRuntimeCmd :: Runtime -> (Event a -> Message) -> IO (Event a)
-sendRuntimeCmd (Runtime ch) msg = do
-  v <- newEvent
-  writeChan ch (msg v)
-  return v
-
--- | Execute synchronously a function returning an event
-sync :: IO (Event a) -> IO a
-sync f = waitEvent =<< f
-
--- | Map a Vector of host memory into runtime managed memory
--- You mustn't use mapped host memory
-mapVector :: Runtime -> Primitive -> Word64 -> Ptr () -> IO (Event Data)
-mapVector r prim sz ptr = sendRuntimeCmd r $ AppMapVector (VectorDesc prim sz) ptr
-
--- | Stop the given runtime
-stopRuntime :: Runtime -> IO (Event ())
-stopRuntime r = sendRuntimeCmd r AppQuit 
-
--- | Submit a task to the runtime system
-submitTask :: Runtime -> KernelSet -> [Data] -> IO (Event [Data])
-submitTask r ks ds = sendRuntimeCmd r $ AppTaskSubmit ks ds
-
--- | Wait for a data to be computed
-waitForData :: Runtime -> Data -> IO (Event ())
-waitForData r d = sendRuntimeCmd r $ AppWaitForData d
+-- | Add a processor in the runtime
+addMemory :: Runtime -> Memory -> STM Node
+addMemory r m = do
+   n <- addNode (graph r) (MemoryNode m) =<< readTVar =<< empty
+   insert n (memories r)
+   return n

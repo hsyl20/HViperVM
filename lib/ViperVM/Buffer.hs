@@ -1,6 +1,6 @@
 module ViperVM.Buffer where
 
-import ViperVM.Platform
+import ViperVM.Platform.Memory
 import ViperVM.Backends.OpenCL.Types
 
 import Data.Word

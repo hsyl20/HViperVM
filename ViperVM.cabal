@@ -27,52 +27,25 @@ library
     ViperVM.Backends.OpenCL.Query
     ViperVM.Backends.OpenCL.Types
 
+    ViperVM.Platform.Memory
+    ViperVM.Platform.Processor
+    ViperVM.Platform.Link
+
     ViperVM.Buffer
-    ViperVM.DataGraph
-    ViperVM.Compiler
+    ViperVM.Runtime
     ViperVM.Data
     ViperVM.Event
-    ViperVM.Executer
     ViperVM.Graph
     ViperVM.Kernel
     ViperVM.KernelInterface
     ViperVM.KernelSet
     ViperVM.Platform
     ViperVM.Region
-    ViperVM.Runtime
     ViperVM.Task
-    ViperVM.Transfer
 
     ViperVM.STM.Common
     ViperVM.STM.TSet
     ViperVM.STM.TIntSet
-
-    ViperVM.BufferManager
-    ViperVM.RegionManager
-    ViperVM.TransferManager  
-    ViperVM.MemoryManager  
-
-    ViperVM.InstanceManager
-    ViperVM.DataManager  
-    ViperVM.KernelManager  
-    ViperVM.RequestManager  
-    ViperVM.Logging
-    ViperVM.Requests
-    ViperVM.StartStop
-    ViperVM.Structures
-
-    ViperVM.Scheduling.Composed
-    ViperVM.Scheduling.DataManager
-    ViperVM.Scheduling.Default
-    ViperVM.Scheduling.EagerKernelCompiler
-    ViperVM.Scheduling.EagerScheduler
-    ViperVM.Scheduling.MemoryManager
-    ViperVM.Scheduling.TaskRequestManager
-    ViperVM.Scheduling.TaskManager
-
-    ViperVM.Logging.Logger
-    ViperVM.Logging.NullLogger
-    ViperVM.Logging.TextLogger
 
     ViperVM.Library.FloatMatrixAdd
 
@@ -118,21 +91,21 @@ executable PlatformInfo
     base,
     ViperVM
 
-executable PlatformTest
-  main-is: PlatformTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    ViperVM
+--executable PlatformTest
+--  main-is: PlatformTest.hs
+--  hs-source-dirs: apps
+--  ghc-options: -Wall -threaded
+--  build-depends: 
+--    base,
+--    ViperVM
 
-executable RuntimeTest
-  main-is: RuntimeTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall
-  build-depends: 
-    base,
-    ViperVM
+--executable RuntimeTest
+--  main-is: RuntimeTest.hs
+--  hs-source-dirs: apps
+--  ghc-options: -Wall
+--  build-depends: 
+--    base,
+--    ViperVM
 
 executable GraphTest
   main-is: GraphTest.hs
