@@ -6,6 +6,7 @@ import ViperVM.Graph
 import ViperVM.Data
 import ViperVM.Task
 import ViperVM.STM.TIntSet
+import qualified Data.IntSet as IntSet
 import qualified ViperVM.Platform as Pf
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Processor
@@ -18,64 +19,118 @@ import Control.Applicative ( (<$>), (<*>))
 
 -- | Contain the whole state of the runtime system using STM
 data Runtime = Runtime {
+      -- Event channel
+      chan :: TChan RuntimeEvent,
       -- Whole graph
       graph :: Graph RNode,
       -- Indexes
       processors :: TNodeSet,
-      memories :: TNodeSet
+      memories :: TNodeSet,
+      links :: TNodeSet
    }
+
+data RuntimeEvent = 
+   MemoryNodeAdded Node |
+   ProcessorAdded Node  |
+   LinkAdded Node
 
 -- | A node of the runtime graph
 data RNode =
+   -- | A physical memory
    MemoryNode Memory |
-   ProcessorNode Processor |
-   LinkNode Link |
+   -- | A processing unit
+   ProcessorNode {
+      proc :: Processor ,
+      procMemories :: TNodeSet
+   } |
+   -- | A link between two memories
+   LinkNode {
+      link :: Link,
+      linkSource :: Node,
+      linkTarget :: Node
+   } |
+   -- | A data
    DataNode {
-      desc :: DataDesc,
+      dataDesc :: DataDesc,
       dataInstances :: TNodeSet,
-      transfers :: TNodeSet
+      dataTransfers :: TNodeSet
    } |
-   DataInstanceNode DataInstance |
+   -- | Data partitioning operator
+   Partition {
+      splitData :: Node
+   } |
+   -- | An instance of a data in a memory
+   DataInstanceNode {
+      dataInstance :: DataInstance
+   } |
+   -- | A data transfer
    DataTransferNode {
-      link :: Node,
-      source :: Node,
-      target :: Node,
-      parentData :: Node
+      transferLink :: Node,
+      transferSource :: Node,
+      transferTarget :: Node,
+      transferData :: Node
    } |
+   -- | A task
    TaskNode {
       task :: Task,
       taskInstances :: TNodeSet,
-      candidates :: TNodeSet
+      taskCandidateProcs :: TNodeSet
    } |
+   -- | An instance of a task
    TaskInstanceNode {
-      parentTask :: Node,
-      params :: TNodeSet,
-      processor :: Node
+      taskInstanceTask :: Node,
+      taskInstanceParams :: TNodeSet,
+      taskInstanceProc :: Node
    }
 
+-- | Create a runtime on the given platform
 createRuntime :: Platform -> IO Runtime
 createRuntime pf = atomically $ do
 
-   g <- newGraph
-   r <- Runtime g <$> empty <*> empty
    
-   forM_ (Pf.processors pf) (addProcessor r)
+   r <- Runtime <$> newTChan <*> newGraph <*> empty <*> empty <*> empty
+   
    forM_ (Pf.memories pf) (addMemory r)
---   forM (Pf.links pf) (addLink r)
+   forM_ (Pf.processors pf) (addProcessor r)
+   forM_ (Pf.links pf) (addLink r)
 
    return r
 
+-- Find a node in a set using a predicate on its value
+findNode :: Runtime -> (RNode -> Bool) -> NodeSet -> STM (Maybe Node)
+findNode r f = g . IntSet.elems
+   where
+      g :: [Int] -> STM (Maybe Node)
+      g [] = return Nothing
+      g (x:xs) = do
+         v <- nodeValue (graph r) x
+         if f v then return (Just x) else g xs
+         
+         
 
--- | Add a processor in the runtime
-addProcessor :: Runtime -> Processor -> STM Node
-addProcessor r p = do
-   n <- addNode (graph r) (ProcessorNode p) =<< readTVar =<< empty
-   insert n (processors r)
-   return n
-
--- | Add a processor in the runtime
+-- | Add a memory in the runtime
 addMemory :: Runtime -> Memory -> STM Node
 addMemory r m = do
    n <- addNode (graph r) (MemoryNode m) =<< readTVar =<< empty
    insert n (memories r)
+   return n
+
+-- Find a memory node
+findMemory :: Runtime -> Memory -> STM (Maybe Node)
+findMemory r m = findNode r (== MemoryNode m) =<< (memories r)
+      
+
+-- | Add a processor in the runtime
+addProcessor :: Runtime -> Processor -> STM Node
+addProcessor r p = do
+   let mems = processorMemories p
+   n <- addNode (graph r) (ProcessorNode p mems) =<< readTVar =<< empty
+   insert n (processors r)
+   return n
+
+-- | Add a link in the runtime
+addLink :: Runtime -> Link -> STM Node
+addLink r l = do
+   n <- addNode (graph r) (LinkNode l) =<< readTVar =<< empty
+   insert n (links r)
    return n
