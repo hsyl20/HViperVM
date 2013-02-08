@@ -44,6 +44,7 @@ floatMatrixAddCLConfig dis = CLKernelConfiguration gDim lDim params
 floatMatrixAddInterface :: KernelInterface
 floatMatrixAddInterface = KernelInterface {
   name = "Float Matrix Addition",
+  paramCount = (2,1),
   makeParameters = \ [a,b] -> [KPReadOnly a, KPReadOnly b, KPReadOnly a],
   makeResult = \[_,_,c] -> [c]
 }

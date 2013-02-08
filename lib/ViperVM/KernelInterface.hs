@@ -7,10 +7,8 @@ data KernelParameter = KPReadOnly Data  -- ^ Access a data in read-only mode
                | KPAllocate DataDesc  -- ^ Allocate a new data
 
 data KernelInterface = KernelInterface {
-  -- | Kernel identifier (name)
-  name :: String,
-  -- | Create kernel parameters from input data
-  makeParameters :: [Data] -> [KernelParameter],
-  -- | Filter data to return as kernel results
-  makeResult :: [Data] -> [Data]
+  name :: String,                                  -- ^ Kernel identifier (name)
+  paramCount :: (Int,Int),                         -- ^ Number of parameters (in, out)
+  makeParameters :: [Data] -> [KernelParameter],   -- ^ Create kernel parameters from input data
+  makeResult :: [Data] -> [Data]                   -- ^ Filter data to return as kernel results
 }

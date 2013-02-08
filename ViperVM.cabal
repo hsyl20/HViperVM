@@ -39,6 +39,7 @@ library
     ViperVM.Runtime.Data
     ViperVM.Runtime.Kernel
     ViperVM.Runtime.Task
+    ViperVM.Runtime.Scheduler
     ViperVM.Runtime
 
     ViperVM.KernelInterface
@@ -100,13 +101,13 @@ executable PlatformInfo
 --    base,
 --    ViperVM
 
---executable RuntimeTest
---  main-is: RuntimeTest.hs
---  hs-source-dirs: apps
---  ghc-options: -Wall
---  build-depends: 
---    base,
---    ViperVM
+executable RuntimeTest
+  main-is: RuntimeTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall
+  build-depends: 
+    base,
+    ViperVM
 
 executable ParseTest
   main-is: ParseTest.hs

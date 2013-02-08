@@ -4,13 +4,14 @@ import Data.Word
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Region
 import ViperVM.Platform.Link
-
 import ViperVM.STM.TSet
+
+import Control.Concurrent.STM.TVar
 
 
 -- | A data
 data Data = Data {
-   dataDesc :: DataDesc,
+   dataDesc :: TVar (Maybe DataDesc),
    dataInstances :: TSet DataInstance,
    dataTransfers :: TSet Transfer
 }
@@ -22,7 +23,6 @@ data Transfer = Transfer {
    transferTarget :: DataInstance,
    transferData :: Data
 }
-
 
 
 ----------------------------------------------------

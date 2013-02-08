@@ -1,12 +1,9 @@
 import Foreign.Marshal.Alloc
-import System.IO (stdout)
 
-import ViperVM.Data
+import ViperVM.Runtime.Data
 import ViperVM.Library.FloatMatrixAdd
-import ViperVM.Logging.TextLogger
 import ViperVM.Platform
-import ViperVM.Runtime
-import ViperVM.Scheduling.Default
+import ViperVM.Runtime.Scheduler
 
 main :: IO ()
 main = do
@@ -24,17 +21,13 @@ main = do
   v1ptr <- mallocBytes (fromIntegral $ n*4)
   v2ptr <- mallocBytes (fromIntegral $ n*4)
 
-  logger <- newTextLogger stdout
-  scheduler <- defaultScheduler logger
-  runtime <- startRuntime platform logger scheduler
+  runtime <- createRuntime platform 
 
-  a <- sync $ mapVector runtime PrimFloat n v1ptr
-  b <- sync $ mapVector runtime PrimFloat n v2ptr
+  a <- mapVectorIO runtime PrimFloat n v1ptr
+  b <- mapVectorIO runtime PrimFloat n v2ptr
 
-  [c] <- sync $ submitTask runtime floatMatrixAdd [a,b]
+  [c] <- submitTaskIO runtime floatMatrixAdd [a,b]
 
-  sync $ waitForData runtime c
-
-  sync $ stopRuntime runtime
+  waitDataIO runtime [c]
 
   putStrLn "Done."

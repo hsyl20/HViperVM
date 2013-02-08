@@ -7,12 +7,16 @@ module ViperVM.Platform (
    module ViperVM.Platform.Memory,
    module ViperVM.Platform.Processor,
    module ViperVM.Platform.Link,
+   module ViperVM.Platform.Buffer,
+   module ViperVM.Platform.Region,
 ) where
 
 import ViperVM.Backends.OpenCL
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Processor
 import ViperVM.Platform.Link
+import ViperVM.Platform.Buffer
+import ViperVM.Platform.Region
 import Data.Traversable
 import Control.Applicative
 

@@ -7,11 +7,6 @@ import qualified ViperVM.Platform as Pf
 
 import Control.Concurrent.STM
 
-data Runtime = Runtime {
-   memories :: TSet Memory,
-   processors :: TSet Processor
-}
-
 -- | A physical memory
 data Memory = Memory {
    peerMem :: Pf.Memory
