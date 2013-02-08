@@ -3,12 +3,12 @@ module ViperVM.Library.FloatMatrixAdd (
   floatMatrixAddCL
   ) where
 
-import ViperVM.Kernel
+import ViperVM.Runtime.Kernel
 import ViperVM.KernelInterface
 import ViperVM.KernelSet
-import ViperVM.Data
-import ViperVM.Buffer
-import ViperVM.Region
+import ViperVM.Runtime.Data
+import ViperVM.Platform.Buffer
+import ViperVM.Platform.Region
 
 floatMatrixAddCL :: Kernel
 floatMatrixAddCL = CLKernel {
@@ -25,8 +25,8 @@ floatMatrixAddCL = CLKernel {
   \    C[gy*width+gx] = A[gy*width+gx] + B[gy*width+gx];\
   \  }\
   \\
-  \}",
-  configure = floatMatrixAddCLConfig
+  \}"
+  --configure = floatMatrixAddCLConfig
 }
 
 floatMatrixAddCLConfig :: [(DataDesc,DataInstance)] -> KernelConfiguration

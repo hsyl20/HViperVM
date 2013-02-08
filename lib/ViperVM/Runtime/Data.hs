@@ -1,12 +1,31 @@
-module ViperVM.Data where
+module ViperVM.Runtime.Data where
 
 import Data.Word
-import ViperVM.Buffer
-import ViperVM.Region
+import ViperVM.Platform.Buffer
+import ViperVM.Platform.Region
+import ViperVM.Platform.Link
+
+import ViperVM.STM.TSet
+
+
+-- | A data
+data Data = Data {
+   dataDesc :: DataDesc,
+   dataInstances :: TSet DataInstance,
+   dataTransfers :: TSet Transfer
+}
+
+-- | A data transfer
+data Transfer = Transfer {
+   transferLink :: Link,
+   transferSource :: DataInstance,
+   transferTarget :: DataInstance,
+   transferData :: Data
+}
+
+
 
 ----------------------------------------------------
-type Data = Int
-
 data Primitive = PrimFloat | PrimDouble
                  deriving (Eq,Ord)
 

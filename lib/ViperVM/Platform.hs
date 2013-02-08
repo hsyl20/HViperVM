@@ -2,9 +2,11 @@
 -- architecture (memory network and processors)
 module ViperVM.Platform (
    Platform, Configuration(..),
-   initPlatform, platformInfo, procInfo, memInfo, linkInfo,
+   initPlatform, platformInfo,
    memories, links, processors,
-   linkEndpoints, processorMemories
+   module ViperVM.Platform.Memory,
+   module ViperVM.Platform.Processor,
+   module ViperVM.Platform.Link,
 ) where
 
 import ViperVM.Backends.OpenCL

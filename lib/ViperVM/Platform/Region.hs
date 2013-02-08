@@ -1,4 +1,4 @@
-module ViperVM.Region where
+module ViperVM.Platform.Region where
 
 import Data.Word
 

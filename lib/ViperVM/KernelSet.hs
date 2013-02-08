@@ -1,7 +1,7 @@
 module ViperVM.KernelSet where
 
 import ViperVM.KernelInterface
-import ViperVM.Kernel
+import ViperVM.Runtime.Kernel
 
 -- | A set of kernel performing the same operation and with the same interface
 data KernelSet = KernelSet KernelInterface [Kernel]

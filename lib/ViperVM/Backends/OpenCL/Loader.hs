@@ -15,6 +15,7 @@ import Foreign.C.String
 import Data.Word
 import Data.Maybe
 import Data.List (stripPrefix)
+import Control.Applicative
 
 -- | OpenCL Library module object
 data OpenCLLibrary = OpenCLLibrary {
@@ -99,7 +100,7 @@ instance Ord OpenCLLibrary where
   compare a b = compare (packDL $ libHandle a) (packDL $ libHandle b)
 
 myMod :: String -> String
-myMod = fromJust . stripPrefix "raw_"
+myMod x = fromJust $ ("c" ++) <$> stripPrefix "rawC" x
 
 $(makeDynamicLinker ''OpenCLLibrary CallConv 'myMod)
 

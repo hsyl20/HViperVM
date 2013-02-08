@@ -1,6 +1,6 @@
 module ViperVM.KernelInterface where
 
-import ViperVM.Data
+import ViperVM.Runtime.Data
 
 data KernelParameter = KPReadOnly Data  -- ^ Access a data in read-only mode
                | KPReadWrite Data -- ^ Access the first data in virtual read-write mode. The second data is the result and the first is left unmodified

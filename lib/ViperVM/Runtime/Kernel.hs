@@ -1,11 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module ViperVM.Kernel where
+module ViperVM.Runtime.Kernel where
 
 import qualified ViperVM.Backends.OpenCL.Types as CL
 import ViperVM.Backends.OpenCL
 import ViperVM.Platform.Processor ( Processor(..) )
-import ViperVM.Data (DataInstance,DataDesc)
 
 import Data.List (sortBy, groupBy )
 import Data.Traversable (traverse)
@@ -21,8 +20,8 @@ data Kernel = CLKernel {
   kernelName :: KernelName,
   constraints :: [KernelConstraint],
   options :: Options,
-  source :: KernelSource,
-  configure :: [(DataDesc,DataInstance)] -> KernelConfiguration
+  source :: KernelSource
+--  configure :: [(DataDesc,DataInstance)] -> KernelConfiguration
 --TODO  mutex :: MVar () -- ^ OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
 }
 

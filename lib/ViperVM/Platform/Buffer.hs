@@ -1,11 +1,11 @@
-module ViperVM.Buffer where
+module ViperVM.Platform.Buffer where
 
 import ViperVM.Platform.Memory
 import ViperVM.Backends.OpenCL.Types
+import ViperVM.Backends.OpenCL
 
 import Data.Word
 import Foreign.Ptr
-import ViperVM.Backends.OpenCL
 
 
 data Buffer = 

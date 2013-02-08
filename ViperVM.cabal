@@ -30,18 +30,19 @@ library
     ViperVM.Platform.Memory
     ViperVM.Platform.Processor
     ViperVM.Platform.Link
+    ViperVM.Platform.Buffer
+    ViperVM.Platform.Region
+    ViperVM.Platform
 
-    ViperVM.Buffer
-    ViperVM.Runtime
-    ViperVM.Data
     ViperVM.Event
-    ViperVM.Graph
-    ViperVM.Kernel
+
+    ViperVM.Runtime.Data
+    ViperVM.Runtime.Kernel
+    ViperVM.Runtime.Task
+    ViperVM.Runtime
+
     ViperVM.KernelInterface
     ViperVM.KernelSet
-    ViperVM.Platform
-    ViperVM.Region
-    ViperVM.Task
 
     ViperVM.STM.Common
     ViperVM.STM.TSet
@@ -106,16 +107,6 @@ executable PlatformInfo
 --  build-depends: 
 --    base,
 --    ViperVM
-
-executable GraphTest
-  main-is: GraphTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    stm,
-    ViperVM
 
 executable ParseTest
   main-is: ParseTest.hs

@@ -1,6 +1,6 @@
-module ViperVM.Task where
+module ViperVM.Runtime.Task where
 
-import ViperVM.Data
+import ViperVM.Runtime.Data
 import ViperVM.KernelSet
 
 import Data.Maybe
@@ -9,11 +9,9 @@ import Data.Maybe
 data TaskParameter = TPReadOnly Data          -- ^ A data accessed in read-only mode
                    | TPReadWrite Data Data    -- ^ A data that is duplicated into the second data
                    | TPAllocate Data          -- ^ A newly allocated data
-                   deriving (Eq,Ord)
 
 -- | A task
 data Task = Task KernelSet [TaskParameter]
-            deriving (Eq,Ord)
 
 instance Show Task where
   show (Task ks _) = show ks
