@@ -38,6 +38,9 @@ notifyMapData _ _ = return ()
 notifyTaskSubmit :: Runtime -> Task -> STM ()
 notifyTaskSubmit _ _ = return ()
 
+-- | Notify when data are waited for
+notifyWaitData :: Runtime -> [Data] -> STM ()
+notifyWaitData _ _ = return ()
 
 -- | IO version of mapVector
 mapVectorIO :: Runtime -> Primitive -> Word64 -> Ptr () -> IO Data
@@ -88,7 +91,7 @@ waitDataIO r ds = atomically $ waitData r ds
 
 -- | Synchronously wait for some data to be computed
 waitData :: Runtime -> [Data] -> STM ()
-waitData _ ds = forM_ ds f
+waitData r ds = notifyWaitData r ds >> forM_ ds f
    where
       f d = do
          cond <- TSet.null (dataInstances d)
