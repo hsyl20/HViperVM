@@ -3,12 +3,8 @@ module ViperVM.Library.FloatMatrixAdd (
   floatMatrixAddCL
   ) where
 
-import ViperVM.Runtime.Kernel
-import ViperVM.KernelInterface
-import ViperVM.KernelSet
-import ViperVM.Runtime.Data
-import ViperVM.Platform.Buffer
-import ViperVM.Platform.Region
+import ViperVM.Runtime
+import ViperVM.Platform
 
 floatMatrixAddCL :: Kernel
 floatMatrixAddCL = CLKernel {

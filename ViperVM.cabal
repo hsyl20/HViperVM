@@ -27,23 +27,20 @@ library
     ViperVM.Backends.OpenCL.Query
     ViperVM.Backends.OpenCL.Types
 
+    ViperVM.Platform
+    ViperVM.Platform.Buffer
+    ViperVM.Platform.Kernel
+    ViperVM.Platform.Link
     ViperVM.Platform.Memory
     ViperVM.Platform.Processor
-    ViperVM.Platform.Link
-    ViperVM.Platform.Buffer
     ViperVM.Platform.Region
-    ViperVM.Platform
 
     ViperVM.Event
 
-    ViperVM.Runtime.Data
-    ViperVM.Runtime.Kernel
-    ViperVM.Runtime.Task
-    ViperVM.Runtime.Scheduler
     ViperVM.Runtime
-
-    ViperVM.KernelInterface
-    ViperVM.KernelSet
+    ViperVM.Runtime.Data
+    ViperVM.Runtime.Nodes
+    ViperVM.Runtime.Scheduler
 
     ViperVM.STM.Common
     ViperVM.STM.TSet

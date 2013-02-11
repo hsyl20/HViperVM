@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module ViperVM.Runtime.Kernel where
+module ViperVM.Platform.Kernel where
 
 import qualified ViperVM.Backends.OpenCL.Types as CL
 import ViperVM.Backends.OpenCL
@@ -8,7 +8,8 @@ import ViperVM.Platform.Processor ( Processor(..) )
 
 import Data.List (sortBy, groupBy )
 import Data.Traversable (traverse)
-import Control.Monad ( liftM,filterM )
+import Control.Monad ( liftM,filterM,forM_ )
+import System.Exit
 
 type KernelName = String
 type KernelSource = String
@@ -22,7 +23,7 @@ data Kernel = CLKernel {
   options :: Options,
   source :: KernelSource
 --  configure :: [(DataDesc,DataInstance)] -> KernelConfiguration
---TODO  mutex :: MVar () -- ^ OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
+--  mutex :: MVar () -- ^ OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
 }
 
 data KernelConfiguration = CLKernelConfiguration {
@@ -116,3 +117,25 @@ compileKernels ker@(CLKernel {..}) procs = do
       Just (CL_BUILD_SUCCESS,k) -> Just (CLCompiledKernel ker k)
       _ -> Nothing
 
+
+-- | Execute a kernel on a given processor
+executeKernel :: Processor -> CompiledKernel -> KernelConfiguration -> IO () -> IO ()
+
+executeKernel (CLProcessor lib _ cq _) (CLCompiledKernel _ clker) (CLKernelConfiguration {..}) callback = do
+
+   -- TODO: OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
+   -- putMVar () (mutex ker)
+
+   forM_ ([0..] `zip` parameters) $ uncurry (setCLKernelArg lib clker)
+
+   let deps = []
+   ev <- clEnqueueNDRangeKernel lib cq clker globalDim localDim deps
+
+   return ()
+   
+   -- TODO: Do not forget to release the mutex
+   --void $ takeMVar (mutex ker)
+
+executeKernel proc ker _ _ = do
+   putStrLn $ "We do not know how to execute kernel " ++ show ker ++ " on " ++ show proc
+   exitFailure

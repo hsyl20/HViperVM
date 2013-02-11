@@ -11,36 +11,32 @@ import Control.Concurrent.STM
 import Control.Applicative
 import Control.Monad
 
-import ViperVM.Platform
-import ViperVM.Runtime.Data
-import ViperVM.Runtime.Task
-
-import ViperVM.KernelSet
-import ViperVM.KernelInterface
+import qualified ViperVM.Platform as Pf
+import ViperVM.Runtime
 
 import qualified ViperVM.STM.TSet as TSet
 
 data Runtime = Runtime {
-   platform :: Platform  -- ^ Platform the runtime is used on
+   platform :: Pf.Platform,  -- ^ Platform the runtime is used on
+   notifyMapData :: Data -> STM (),
+   notifyTaskSubmit :: Task -> STM (),
+   notifyWaitData :: [Data] -> STM ()
 }
 
 
 -- | Create a runtime on a platform
-createRuntime :: Platform -> IO Runtime
-createRuntime pf = return (Runtime pf)
+createRuntime :: Pf.Platform -> IO Runtime
+createRuntime pf = do
+   let r = Runtime {
+         platform = pf,
+         notifyMapData = \_ -> return (),
+         notifyTaskSubmit = \_ -> return (),
+         notifyWaitData = \_ -> return ()
+      }
+
+   return r
 
 
--- | Called when a data is mapped in host memory
-notifyMapData :: Runtime -> Data -> STM ()
-notifyMapData _ _ = return ()
-
--- | Called when a task is submitted
-notifyTaskSubmit :: Runtime -> Task -> STM ()
-notifyTaskSubmit _ _ = return ()
-
--- | Notify when data are waited for
-notifyWaitData :: Runtime -> [Data] -> STM ()
-notifyWaitData _ _ = return ()
 
 -- | IO version of mapVector
 mapVectorIO :: Runtime -> Primitive -> Word64 -> Ptr () -> IO Data
@@ -51,8 +47,8 @@ mapVector :: Runtime -> Primitive -> Word64 -> Ptr () -> STM Data
 mapVector r prim n ptr = do
    let desc = VectorDesc prim n
        sz   = n * primitiveSize prim
-       buf  = HostBuffer sz ptr
-       reg  = Region1D 0 sz
+       buf  = Pf.HostBuffer sz ptr
+       reg  = Pf.Region1D 0 sz
        di   = Vector buf reg
    
    -- Create data
@@ -61,6 +57,8 @@ mapVector r prim n ptr = do
    notifyMapData r dat
 
    return dat
+
+
 
 
 -- | IO version of submitTask
@@ -78,11 +76,13 @@ submitTask r ks inData = do
    -- Create output data
    outData <- forM [1..outp] $ const $ (Data <$> newTVar Nothing <*> TSet.empty <*> TSet.empty)
 
-   let task = Task ks inData outData
+   task <- Task ks inData outData <$> TSet.empty
 
    notifyTaskSubmit r task
 
    return outData
+
+
 
 
 -- | IO version of waitData

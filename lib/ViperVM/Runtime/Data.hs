@@ -9,22 +9,6 @@ import ViperVM.STM.TSet
 import Control.Concurrent.STM.TVar
 
 
--- | A data
-data Data = Data {
-   dataDesc :: TVar (Maybe DataDesc),
-   dataInstances :: TSet DataInstance,
-   dataTransfers :: TSet Transfer
-}
-
--- | A data transfer
-data Transfer = Transfer {
-   transferLink :: Link,
-   transferSource :: DataInstance,
-   transferTarget :: DataInstance,
-   transferData :: Data
-}
-
-
 ----------------------------------------------------
 data Primitive = PrimFloat | PrimDouble
                  deriving (Eq,Ord)

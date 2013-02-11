@@ -9,6 +9,7 @@ module ViperVM.Platform (
    module ViperVM.Platform.Link,
    module ViperVM.Platform.Buffer,
    module ViperVM.Platform.Region,
+   module ViperVM.Platform.Kernel,
 ) where
 
 import ViperVM.Backends.OpenCL
@@ -17,6 +18,7 @@ import ViperVM.Platform.Processor
 import ViperVM.Platform.Link
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Region
+import ViperVM.Platform.Kernel
 import Data.Traversable
 import Control.Applicative
 
