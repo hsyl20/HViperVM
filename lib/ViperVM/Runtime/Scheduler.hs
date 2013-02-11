@@ -11,13 +11,15 @@ import Control.Concurrent.STM
 import Control.Applicative
 import Control.Monad
 
+import qualified ViperVM.STM.TSet as TSet
 import qualified ViperVM.Platform as Pf
 import ViperVM.Runtime
 
-import qualified ViperVM.STM.TSet as TSet
 
 data Runtime = Runtime {
-   platform :: Pf.Platform,  -- ^ Platform the runtime is used on
+   processors :: [Processor],
+   memories :: [Memory],
+   links :: [Link],
    notifyMapData :: Data -> STM (),
    notifyTaskSubmit :: Task -> STM (),
    notifyWaitData :: [Data] -> STM ()
@@ -27,8 +29,12 @@ data Runtime = Runtime {
 -- | Create a runtime on a platform
 createRuntime :: Pf.Platform -> IO Runtime
 createRuntime pf = do
+   (mems,procs,lnks) <- atomically $ initFromPlatform pf
+
    let r = Runtime {
-         platform = pf,
+         processors = procs,
+         memories = mems,
+         links = lnks,
          notifyMapData = \_ -> return (),
          notifyTaskSubmit = \_ -> return (),
          notifyWaitData = \_ -> return ()

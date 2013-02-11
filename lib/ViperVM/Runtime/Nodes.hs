@@ -12,22 +12,43 @@ import qualified ViperVM.Platform as Pf
 
 -- | A physical memory
 data Memory = Memory {
-   peerMem :: Pf.Memory,
-   memDataInstances :: TSet DataInstance
+   memPeer :: Pf.Memory,
+   memDataInstances :: TSet DataInstance,
+   memProcs :: TSet Processor,
+   memOutLinks :: TSet Link,
+   memInLinks :: TSet Link
 }
+
+instance Eq Memory where
+   (==) m1 m2 = (==) (memPeer m1) (memPeer m2)
+
+instance Ord Memory where
+   compare m1 m2 = compare (memPeer m1) (memPeer m2)
 
 -- | A processing unit
 data Processor = Processor {
-   proc :: Pf.Processor,
-   procMemories :: TVar [Memory]
-}
+   procPeer :: Pf.Processor,
+   procMemories :: TSet Memory
+} 
+
+instance Eq Processor where
+   (==) p1 p2 = (==) (procPeer p1) (procPeer p2)
+
+instance Ord Processor where
+   compare p1 p2 = compare (procPeer p1) (procPeer p2)
 
 -- | A link between two memories
 data Link = Link {
-   link :: Pf.Link,
+   linkPeer :: Pf.Link,
    linkSource :: Memory,
    linkTarget :: Memory
 }
+
+instance Eq Link where
+   (==) p1 p2 = (==) (linkPeer p1) (linkPeer p2)
+
+instance Ord Link where
+   compare p1 p2 = compare (linkPeer p1) (linkPeer p2)
 
 -- | A data
 data Data = Data {

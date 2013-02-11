@@ -41,6 +41,7 @@ library
     ViperVM.Runtime.Data
     ViperVM.Runtime.Nodes
     ViperVM.Runtime.Scheduler
+    ViperVM.Runtime.Platform
 
     ViperVM.STM.Common
     ViperVM.STM.TSet
