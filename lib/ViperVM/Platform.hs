@@ -4,23 +4,17 @@ module ViperVM.Platform (
    Platform, Configuration(..),
    initPlatform, platformInfo,
    memories, links, processors,
-   module ViperVM.Platform.Memory,
-   module ViperVM.Platform.Processor,
-   module ViperVM.Platform.Link,
-   module ViperVM.Platform.Buffer,
-   module ViperVM.Platform.Region,
-   module ViperVM.Platform.Kernel,
-   module ViperVM.Platform.DataDesc,
+   module X
 ) where
 
-import ViperVM.Backends.OpenCL
-import ViperVM.Platform.Memory
-import ViperVM.Platform.Processor
-import ViperVM.Platform.Link
-import ViperVM.Platform.Buffer
-import ViperVM.Platform.Region
-import ViperVM.Platform.Kernel
-import ViperVM.Platform.DataDesc
+import ViperVM.Backends.OpenCL as X
+import ViperVM.Platform.Memory as X
+import ViperVM.Platform.Processor as X
+import ViperVM.Platform.Link as X
+import ViperVM.Platform.Buffer as X
+import ViperVM.Platform.Region as X
+import ViperVM.Platform.Kernel as X
+import ViperVM.Platform.DataDesc as X
 
 import Data.Traversable
 import Control.Applicative

@@ -26,7 +26,7 @@ initFromPlatform pf = do
    links <- forM (Pf.links pf) (`initLink` memMap)
 
    -- Create "proc <-> memory" edges
-   forM_ (Pf.processors pf) $ \p -> do
+   forM_ (Pf.processors pf) $ \p ->
       forM_ (Pf.processorMemories p) $ \m -> do
          let proc = procMap ! p
              mem  = memMap ! m
@@ -60,4 +60,4 @@ initLink l memMap = do
    let (src,dst) = Pf.linkEndpoints l
        srcNode = memMap ! src
        dstNode = memMap ! dst
-   return $ (Link l srcNode dstNode)
+   return $ Link l srcNode dstNode

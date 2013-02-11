@@ -5,7 +5,8 @@ import qualified ViperVM.Platform as Pf
 
 import Control.Applicative
 import Control.Concurrent.STM
-import Control.Monad
+import Control.Monad (when,void)
+import Data.Traversable
 import Data.Maybe
 import qualified ViperVM.STM.TSet as TSet
 
@@ -23,3 +24,11 @@ attachDataInstance d di = do
 
    writeTVar (dataInstanceData di) (Just d)
    TSet.insert di (dataInstances d)
+
+
+-- | Detach a data instance from a data
+detachDataInstance :: DataInstance -> STM ()
+detachDataInstance di = do
+   oldDat <- readTVar (dataInstanceData di)
+   void $ forM oldDat $ \d -> TSet.delete di (dataInstances d)
+   writeTVar (dataInstanceData di) Nothing

@@ -83,7 +83,7 @@ submitTask r ks inData = do
    when (length inData /= inp) $ error "Invalid number of parameters"
 
    -- Create output data
-   outData <- forM [1..outp] $ const $ (Data <$> newTVar Nothing <*> TSet.empty <*> TSet.empty)
+   outData <- forM [1..outp] $ const (Data <$> newTVar Nothing <*> TSet.empty <*> TSet.empty)
 
    task <- Task ks inData outData <$> TSet.empty
 

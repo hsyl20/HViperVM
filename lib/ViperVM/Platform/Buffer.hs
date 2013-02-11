@@ -33,9 +33,7 @@ getBufferMemory (HostBuffer {}) = HostMemory
 
 -- | Ttry to allocate a buffer in a memory
 allocateBuffer :: Memory -> Word64 -> IO (Maybe Buffer)
-allocateBuffer mem sz = do
-
-   case mem of
+allocateBuffer mem sz = case mem of
 
       HostMemory -> do 
          ptr <- mallocBytes (fromIntegral sz)
@@ -48,7 +46,7 @@ allocateBuffer mem sz = do
 
 -- | Release a buffer
 releaseBuffer :: Buffer -> IO ()
-releaseBuffer buffer = do
+releaseBuffer buffer = 
    case buffer of
       HostBuffer _ ptr -> Foreign.Marshal.Alloc.free ptr
       CLBuffer lib _ m -> void $ clReleaseMemObject lib m
