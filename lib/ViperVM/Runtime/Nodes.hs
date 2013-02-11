@@ -60,7 +60,9 @@ data Data = Data {
 data DataInstance = DataInstance {
    dataInstanceMem :: Memory,
    dataInstanceRegions :: [(Pf.Buffer,Pf.Region)],
-   dataInstanceData :: TVar (Maybe Data)
+   dataInstanceData :: TVar (Maybe Data),
+   dataInstanceOutTransfers :: TSet Transfer,
+   dataInstanceInTransfer :: TVar (Maybe Transfer)
 }
 
 instance Eq DataInstance where
@@ -73,9 +75,8 @@ instance Ord DataInstance where
 data Transfer = Transfer {
    transferLink :: Link,
    transferSource :: DataInstance,
-   transferTarget :: DataInstance,
-   transferData :: Data
-}
+   transferTarget :: DataInstance
+} deriving (Eq,Ord)
 
 -- | Data partitioning operator
 data Partition = Partition {
