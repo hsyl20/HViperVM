@@ -34,7 +34,7 @@ library
     ViperVM.Platform.Memory
     ViperVM.Platform.Processor
     ViperVM.Platform.Region
-    ViperVM.Platform.DataInstance
+    ViperVM.Platform.DataDesc
 
     ViperVM.Event
 

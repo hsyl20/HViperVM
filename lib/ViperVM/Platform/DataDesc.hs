@@ -1,4 +1,4 @@
-module ViperVM.Platform.DataInstance where
+module ViperVM.Platform.DataDesc where
 
 import Data.Word
 
