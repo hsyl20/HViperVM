@@ -1,44 +1,25 @@
 module ViperVM.Runtime.Data where
 
-import Data.Word
-import ViperVM.Platform.Buffer
-import ViperVM.Platform.Region
-import ViperVM.Platform.Link
-import ViperVM.STM.TSet
+import ViperVM.Runtime.Nodes
+import qualified ViperVM.Platform as Pf
 
-import Control.Concurrent.STM.TVar
+import Control.Applicative
+import Control.Concurrent.STM
+import Control.Monad
+import Data.Maybe
+import qualified ViperVM.STM.TSet as TSet
 
 
-----------------------------------------------------
-data Primitive = PrimFloat | PrimDouble
-                 deriving (Eq,Ord)
+-- | Create a data instance node
+createDataInstance :: Memory -> [(Pf.Buffer,Pf.Region)] -> STM DataInstance
+createDataInstance mem regs = DataInstance mem regs <$> newTVar Nothing
 
-instance Show Primitive where
-  show PrimFloat = "Float"
-  show PrimDouble = "Double"
+-- | Attach a data instance to a data
+attachDataInstance :: Data -> DataInstance -> STM ()
+attachDataInstance d di = do
 
-primitiveSize :: Primitive -> Word64
-primitiveSize PrimFloat = 4
-primitiveSize PrimDouble = 8
+   oldDat <- readTVar (dataInstanceData di)
+   when (isJust oldDat) $ error "Trying to attach a data instance already attached"
 
-----------------------------------------------------
-
-data DataDesc = VectorDesc Primitive Word64
-                deriving (Eq,Ord,Show)
-
-data DataInstance = Vector Buffer Region
-                    deriving (Eq,Ord,Show)
-
-getDataInstanceRegion :: DataInstance -> Region
-getDataInstanceRegion (Vector _ r) = r
-
-getDataInstanceBuffer :: DataInstance -> Buffer
-getDataInstanceBuffer (Vector b _) = b
-
-backingBufferSize :: DataDesc -> Word64
-backingBufferSize (VectorDesc PrimFloat n) = 4 * n
-backingBufferSize (VectorDesc PrimDouble n) = 8 * n
-
-createDataInstance :: DataDesc -> Buffer -> DataInstance
-createDataInstance desc@(VectorDesc _ _) b = Vector b $ Region1D 0 (backingBufferSize desc)
-
+   writeTVar (dataInstanceData di) (Just d)
+   TSet.insert di (dataInstances d)

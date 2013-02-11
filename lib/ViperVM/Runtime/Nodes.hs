@@ -6,7 +6,6 @@ module ViperVM.Runtime.Nodes where
 
 import Control.Concurrent.STM
 import ViperVM.STM.TSet
-import ViperVM.Runtime.Data
 
 import qualified ViperVM.Platform as Pf
 
@@ -52,10 +51,23 @@ instance Ord Link where
 
 -- | A data
 data Data = Data {
-   dataDesc :: TVar (Maybe DataDesc),
+   dataDesc :: TVar (Maybe Pf.DataDesc),
    dataInstances :: TSet DataInstance,
    dataTransfers :: TSet Transfer
 }
+
+-- | A data instance
+data DataInstance = DataInstance {
+   dataInstanceMem :: Memory,
+   dataInstanceRegions :: [(Pf.Buffer,Pf.Region)],
+   dataInstanceData :: TVar (Maybe Data)
+}
+
+instance Eq DataInstance where
+   (==) p1 p2 = (==) (dataInstanceRegions p1) (dataInstanceRegions p2)
+
+instance Ord DataInstance where
+   compare p1 p2 = compare (dataInstanceRegions p1) (dataInstanceRegions p2)
 
 -- | A data transfer
 data Transfer = Transfer {
@@ -103,7 +115,7 @@ instance Show KernelSet where
 
 data KernelParameter = KPReadOnly Data  -- ^ Access a data in read-only mode
                | KPReadWrite Data -- ^ Access the first data in virtual read-write mode. The second data is the result and the first is left unmodified
-               | KPAllocate DataDesc  -- ^ Allocate a new data
+               | KPAllocate Pf.DataDesc  -- ^ Allocate a new data
 
 data KernelInterface = KernelInterface {
   name :: String,                                  -- ^ Kernel identifier (name)

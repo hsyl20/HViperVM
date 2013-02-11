@@ -25,6 +25,11 @@ getCLBuffer buf = clmem
    where
       CLBuffer _ _ clmem = buf
 
+-- | Return memory into which the buffer is allocated
+getBufferMemory :: Buffer -> Memory
+getBufferMemory (CLBuffer _ mem _) = mem
+getBufferMemory (HostBuffer {}) = HostMemory
+
 
 -- | Ttry to allocate a buffer in a memory
 allocateBuffer :: Memory -> Word64 -> IO (Maybe Buffer)

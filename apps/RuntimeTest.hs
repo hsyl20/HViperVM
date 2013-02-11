@@ -1,6 +1,5 @@
 import Foreign.Marshal.Alloc
 
-import ViperVM.Runtime.Data
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Platform
 import ViperVM.Runtime.Scheduler

@@ -13,7 +13,7 @@ import qualified Data.Map as Map
 import Data.Map
 
 -- | Initialize the runtime graph from a given Platform
-initFromPlatform :: Pf.Platform -> STM ([Memory],[Processor],[Link])
+initFromPlatform :: Pf.Platform -> STM (Memory,[Memory],[Processor],[Link])
 initFromPlatform pf = do
 
    -- Create nodes
@@ -40,7 +40,9 @@ initFromPlatform pf = do
       TSet.insert l (memOutLinks src)
       TSet.insert l (memInLinks dst)
 
-   return (mems,procs,links)
+   let hostMem = memMap ! Pf.HostMemory
+
+   return (hostMem,mems,procs,links)
 
 -- | Initialize a memory node
 initMemory :: Pf.Memory -> STM Memory

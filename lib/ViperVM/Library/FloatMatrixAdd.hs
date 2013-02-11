@@ -3,7 +3,7 @@ module ViperVM.Library.FloatMatrixAdd (
   floatMatrixAddCL
   ) where
 
-import ViperVM.Runtime
+import ViperVM.Runtime hiding (DataInstance)
 import ViperVM.Platform
 
 floatMatrixAddCL :: Kernel
@@ -25,13 +25,13 @@ floatMatrixAddCL = CLKernel {
   --configure = floatMatrixAddCLConfig
 }
 
-floatMatrixAddCLConfig :: [(DataDesc,DataInstance)] -> KernelConfiguration
+floatMatrixAddCLConfig :: [(DataDesc,[(Buffer,Region)])] -> KernelConfiguration
 floatMatrixAddCLConfig dis = CLKernelConfiguration gDim lDim params
    where
       -- TODO: we shouldn't use vectors. We should use region offset
-      (VectorDesc PrimFloat n1, Vector buf1 (Region1D _ _)) = head dis
-      (VectorDesc PrimFloat _, Vector buf2 (Region1D _ _)) = head (tail dis)
-      (VectorDesc PrimFloat _, Vector buf3 (Region1D _ _)) = head (tail (tail dis))
+      (VectorDesc PrimFloat n1, [(buf1, Region1D {})]) = head dis
+      (VectorDesc PrimFloat _,  [(buf2, Region1D {})]) = head (tail dis)
+      (VectorDesc PrimFloat _,  [(buf3, Region1D {})]) = head (tail (tail dis))
       gDim = [fromIntegral n1,1,1]
       lDim = []
       params = [CLKPInt (fromIntegral n1), CLKPInt 1, CLKPMem (getCLBuffer buf1), CLKPMem (getCLBuffer buf2), CLKPMem (getCLBuffer buf3)]
