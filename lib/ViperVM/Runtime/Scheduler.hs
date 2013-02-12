@@ -21,6 +21,7 @@ data Runtime = Runtime {
    memories :: [Memory],
    hostMemory :: Memory,
    links :: [Link],
+   lastDataId :: TVar Int,
    notifyMapData :: Data -> STM (),
    notifyTaskSubmit :: Task -> STM (),
    notifyWaitData :: [Data] -> STM ()
@@ -32,11 +33,14 @@ createRuntime :: Pf.Platform -> IO Runtime
 createRuntime pf = do
    (hostMem,mems,procs,lnks) <- atomically $ initFromPlatform pf
 
+   lstDataId <- atomically $ newTVar 0
+
    let r = Runtime {
          processors = procs,
          memories = mems,
          hostMemory = hostMem,
          links = lnks,
+         lastDataId = lstDataId,
          notifyMapData = \_ -> return (),
          notifyTaskSubmit = \_ -> return (),
          notifyWaitData = \_ -> return ()
@@ -45,6 +49,13 @@ createRuntime pf = do
    return r
 
 
+-- | Create a new data
+createData :: Runtime -> Maybe Pf.DataDesc -> STM Data
+createData r desc = do
+   lstId <- readTVar (lastDataId r)
+   writeTVar (lastDataId r) (lstId+1)  -- FIXME: potential overflow
+   Data lstId <$> newTVar desc <*> TSet.empty <*> TSet.empty
+   
 
 -- | IO version of mapVector
 mapVectorIO :: Runtime -> Pf.Primitive -> Word64 -> Ptr () -> IO Data
@@ -58,10 +69,9 @@ mapVector r prim n ptr = do
        buf  = Pf.HostBuffer sz ptr
        reg  = Pf.Region1D 0 sz
 
+   dat <- createData r (Just desc) 
    di <- createDataInstance (hostMemory r) [(buf,reg)]
-   
-   -- Create data
-   dat <- Data <$> newTVar (Just desc) <*> TSet.singleton di <*> TSet.empty
+   attachDataInstance dat di
 
    notifyMapData r dat
 
@@ -83,7 +93,7 @@ submitTask r ks inData = do
    when (length inData /= inp) $ error "Invalid number of parameters"
 
    -- Create output data
-   outData <- forM [1..outp] $ const (Data <$> newTVar Nothing <*> TSet.empty <*> TSet.empty)
+   outData <- forM [1..outp] $ const (createData r Nothing)
 
    task <- Task ks inData outData <$> TSet.empty
 

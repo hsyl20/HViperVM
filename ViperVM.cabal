@@ -44,6 +44,7 @@ library
     ViperVM.Runtime.Scheduler
     ViperVM.Runtime.Platform
     ViperVM.Runtime.Transfer
+    ViperVM.Runtime.Task
 
     ViperVM.STM.Common
     ViperVM.STM.TSet

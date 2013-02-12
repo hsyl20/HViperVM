@@ -15,7 +15,7 @@ createTransfer d l src dst = do
    TSet.insert t (dataInstanceOutTransfers src)
 
    v <- readTVar $ dataInstanceInTransfer dst
-   when (isJust v) $ error "Duplicated transfers targeting a data"
+   when (isJust v) $ error "Duplicated transfers targeting a data instance"
    writeTVar (dataInstanceInTransfer dst) (Just t)
 
    return t

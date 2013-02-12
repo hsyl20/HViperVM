@@ -27,7 +27,8 @@ instance Ord Memory where
 -- | A processing unit
 data Processor = Processor {
    procPeer :: Pf.Processor,
-   procMemories :: TSet Memory
+   procMemories :: TSet Memory,
+   procTaskInstances :: TSet TaskInstance
 } 
 
 instance Eq Processor where
@@ -51,10 +52,18 @@ instance Ord Link where
 
 -- | A data
 data Data = Data {
+   dataId :: Int,                         -- id used for Eq and Ord (any better solution?)
    dataDesc :: TVar (Maybe Pf.DataDesc),
    dataInstances :: TSet DataInstance,
    dataTransfers :: TSet Transfer
-}
+} 
+
+instance Eq Data where
+   (==) d1 d2 = (dataId d1) == (dataId d2) 
+
+instance Ord Data where
+   compare d1 d2 = compare (dataId d1) (dataId d2)
+
 
 -- | A data instance
 data DataInstance = DataInstance {
@@ -89,14 +98,25 @@ data Task = Task {
    inputParams :: [Data],
    outputParams :: [Data],
    taskInstances :: TSet TaskInstance
-}
+} 
+
+instance Eq Task where
+   (==) t1 t2 = (f t1) == (f t2)
+      where
+         f x = (kernelSet x, inputParams x, outputParams x)
+
+instance Ord Task where
+   compare t1 t2 = compare (f t1) (f t2)
+      where
+         f x = (kernelSet x, inputParams x, outputParams x)
+
 
 -- | An instance of a task
 data TaskInstance = TaskInstance {
    taskInstanceTask :: Task,
-   taskInstanceParams :: TSet DataInstance,
+   taskInstanceParams :: [DataInstance],
    taskInstanceProc :: Processor
-}
+} deriving (Eq,Ord)
 
 -- | A set of kernel performing the same operation and with the same interface
 data KernelSet = KernelSet {

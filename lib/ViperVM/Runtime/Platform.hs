@@ -51,7 +51,7 @@ initMemory m = Memory m <$> TSet.empty <*> TSet.empty <*> TSet.empty <*> TSet.em
 
 -- | Initialize a processor
 initProcessor :: Pf.Processor -> STM Processor
-initProcessor p = Processor p <$> TSet.empty
+initProcessor p = Processor p <$> TSet.empty <*> TSet.empty
 
 
 -- | Initialize a link
