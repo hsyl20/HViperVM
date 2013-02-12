@@ -6,6 +6,7 @@ module ViperVM.Runtime.Nodes where
 
 import Control.Concurrent.STM
 import ViperVM.STM.TSet
+import Data.Map
 
 import qualified ViperVM.Platform as Pf
 
@@ -94,7 +95,7 @@ data Partition = Partition {
 
 -- | A task
 data Task = Task {
-   kernelSet :: KernelSet,
+   metaKernel :: MetaKernel,
    inputParams :: [Data],
    outputParams :: [Data],
    taskInstances :: TSet TaskInstance
@@ -103,12 +104,12 @@ data Task = Task {
 instance Eq Task where
    (==) t1 t2 = (f t1) == (f t2)
       where
-         f x = (kernelSet x, inputParams x, outputParams x)
+         f x = (metaKernel x, inputParams x, outputParams x)
 
 instance Ord Task where
    compare t1 t2 = compare (f t1) (f t2)
       where
-         f x = (kernelSet x, inputParams x, outputParams x)
+         f x = (metaKernel x, inputParams x, outputParams x)
 
 
 -- | An instance of a task
@@ -118,10 +119,21 @@ data TaskInstance = TaskInstance {
    taskInstanceProc :: Processor
 } deriving (Eq,Ord)
 
--- | A set of kernel performing the same operation and with the same interface
+data MetaKernel = MetaKernel {
+   metaKernelSet :: KernelSet,
+   compiledKernels :: TVar (Map Processor (Map Pf.Kernel Pf.CompiledKernel))
+}
+
+instance Eq MetaKernel where
+   (==) k1 k2 = metaKernelSet k1 == metaKernelSet k2
+
+instance Ord MetaKernel where
+   compare k1 k2 = compare (metaKernelSet k1) (metaKernelSet k2)
+
+-- | A set of kernels performing the same operation and with the same interface
 data KernelSet = KernelSet {
    kernelInterface :: KernelInterface,
-   kernels :: [Pf.Kernel]
+   kernelSetPeers :: [Pf.Kernel]
 }
                  
 instance Eq KernelSet where

@@ -45,6 +45,7 @@ library
     ViperVM.Runtime.Platform
     ViperVM.Runtime.Transfer
     ViperVM.Runtime.Task
+    ViperVM.Runtime.Kernel
 
     ViperVM.STM.Common
     ViperVM.STM.TSet

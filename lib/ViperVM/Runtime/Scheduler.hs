@@ -6,6 +6,8 @@ module ViperVM.Runtime.Scheduler (
 ) where
 
 import Data.Word
+import Data.Map
+import qualified Data.Map as Map
 import Foreign.Ptr
 import Control.Concurrent.STM
 import Control.Applicative
@@ -19,6 +21,7 @@ import ViperVM.Runtime
 data Runtime = Runtime {
    processors :: [Processor],
    memories :: [Memory],
+   kernels :: TVar (Map KernelSet MetaKernel),
    hostMemory :: Memory,
    links :: [Link],
    lastDataId :: TVar Int,
@@ -34,10 +37,12 @@ createRuntime pf = do
    (hostMem,mems,procs,lnks) <- atomically $ initFromPlatform pf
 
    lstDataId <- atomically $ newTVar 0
+   kernlSet <- atomically $ newTVar Map.empty
 
    let r = Runtime {
          processors = procs,
          memories = mems,
+         kernels = kernlSet,
          hostMemory = hostMem,
          links = lnks,
          lastDataId = lstDataId,
@@ -79,6 +84,19 @@ mapVector r prim n ptr = do
 
 
 
+-- Find or create MetaKernel node
+fetchKernelNode :: Runtime -> KernelSet -> STM MetaKernel
+fetchKernelNode r ks = do
+   kernelMap <- readTVar (kernels r)
+
+   case Map.lookup ks kernelMap of
+      Nothing -> do
+         mk <- MetaKernel ks <$> newTVar (Map.empty)
+         writeTVar (kernels r) (Map.insert ks mk kernelMap)
+         return mk
+      Just mk -> return mk
+   
+
 
 -- | IO version of submitTask
 submitTaskIO :: Runtime -> KernelSet -> [Data] -> IO [Data]
@@ -95,7 +113,9 @@ submitTask r ks inData = do
    -- Create output data
    outData <- forM [1..outp] $ const (createData r Nothing)
 
-   task <- Task ks inData outData <$> TSet.empty
+   mk <- fetchKernelNode r ks
+
+   task <- Task mk inData outData <$> TSet.empty
 
    notifyTaskSubmit r task
 
