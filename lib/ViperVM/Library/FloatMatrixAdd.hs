@@ -1,9 +1,10 @@
 module ViperVM.Library.FloatMatrixAdd (
+  registerFloatMatrixAdd,
   floatMatrixAdd,
   floatMatrixAddCL
   ) where
 
-import ViperVM.Runtime hiding (DataInstance)
+import ViperVM.Runtime hiding (DataInstance,Kernel)
 import ViperVM.Platform
 
 floatMatrixAddCL :: Kernel
@@ -37,13 +38,13 @@ floatMatrixAddCLConfig dis = CLKernelConfiguration gDim lDim params
       params = [CLKPInt (fromIntegral n1), CLKPInt 1, CLKPMem (getCLBuffer buf1), CLKPMem (getCLBuffer buf2), CLKPMem (getCLBuffer buf3)]
 
 
-floatMatrixAddInterface :: KernelInterface
-floatMatrixAddInterface = KernelInterface {
+floatMatrixAdd :: KernelInterface
+floatMatrixAdd = KernelInterface {
   name = "Float Matrix Addition",
   paramCount = (2,1),
   makeParameters = \ [a,b] -> [KPReadOnly a, KPReadOnly b, KPReadOnly a],
   makeResult = \[_,_,c] -> [c]
 }
 
-floatMatrixAdd :: KernelSet
-floatMatrixAdd = KernelSet floatMatrixAddInterface [floatMatrixAddCL]
+registerFloatMatrixAdd :: Runtime -> IO ()
+registerFloatMatrixAdd r = registerKernelsIO r floatMatrixAdd [floatMatrixAddCL]

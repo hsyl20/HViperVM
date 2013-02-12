@@ -23,7 +23,7 @@ initFromPlatform pf = do
    let memMap  = Map.fromList $ Pf.memories pf `zip` mems
        procMap = Map.fromList $ Pf.processors pf `zip` procs
 
-   links <- forM (Pf.links pf) (`initLink` memMap)
+   lnks <- forM (Pf.links pf) (`initLink` memMap)
 
    -- Create "proc <-> memory" edges
    forM_ (Pf.processors pf) $ \p ->
@@ -34,7 +34,7 @@ initFromPlatform pf = do
          TSet.insert mem (procMemories proc)
 
    -- Create "mem <-> link" edges
-   forM_ links $ \l -> do
+   forM_ lnks $ \l -> do
       let src = linkSource l
           dst = linkTarget l
       TSet.insert l (memOutLinks src)
@@ -42,7 +42,7 @@ initFromPlatform pf = do
 
    let hostMem = memMap ! Pf.HostMemory
 
-   return (hostMem,mems,procs,links)
+   return (hostMem,mems,procs,lnks)
 
 -- | Initialize a memory node
 initMemory :: Pf.Memory -> STM Memory

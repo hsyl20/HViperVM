@@ -10,6 +10,18 @@ import Data.Map
 
 import qualified ViperVM.Platform as Pf
 
+data Runtime = Runtime {
+   processors :: [Processor],
+   memories :: [Memory],
+   kernels :: TVar (Map KernelInterface MetaKernel),
+   hostMemory :: Memory,
+   links :: [Link],
+   lastDataId :: TVar Int,
+   notifyMapData :: Data -> STM (),
+   notifyTaskSubmit :: Task -> STM (),
+   notifyWaitData :: [Data] -> STM ()
+}
+
 -- | A physical memory
 data Memory = Memory {
    memPeer :: Pf.Memory,
@@ -119,40 +131,49 @@ data TaskInstance = TaskInstance {
    taskInstanceProc :: Processor
 } deriving (Eq,Ord)
 
+
+-- | A meta kernel
 data MetaKernel = MetaKernel {
-   metaKernelSet :: KernelSet,
-   compiledKernels :: TVar (Map Processor (Map Pf.Kernel Pf.CompiledKernel))
+   metaKernelInterface :: KernelInterface,
+   metaKernels :: TSet Kernel
 }
 
 instance Eq MetaKernel where
-   (==) k1 k2 = metaKernelSet k1 == metaKernelSet k2
+   (==) k1 k2 = metaKernelInterface k1 == metaKernelInterface k2
 
 instance Ord MetaKernel where
-   compare k1 k2 = compare (metaKernelSet k1) (metaKernelSet k2)
+   compare k1 k2 = compare (metaKernelInterface k1) (metaKernelInterface k2)
 
--- | A set of kernels performing the same operation and with the same interface
-data KernelSet = KernelSet {
-   kernelInterface :: KernelInterface,
-   kernelSetPeers :: [Pf.Kernel]
+
+-- | A kernel
+data Kernel = Kernel {
+   kernelPeer :: Pf.Kernel,
+   kernelCompiled :: TVar (Map Processor Pf.CompiledKernel)
 }
-                 
-instance Eq KernelSet where
-  (==) (KernelSet _ a) (KernelSet _ b) = a == b
 
-instance Ord KernelSet where
-  compare (KernelSet _ a) (KernelSet _ b) = compare a b
+instance Eq Kernel where
+   (==) k1 k2 = kernelPeer k1 == kernelPeer k2
 
-instance Show KernelSet where
-  show (KernelSet (KernelInterface {..}) _) = name
+instance Ord Kernel where
+   compare k1 k2 = compare (kernelPeer k1) (kernelPeer k2)
 
 
-data KernelParameter = KPReadOnly Data  -- ^ Access a data in read-only mode
-               | KPReadWrite Data -- ^ Access the first data in virtual read-write mode. The second data is the result and the first is left unmodified
-               | KPAllocate Pf.DataDesc  -- ^ Allocate a new data
-
+-- | A unique identifier for a set of kernels doing the same thing
 data KernelInterface = KernelInterface {
   name :: String,                                  -- ^ Kernel identifier (name)
   paramCount :: (Int,Int),                         -- ^ Number of parameters (in, out)
   makeParameters :: [Data] -> [KernelParameter],   -- ^ Create kernel parameters from input data
   makeResult :: [Data] -> [Data]                   -- ^ Filter data to return as kernel results
 }
+
+instance Eq KernelInterface where
+   (==) k1 k2 = name k1 == name k2
+
+instance Ord KernelInterface where
+   compare k1 k2 = compare (name k1) (name k2)
+
+
+data KernelParameter = KPReadOnly Data  -- ^ Access a data in read-only mode
+               | KPReadWrite Data -- ^ Access the first data in virtual read-write mode. The second data is the result and the first is left unmodified
+               | KPAllocate Pf.DataDesc  -- ^ Allocate a new data
+

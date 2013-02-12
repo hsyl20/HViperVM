@@ -22,6 +22,8 @@ main = do
 
   runtime <- createRuntime platform 
 
+  registerFloatMatrixAdd runtime
+
   a <- mapVectorIO runtime PrimFloat n v1ptr
   b <- mapVectorIO runtime PrimFloat n v2ptr
 
