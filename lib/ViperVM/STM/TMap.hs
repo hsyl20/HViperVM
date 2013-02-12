@@ -1,0 +1,47 @@
+module ViperVM.STM.TMap where
+
+import Control.Concurrent.STM
+import Data.Map
+import qualified Data.Map as Map
+import ViperVM.STM.Common
+
+type TMap a b = TVar (Map a b)
+
+null :: TMap a b -> STM Bool
+null = readTVar >=$> Map.null
+
+size :: TMap a b -> STM Int
+size = readTVar >=$> Map.size
+
+member :: Ord a => a -> TMap a b -> STM Bool
+member v = readTVar >=$> Map.member v
+
+notMember :: Ord a => a -> TMap a b -> STM Bool
+notMember v = readTVar >=$> Map.notMember v
+
+empty :: STM (TMap a b)
+empty = newTVar Map.empty
+
+singleton :: a -> b -> STM (TMap a b)
+singleton k v = newTVar (Map.singleton k v)
+
+insert :: Ord a => a -> b -> TMap a b -> STM ()
+insert k v = withTVar (Map.insert k v)
+
+delete :: Ord a => a -> TMap a b -> STM ()
+delete v = withTVar (Map.delete v)
+
+filter :: (b -> Bool) -> TMap a b -> STM ()
+filter f = withTVar (Map.filter f)
+
+foldr :: (b -> b -> b) -> b -> TMap a b -> STM b
+foldr f x = readTVar >=$> Map.foldr f x
+
+foldl :: (a -> b -> a) -> a -> TMap c b -> STM a
+foldl f x = readTVar >=$> Map.foldl f x
+
+elems :: TMap a b -> STM [b]
+elems = readTVar >=$> Map.elems
+
+toList :: TMap a b -> STM [(a,b)]
+toList = readTVar >=$> Map.toList

@@ -49,6 +49,7 @@ library
 
     ViperVM.STM.Common
     ViperVM.STM.TSet
+    ViperVM.STM.TMap
     ViperVM.STM.TIntSet
 
     ViperVM.Library.FloatMatrixAdd

@@ -6,6 +6,7 @@ module ViperVM.Runtime.Nodes where
 
 import Control.Concurrent.STM
 import ViperVM.STM.TSet
+import ViperVM.STM.TMap
 import Data.Map
 
 import qualified ViperVM.Platform as Pf
@@ -148,7 +149,8 @@ instance Ord MetaKernel where
 -- | A kernel
 data Kernel = Kernel {
    kernelPeer :: Pf.Kernel,
-   kernelCompiled :: TVar (Map Processor Pf.CompiledKernel)
+   kernelCompiled :: TMap Processor Pf.CompiledKernel,
+   kernelBeingCompiled :: TSet Processor
 }
 
 instance Eq Kernel where
