@@ -18,9 +18,11 @@ data Runtime = Runtime {
    hostMemory :: Memory,
    links :: [Link],
    lastDataId :: TVar Int,
+
    notifyMapData :: Data -> STM (),
    notifyTaskSubmit :: Task -> STM (),
-   notifyWaitData :: [Data] -> STM ()
+   notifyWaitData :: [Data] -> STM (),
+   notifyKernelRegister :: KernelInterface -> Kernel -> STM ()
 }
 
 -- | A physical memory

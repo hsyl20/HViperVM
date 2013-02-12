@@ -39,6 +39,7 @@ registerKernel r ki k = do
    meta <- fetchMetaKernel r ki
    ker <- Kernel k <$> newTVar Map.empty <*> TSet.empty
    TSet.insert ker (metaKernels meta)
+   notifyKernelRegister r ki ker
 
 
 -- | Store a compiled kernel for several processors

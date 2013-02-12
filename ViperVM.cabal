@@ -46,6 +46,7 @@ library
     ViperVM.Runtime.Kernel
     ViperVM.Runtime.DefaultRuntime
     ViperVM.Runtime.UserInterface
+    ViperVM.Runtime.Compiler
 
     ViperVM.Runtime.DefaultScheduler
 
@@ -75,7 +76,7 @@ library
   build-tools: 
     c2hs
 
-  ghc-options: -Wall
+  ghc-options: -Wall -threaded
 
   hs-source-dirs: lib
 
@@ -109,7 +110,7 @@ executable PlatformInfo
 executable RuntimeTest
   main-is: RuntimeTest.hs
   hs-source-dirs: apps
-  ghc-options: -Wall
+  ghc-options: -Wall -threaded
   build-depends: 
     base,
     ViperVM

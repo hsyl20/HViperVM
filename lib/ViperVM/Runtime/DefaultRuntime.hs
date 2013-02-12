@@ -29,7 +29,8 @@ createDefaultRuntime pf = do
          lastDataId = lstDataId,
          notifyMapData = \_ -> return (),
          notifyTaskSubmit = \_ -> return (),
-         notifyWaitData = \_ -> return ()
+         notifyWaitData = \_ -> return (),
+         notifyKernelRegister = \_ _ -> return ()
       }
 
    return r

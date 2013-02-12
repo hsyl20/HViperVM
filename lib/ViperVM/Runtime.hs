@@ -6,3 +6,4 @@ import ViperVM.Runtime.DefaultRuntime as X
 import ViperVM.Runtime.Task as X
 import ViperVM.Runtime.Kernel as X
 import ViperVM.Runtime.UserInterface as X
+import ViperVM.Runtime.Compiler as X
