@@ -41,11 +41,13 @@ library
     ViperVM.Runtime
     ViperVM.Runtime.Data
     ViperVM.Runtime.Nodes
-    ViperVM.Runtime.Scheduler
-    ViperVM.Runtime.Platform
     ViperVM.Runtime.Transfer
     ViperVM.Runtime.Task
     ViperVM.Runtime.Kernel
+    ViperVM.Runtime.DefaultRuntime
+    ViperVM.Runtime.UserInterface
+
+    ViperVM.Runtime.DefaultScheduler
 
     ViperVM.STM.Common
     ViperVM.STM.TSet

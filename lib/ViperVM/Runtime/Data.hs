@@ -10,6 +10,13 @@ import Data.Traversable
 import Data.Maybe
 import qualified ViperVM.STM.TSet as TSet
 
+-- | Create a new data
+createData :: Runtime -> Maybe Pf.DataDesc -> STM Data
+createData r desc = do
+   lstId <- readTVar (lastDataId r)
+   writeTVar (lastDataId r) (lstId+1)  -- FIXME: potential overflow
+   Data lstId <$> newTVar desc <*> TSet.empty <*> TSet.empty
+
 
 -- | Create a data instance node
 createDataInstance :: Memory -> [(Pf.Buffer,Pf.Region)] -> STM DataInstance

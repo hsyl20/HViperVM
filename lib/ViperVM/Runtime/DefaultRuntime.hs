@@ -1,5 +1,5 @@
-module ViperVM.Runtime.Platform (
-   initFromPlatform
+module ViperVM.Runtime.DefaultRuntime (
+   createDefaultRuntime
 ) where
 
 import ViperVM.Runtime.Nodes
@@ -11,6 +11,29 @@ import Control.Concurrent.STM
 import Control.Applicative
 import qualified Data.Map as Map
 import Data.Map
+
+-- | Create a runtime on a platform
+createDefaultRuntime :: Pf.Platform -> IO Runtime
+createDefaultRuntime pf = do
+   (hostMem,mems,procs,lnks) <- atomically $ initFromPlatform pf
+
+   lstDataId <- atomically $ newTVar 0
+   kernlSet <- atomically $ newTVar Map.empty
+
+   let r = Runtime {
+         processors = procs,
+         memories = mems,
+         kernels = kernlSet,
+         hostMemory = hostMem,
+         links = lnks,
+         lastDataId = lstDataId,
+         notifyMapData = \_ -> return (),
+         notifyTaskSubmit = \_ -> return (),
+         notifyWaitData = \_ -> return ()
+      }
+
+   return r
+
 
 -- | Initialize the runtime graph from a given Platform
 initFromPlatform :: Pf.Platform -> STM (Memory,[Memory],[Processor],[Link])

@@ -2,7 +2,7 @@ import Foreign.Marshal.Alloc
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Platform
-import ViperVM.Runtime.Scheduler
+import ViperVM.Runtime.DefaultScheduler
 
 main :: IO ()
 main = do

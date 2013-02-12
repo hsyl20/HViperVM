@@ -1,12 +1,10 @@
-module ViperVM.Runtime.Scheduler (
-   createRuntime, 
+module ViperVM.Runtime.UserInterface (
    mapVector, mapVectorIO,
    submitTask, submitTaskIO,
    waitData, waitDataIO
 ) where
 
 import Data.Word
-import qualified Data.Map as Map
 import Foreign.Ptr
 import Control.Concurrent.STM
 import Control.Applicative
@@ -14,40 +12,9 @@ import Control.Monad
 
 import qualified ViperVM.STM.TSet as TSet
 import qualified ViperVM.Platform as Pf
-import ViperVM.Runtime
-
-
-
--- | Create a runtime on a platform
-createRuntime :: Pf.Platform -> IO Runtime
-createRuntime pf = do
-   (hostMem,mems,procs,lnks) <- atomically $ initFromPlatform pf
-
-   lstDataId <- atomically $ newTVar 0
-   kernlSet <- atomically $ newTVar Map.empty
-
-   let r = Runtime {
-         processors = procs,
-         memories = mems,
-         kernels = kernlSet,
-         hostMemory = hostMem,
-         links = lnks,
-         lastDataId = lstDataId,
-         notifyMapData = \_ -> return (),
-         notifyTaskSubmit = \_ -> return (),
-         notifyWaitData = \_ -> return ()
-      }
-
-   return r
-
-
--- | Create a new data
-createData :: Runtime -> Maybe Pf.DataDesc -> STM Data
-createData r desc = do
-   lstId <- readTVar (lastDataId r)
-   writeTVar (lastDataId r) (lstId+1)  -- FIXME: potential overflow
-   Data lstId <$> newTVar desc <*> TSet.empty <*> TSet.empty
-   
+import ViperVM.Runtime.Nodes
+import ViperVM.Runtime.Data
+import ViperVM.Runtime.Kernel
 
 -- | IO version of mapVector
 mapVectorIO :: Runtime -> Pf.Primitive -> Word64 -> Ptr () -> IO Data
