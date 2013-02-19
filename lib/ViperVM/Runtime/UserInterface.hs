@@ -32,7 +32,7 @@ mapVector r prim n ptr = do
    di <- createDataInstance (hostMemory r) [(buf,reg)]
    attachDataInstance dat di
 
-   notifyMapData r dat
+   writeTChan (events r) $ NotifyMapData dat
 
    return dat
 
@@ -57,7 +57,7 @@ submitTask r ki inData = do
 
    task <- Task mk inData outData <$> TSet.empty
 
-   notifyTaskSubmit r task
+   writeTChan (events r) $ NotifyTaskSubmit task
 
    return outData
 
@@ -70,7 +70,7 @@ waitDataIO r ds = atomically $ waitData r ds
 
 -- | Synchronously wait for some data to be computed
 waitData :: Runtime -> [Data] -> STM ()
-waitData r ds = notifyWaitData r ds >> forM_ ds f
+waitData r ds = writeTChan (events r) (NotifyWaitData ds) >> forM_ ds f
    where
       f d = do
          cond <- TSet.null (dataInstances d)

@@ -19,6 +19,7 @@ createDefaultRuntime pf = do
 
    lstDataId <- atomically $ newTVar 0
    kernlSet <- atomically $ newTVar Map.empty
+   evts <- atomically $ newTChan
 
    let r = Runtime {
          processors = procs,
@@ -27,10 +28,7 @@ createDefaultRuntime pf = do
          hostMemory = hostMem,
          links = lnks,
          lastDataId = lstDataId,
-         notifyMapData = \_ -> return (),
-         notifyTaskSubmit = \_ -> return (),
-         notifyWaitData = \_ -> return (),
-         notifyKernelRegister = \_ _ -> return ()
+         events = evts
       }
 
    return r

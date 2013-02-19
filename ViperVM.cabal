@@ -47,6 +47,8 @@ library
     ViperVM.Runtime.DefaultRuntime
     ViperVM.Runtime.UserInterface
     ViperVM.Runtime.Compiler
+    ViperVM.Runtime.GenericScheduler
+    ViperVM.Runtime.Worker
 
     ViperVM.Runtime.DefaultScheduler
 
@@ -71,7 +73,8 @@ library
     dynamic-linker-template ==0.1.*,
     haskell-src-meta ==0.6.*,
     haskell-src-exts ==1.13.*,
-    stm ==2.4
+    stm ==2.4.*,
+    monad-loops
 
   build-tools: 
     c2hs

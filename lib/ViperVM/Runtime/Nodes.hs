@@ -11,6 +11,11 @@ import Data.Map
 
 import qualified ViperVM.Platform as Pf
 
+data RuntimeEvent = NotifyMapData Data |
+                    NotifyTaskSubmit Task |
+                    NotifyWaitData [Data] |
+                    NotifyKernelRegister KernelInterface Kernel
+
 data Runtime = Runtime {
    processors :: [Processor],
    memories :: [Memory],
@@ -18,11 +23,7 @@ data Runtime = Runtime {
    hostMemory :: Memory,
    links :: [Link],
    lastDataId :: TVar Int,
-
-   notifyMapData :: Data -> STM (),
-   notifyTaskSubmit :: Task -> STM (),
-   notifyWaitData :: [Data] -> STM (),
-   notifyKernelRegister :: KernelInterface -> Kernel -> STM ()
+   events :: TChan RuntimeEvent
 }
 
 -- | A physical memory
@@ -127,11 +128,16 @@ instance Ord Task where
          f x = (metaKernel x, inputParams x, outputParams x)
 
 
+data TaskInstanceState = TaskInstancePending | TaskInstanceRunning | TaskInstanceCompleted
+                         deriving (Eq,Ord)
+
 -- | An instance of a task
 data TaskInstance = TaskInstance {
    taskInstanceTask :: Task,
    taskInstanceParams :: [DataInstance],
-   taskInstanceProc :: Processor
+   taskInstanceProc :: Processor,
+   taskInstanceKernel :: Kernel,
+   taskInstanceState :: TaskInstanceState
 } deriving (Eq,Ord)
 
 

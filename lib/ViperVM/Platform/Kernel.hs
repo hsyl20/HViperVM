@@ -8,8 +8,9 @@ import ViperVM.Platform.Processor ( Processor(..) )
 
 import Data.List (sortBy, groupBy )
 import Data.Traversable (traverse)
-import Control.Monad ( liftM,filterM,forM_ )
+import Control.Monad ( liftM,forM_ )
 import System.Exit
+import System.IO.Unsafe
 
 type KernelName = String
 type KernelSource = String
@@ -58,19 +59,18 @@ instance Show CompiledKernel where
    show (CLCompiledKernel {..}) = show kernel 
 
 -- | Indicate if a processor supports given constraints
-supportConstraints :: [KernelConstraint] -> Processor -> IO Bool
-supportConstraints cs p = liftM and $ mapM (`supportConstraint` p) cs
+supportConstraints :: [KernelConstraint] -> Processor -> Bool
+supportConstraints cs p = all (`supportConstraint` p) cs
 
 -- | Indicate if a processor supports a given constraint
-supportConstraint :: KernelConstraint -> Processor -> IO Bool
-supportConstraint DoublePrecisionSupportRequired (CLProcessor lib _ _ dev) =
-  liftM (not . null) $ clGetDeviceDoubleFPConfig lib dev
-supportConstraint DoublePrecisionSupportRequired HostProcessor = return True
+supportConstraint :: KernelConstraint -> Processor -> Bool
+supportConstraint DoublePrecisionSupportRequired (CLProcessor lib _ _ dev) = not . null . unsafePerformIO $ clGetDeviceDoubleFPConfig lib dev
+supportConstraint DoublePrecisionSupportRequired HostProcessor = True
 
 -- | Indicate if a processor can execute a given kernel
-canExecute :: Processor -> Kernel -> IO Bool
+canExecute :: Processor -> Kernel -> Bool
 canExecute p@(CLProcessor {}) (CLKernel {..})  = supportConstraints constraints p
-canExecute _ _ = return False
+canExecute _ _ = False
 
 isOpenCLProcessor :: Processor -> Bool
 isOpenCLProcessor (CLProcessor {}) = True
@@ -79,10 +79,8 @@ isOpenCLProcessor _ = False
 -- | Try to compile kernel for the given processors
 compileKernels :: Kernel -> [Processor] -> IO [Maybe CompiledKernel]
 compileKernels ker@(CLKernel {..}) procs = do
-  -- Exclude non-OpenCL processors
-  let clProcs = filter isOpenCLProcessor procs
   -- Exclude devices that do not support constraints
-  validProcs <- filterM (supportConstraints constraints) clProcs
+  let validProcs = filter (`canExecute` ker) procs
   -- Group devices that are in the same context to compile in one pass
   let groups = groupBy eqProc $ sortBy compareProc validProcs
   let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap extractDev x)) groups

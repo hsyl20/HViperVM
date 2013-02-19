@@ -8,6 +8,8 @@ import Control.Concurrent.STM
 import Control.Monad (when,void)
 import Data.Traversable
 import Data.Maybe
+import Data.Set
+import qualified Data.Set as Set
 import qualified ViperVM.STM.TSet as TSet
 
 -- | Create a new data
@@ -40,3 +42,11 @@ detachDataInstance di = do
    void $ forM oldDat $ \d -> TSet.delete di (dataInstances d)
    writeTVar (dataInstanceData di) Nothing
 
+
+-- | Retrieve instances of a data in a memory
+dataInstancesInMemory :: Memory -> Data -> STM (Set DataInstance)
+dataInstancesInMemory m d = Set.filter (\di -> dataInstanceMem di == m) <$> readTVar (dataInstances d)
+
+-- | Retrieve instances of a data in one of the memories
+dataInstancesInMemories :: Set Memory -> Data -> STM (Set DataInstance)
+dataInstancesInMemories ms d = Set.filter (\di -> Set.member (dataInstanceMem di) ms) <$> readTVar (dataInstances d)
