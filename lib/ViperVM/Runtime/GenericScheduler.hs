@@ -6,7 +6,9 @@ import Control.Monad
 
 import ViperVM.Runtime.Nodes
 
-data SchedEvent = Submitted Task | Completed TaskInstance
+data SchedEvent = Submitted Task |
+                  Required [Data] |
+                  Completed TaskInstance
 
 createGenericScheduler :: (SchedEvent -> STM ()) -> IO (SchedEvent -> STM ())
 createGenericScheduler sched = do

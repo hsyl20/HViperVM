@@ -26,6 +26,8 @@ createRuntime pf = do
       case ev of
          NotifyKernelRegister ki k -> compiler (k, processors r)
          NotifyTaskSubmit t -> sched (Submitted t)
+         NotifyMapData _ -> return ()
+         NotifyWaitData ds -> sched (Required ds)
 
    return r
 
