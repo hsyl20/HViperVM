@@ -49,6 +49,7 @@ library
     ViperVM.Runtime.Compiler
     ViperVM.Runtime.GenericScheduler
     ViperVM.Runtime.Worker
+    ViperVM.Runtime.MemoryManager
 
     ViperVM.Runtime.DefaultScheduler
 

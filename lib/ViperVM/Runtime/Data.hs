@@ -22,7 +22,7 @@ createData r desc = do
 
 -- | Create a data instance node
 createDataInstance :: Memory -> [(Pf.Buffer,Pf.Region)] -> STM DataInstance
-createDataInstance mem regs = DataInstance mem regs <$> newTVar Nothing <*> TSet.empty <*> newTVar Nothing
+createDataInstance mem regs = DataInstance mem regs <$> newTVar 0 <*> newTVar Nothing <*> TSet.empty <*> newTVar Nothing
 
 -- | Attach a data instance to a data
 attachDataInstance :: Data -> DataInstance -> STM ()

@@ -14,6 +14,7 @@ import Data.Maybe
 import qualified Data.Set as Set
 import Data.Set
 import qualified Data.Sequence as Seq
+import Debug.Trace
 
 data Worker = Worker {
    workerProc :: Processor,
@@ -48,6 +49,7 @@ workerThread w = do
          insts <- forM (inputParams t) (dataInstancesInMemories mems)
 
          -- Transfer input data if they are available and if required, or retry
+         trace "Yo" (return ())
 
          return ()
 

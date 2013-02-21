@@ -86,6 +86,7 @@ instance Ord Data where
 data DataInstance = DataInstance {
    dataInstanceMem :: Memory,
    dataInstanceRegions :: [(Pf.Buffer,Pf.Region)],
+   dataInstancePinning :: TVar Int,       -- ^ 0 if not pinned, otherwise indicate the number of pinning requests
    dataInstanceData :: TVar (Maybe Data),
    dataInstanceOutTransfers :: TSet Transfer,
    dataInstanceInTransfer :: TVar (Maybe Transfer)
