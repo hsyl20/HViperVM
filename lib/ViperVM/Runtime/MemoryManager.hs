@@ -1,10 +1,15 @@
 module ViperVM.Runtime.MemoryManager where
 
 import ViperVM.Runtime.Nodes
+import ViperVM.Runtime.Data
+import ViperVM.STM.Common
 import ViperVM.STM.TMap
 import qualified ViperVM.STM.TMap as TMap
 import ViperVM.STM.TSet
 import Data.Set
+import qualified Data.Set as Set
+import Data.Maybe
+import Control.Monad
 import Control.Applicative ( (<*>), (<$>) )
 import Control.Concurrent.STM
 
@@ -20,9 +25,9 @@ data DataConfig = DataConfig {
    dataW :: TSet WritableConfig,   -- ^ Data to allocate for writing
    dataRW :: TSet InplaceConfig,   -- ^ Data to prepare for inplace modification
 
-   readyR :: TMap Data DataInstance,   -- ^ Data instance ready for read access (already associated to the data)
-   readyW :: TMap Data DataInstance,   -- ^ Data instance ready for write access (not associated)
-   readyRW :: TMap Data DataInstance   -- ^ Data instance ready for read-write access (not associated, target data)
+   readyR :: TMap Data DataInstance,   -- ^ Pinned data instance ready for read access (already associated to the data)
+   readyW :: TMap Data DataInstance,   -- ^ Pinned data instance ready for write access (not associated)
+   readyRW :: TMap Data DataInstance   -- ^ Pinned data instance ready for read-write access (not associated, target data)
 }
 
 data DataManager = DataManager {
@@ -32,3 +37,25 @@ data DataManager = DataManager {
 -- | Create a data config
 createDataConfig :: Set ReadableConfig -> Set WritableConfig -> Set InplaceConfig -> STM DataConfig
 createDataConfig r w rw = DataConfig <$> newTVar r <*> newTVar w <*> newTVar rw <*> TMap.empty <*> TMap.empty <*> TMap.empty
+
+
+-- | Instantiate a data configuration
+makeDataConfig :: DataConfig -> IO ()
+makeDataConfig conf = do
+   -- We can already pin available data instances
+   atomically $ useTVar (dataR conf) $ \rds -> do
+      let rd = Set.elems rds
+      dis <- forM rd $ \(d,ms) -> firstDataInstanceWithModeInMemories (/= ReadWrite) ms d
+      rmd <- forM (dis `zip` rd) $ \(mdi, (d, ms)) -> case mdi of
+         Nothing -> return $ Just (d, ms)
+         Just di -> do
+            pinDataInstance ReadOnly di
+            TMap.insert d di (readyR conf)
+            return Nothing
+      return $ Set.fromList $ mapMaybe id rmd
+         
+       
+
+
+   -- We need to be able to allocate data instances, otherwise we have to make room
+

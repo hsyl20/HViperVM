@@ -1,11 +1,13 @@
 module ViperVM.Runtime.Data where
 
 import ViperVM.Runtime.Nodes
+import ViperVM.STM.Common
 import qualified ViperVM.Platform as Pf
 
 import Control.Applicative
 import Control.Concurrent.STM
 import Control.Monad (when,void)
+import Control.Monad.Loops
 import Data.Traversable
 import Data.Maybe
 import Data.Set
@@ -22,7 +24,7 @@ createData r desc = do
 
 -- | Create a data instance node
 createDataInstance :: Memory -> [(Pf.Buffer,Pf.Region)] -> STM DataInstance
-createDataInstance mem regs = DataInstance mem regs <$> newTVar 0 <*> newTVar Nothing <*> TSet.empty <*> newTVar Nothing
+createDataInstance mem regs = DataInstance mem regs <$> newTVar 0 <*> newTVar NoAccess <*> newTVar Nothing <*> TSet.empty <*> newTVar Nothing
 
 -- | Attach a data instance to a data
 attachDataInstance :: Data -> DataInstance -> STM ()
@@ -50,3 +52,20 @@ dataInstancesInMemory m d = Set.filter (\di -> dataInstanceMem di == m) <$> read
 -- | Retrieve instances of a data in one of the memories
 dataInstancesInMemories :: Set Memory -> Data -> STM (Set DataInstance)
 dataInstancesInMemories ms d = Set.filter (\di -> Set.member (dataInstanceMem di) ms) <$> readTVar (dataInstances d)
+
+-- | Try to retrieve the first data instance with a valid access mode in the given memories
+firstDataInstanceWithModeInMemories :: (AccessMode -> Bool) -> Set Memory -> Data -> STM (Maybe DataInstance)
+firstDataInstanceWithModeInMemories mode ms d = firstM (\x -> mode <$> readTVar (dataInstanceMode x)) =<< (elems <$> dataInstancesInMemories ms d)
+
+-- | Pin a data instance
+pinDataInstance :: AccessMode -> DataInstance -> STM ()
+pinDataInstance mode di = do
+   writeTVar (dataInstanceMode di) mode
+   withTVar (+1) (dataInstancePinCount di)
+
+-- | Unpin a data instance
+unpinDataInstance :: DataInstance -> STM ()
+unpinDataInstance di = do
+   withTVar (\x -> x - 1) (dataInstancePinCount di)
+   n <- readTVar (dataInstancePinCount di)
+   when (n == 0) $ writeTVar (dataInstanceMode di) NoAccess

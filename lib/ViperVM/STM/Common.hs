@@ -9,3 +9,6 @@ import Control.Monad
 withTVar :: (a -> a) -> TVar a -> STM ()
 withTVar f v = readTVar v >>= writeTVar v . f
 
+useTVar :: TVar a -> (a -> STM a) -> STM ()
+useTVar v f = readTVar v >>= f >>= writeTVar v
+

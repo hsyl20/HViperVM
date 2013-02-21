@@ -82,11 +82,15 @@ instance Ord Data where
    compare d1 d2 = compare (dataId d1) (dataId d2)
 
 
+data AccessMode = ReadOnly | ReadWrite | NoAccess
+                  deriving (Eq,Ord)
+
 -- | A data instance
 data DataInstance = DataInstance {
    dataInstanceMem :: Memory,
    dataInstanceRegions :: [(Pf.Buffer,Pf.Region)],
-   dataInstancePinning :: TVar Int,       -- ^ 0 if not pinned, otherwise indicate the number of pinning requests
+   dataInstancePinCount :: TVar Int,       -- ^ 0 if not pinned, otherwise indicate the number of pinning requests
+   dataInstanceMode :: TVar AccessMode,
    dataInstanceData :: TVar (Maybe Data),
    dataInstanceOutTransfers :: TSet Transfer,
    dataInstanceInTransfer :: TVar (Maybe Transfer)
