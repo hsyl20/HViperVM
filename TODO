@@ -1,0 +1,46 @@
+Things to do for each release
+
+
+Version 0.1
+   - OpenCL backend
+   - Basic platform detection
+   - Low-level generic API to manage platform
+      - Allocation/Release
+      - Direct data transfers
+
+Version 0.2
+   - Generic kernel management
+   - Basic kernel execution (static scheduling)
+      - Generic kernel parameters
+
+Version 0.3
+   - Indirect data transfers (through main memory for instance)
+
+Version 1.0
+   - Kernel scheduling
+
+
+Version N
+   - Functional frontend
+      - Parallel interpreter
+      - Garbage collector
+   - Granularity adaptation
+   - Fault-tolerance
+      - Automatic check-pointing
+   - Schedulers
+   - Kernel generation
+      - Data-parallel
+   - Backends
+      - CUDA
+      - x86
+      - Simulator
+      - Hard-drive
+   - Kernel library
+      - Automatic tests
+      - Auto-tuning (perf model)
+   - Networking
+      - Global-view
+      - Hierarchical
+      - MPI-like
+   - Performance models
+   - Accuracy management

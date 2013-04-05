@@ -6,7 +6,7 @@ import qualified ViperVM.Platform as Pf
 
 import Control.Applicative
 import Control.Concurrent.STM
-import Control.Monad (when,void)
+import Control.Monad (when, void)
 import Control.Monad.Loops
 import Data.Traversable
 import Data.Maybe
@@ -69,3 +69,20 @@ unpinDataInstance di = do
    withTVar (\x -> x - 1) (dataInstancePinCount di)
    n <- readTVar (dataInstancePinCount di)
    when (n == 0) $ writeTVar (dataInstanceMode di) NoAccess
+
+-- | Allocate a data instance in a memory
+allocateDataInstance :: Memory -> Pf.DataDesc -> IO (Maybe DataInstance)
+allocateDataInstance m desc = do
+   let sz = Pf.backingBufferSize desc
+       mem = memPeer m
+   
+   maybeBuf <- Pf.allocateBuffer mem sz
+
+   case maybeBuf of
+      Just buf -> do
+         let reg = Pf.defaultRegion desc
+         di <- atomically $ createDataInstance m [(buf,reg)]
+         return (Just di)
+      Nothing -> return Nothing
+
+   

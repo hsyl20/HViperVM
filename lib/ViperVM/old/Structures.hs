@@ -268,38 +268,6 @@ mapHostBufferR sz ptr = do
 getDataInstanceMemoryR :: DataInstance -> R Memory
 getDataInstanceMemoryR (Vector b _) = getBufferMemoryR b
 
-checkTransfer :: Transfer -> R Bool
-checkTransfer (Transfer l b1 r1 b2 r2) = do
-  m1 <- getBufferMemoryR b1
-  m2 <- getBufferMemoryR b2
-  return $ lm1 == m1 && lm2 == m2 && checkCompatibleRegions r1 r2
-  where
-    (lm1,lm2) = linkEndpoints l
-
--- | Perform transfer synchronously
-performTransfer :: Transfer -> IO ()
-performTransfer (Transfer link srcBuf srcReg dstBuf dstReg) = case (link,srcBuf,srcReg,dstBuf,dstReg) of
-
-  -- Host --> CL, Region1D, Region1D
-  (CLLink lib cq HostMemory (CLMemory {}), 
-      HostBuffer _ ptr, Region1D soff sz,
-      CLBuffer _ _ buf, Region1D doff _) -> do
-         let srcptr = plusPtr ptr (fromIntegral soff)
-         e <- clEnqueueWriteBuffer lib cq buf True doff sz srcptr []
-         void $ clWaitForEvents lib [e]
-         void $ clReleaseEvent lib e
-
-  -- CL --> Host, Region1D, Region1D
-  (CLLink lib cq (CLMemory {}) HostMemory,
-      CLBuffer _ _ buf, Region1D soff sz,
-      HostBuffer _ ptr, Region1D doff _) -> do
-         let dstptr = plusPtr ptr (fromIntegral doff)
-         e <- clEnqueueReadBuffer lib cq buf True soff sz dstptr []
-         void $ clWaitForEvents lib [e]
-         void $ clReleaseEvent lib e
-
-  _ -> undefined
-
 -- | Indicate if a data instance if stored in the given memory
 isInstanceInMem :: Memory -> DataInstance -> R Bool
 isInstanceInMem mem di = (== mem) <$> getDataInstanceMemoryR di
@@ -345,14 +313,6 @@ getDataEventsR d = gets (Map.findWithDefault [] d . getL dataEvents)
 -- | Check for existing instance of a data
 dataInstanceExistsR :: Data -> R Bool
 dataInstanceExistsR d = not . null <$> instancesR d
-
--- | Start a new asynchronous transfer
-submitTransfer :: Transfer -> R ()
-submitTransfer transfer@(Transfer link _ _ _ _) = do
-  valid <- checkTransfer transfer
-  unless valid $ error "Invalid transfer"
-  ch <- gets $ \x -> linkChannels x ! link
-  lift $ writeChan ch transfer
 
 partitionM :: Applicative m => (a -> m Bool) -> [a] -> m ([a],[a])
 partitionM p xs = (map fst *** map fst) . List.partition snd . zip xs <$> traverse p xs

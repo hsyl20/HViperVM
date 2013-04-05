@@ -39,23 +39,33 @@ createDataConfig :: Set ReadableConfig -> Set WritableConfig -> Set InplaceConfi
 createDataConfig r w rw = DataConfig <$> newTVar r <*> newTVar w <*> newTVar rw <*> TMap.empty <*> TMap.empty <*> TMap.empty
 
 
+{-
 -- | Instantiate a data configuration
 makeDataConfig :: DataConfig -> IO ()
 makeDataConfig conf = do
    -- We can already pin available data instances
-   atomically $ useTVar (dataR conf) $ \rds -> do
-      let rd = Set.elems rds
-      dis <- forM rd $ \(d,ms) -> firstDataInstanceWithModeInMemories (/= ReadWrite) ms d
-      rmd <- forM (dis `zip` rd) $ \(mdi, (d, ms)) -> case mdi of
-         Nothing -> return $ Just (d, ms)
-         Just di -> do
-            pinDataInstance ReadOnly di
-            TMap.insert d di (readyR conf)
-            return Nothing
-      return $ Set.fromList $ mapMaybe id rmd
-         
-       
+   pinReady (dataR conf) (readyR conf) (/= ReadWrite)
 
+   -- We need to allocate missing instances
+   rds <- atomically $ readTVar (dataR conf)
+   forM rds $ \(d,ms) -> do
+      m <- head $ Set.elems ms
+      desc <- atomically $ (fromJust <$> readTVar (dataDesc d))
+      di <- allocateDataInstance m desc 
+      -- Perform data transfers
+      --TODO
+      atomically $ TMap.insert d di readyR
+      
 
-   -- We need to be able to allocate data instances, otherwise we have to make room
-
+   where
+      pinReady dataSet readyMap fmode = atomically $ useTVar dataSet $ \rds -> do
+         let rd = Set.elems rds
+         dis <- forM rd $ \(d,ms) -> firstDataInstanceWithModeInMemories fmode ms d
+         rmd <- forM (dis `zip` rd) $ \(mdi, (d, ms)) -> case mdi of
+            Nothing -> return $ Just (d, ms)
+            Just di -> do
+               pinDataInstance ReadOnly di
+               TMap.insert d di readyMap
+               return Nothing
+         return $ Set.fromList $ mapMaybe id rmd
+-}

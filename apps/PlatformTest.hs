@@ -2,7 +2,6 @@
 
 import ViperVM.Platform
 import ViperVM.Event
-import ViperVM.MemoryManager
 
 import Control.Monad
 import Text.Printf

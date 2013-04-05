@@ -35,6 +35,8 @@ library
     ViperVM.Platform.Processor
     ViperVM.Platform.Region
     ViperVM.Platform.DataDesc
+    ViperVM.Platform.Transfer
+    ViperVM.Platform.MemoryManager
 
     ViperVM.Event
 
@@ -103,13 +105,13 @@ executable PlatformInfo
     base,
     ViperVM
 
---executable PlatformTest
---  main-is: PlatformTest.hs
---  hs-source-dirs: apps
---  ghc-options: -Wall -threaded
---  build-depends: 
---    base,
---    ViperVM
+executable PlatformTest
+  main-is: PlatformTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    ViperVM
 
 executable RuntimeTest
   main-is: RuntimeTest.hs
