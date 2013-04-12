@@ -1,15 +1,10 @@
 module ViperVM.Runtime.MemoryManager where
 
 import ViperVM.Runtime.Nodes
-import ViperVM.Runtime.Data
-import ViperVM.STM.Common
 import ViperVM.STM.TMap
 import qualified ViperVM.STM.TMap as TMap
 import ViperVM.STM.TSet
 import Data.Set
-import qualified Data.Set as Set
-import Data.Maybe
-import Control.Monad
 import Control.Applicative ( (<*>), (<$>) )
 import Control.Concurrent.STM
 

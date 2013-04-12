@@ -37,6 +37,7 @@ library
     ViperVM.Platform.DataDesc
     ViperVM.Platform.Transfer
     ViperVM.Platform.MemoryManager
+    ViperVM.Platform.Platform
 
     ViperVM.Event
 

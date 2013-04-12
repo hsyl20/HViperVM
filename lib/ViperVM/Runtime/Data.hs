@@ -71,12 +71,12 @@ unpinDataInstance di = do
    when (n == 0) $ writeTVar (dataInstanceMode di) NoAccess
 
 -- | Allocate a data instance in a memory
-allocateDataInstance :: Memory -> Pf.DataDesc -> IO (Maybe DataInstance)
-allocateDataInstance m desc = do
+allocateDataInstance :: Pf.MemoryManager -> Memory -> Pf.DataDesc -> IO (Maybe DataInstance)
+allocateDataInstance mm m desc = do
    let sz = Pf.backingBufferSize desc
        mem = memPeer m
    
-   maybeBuf <- Pf.allocateBuffer mem sz
+   maybeBuf <- Pf.allocateBuffer mm mem sz
 
    case maybeBuf of
       Just buf -> do

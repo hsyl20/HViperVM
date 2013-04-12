@@ -19,15 +19,14 @@ main = do
   putStr =<< platformInfo platform
 
   putStrLn "Initializing memory manager..."
-  mm <- initMemoryManager platform
+  mm <- createMemoryManager platform
 
   let bufferSize = 1024 * 1024
 
   putStrLn $ printf "\nTrying to allocate a buffer (%d KB) in each memory node..." (bufferSize `div` 1024)
   buffers <- forM (memories platform) $ \mem -> do
       putStrLn =<< memInfo mem
-      (BufferAllocation _ _ ev) <- allocateBuffer mm mem bufferSize
-      buf <- waitEvent ev
+      buf <- allocateBuffer mm mem bufferSize
       case buf of
          Nothing -> putStrLn "     --> Allocation FAILED"
          Just _  -> putStrLn "     --> Allocation SUCCEEDED"
@@ -39,10 +38,7 @@ main = do
       case buf of 
          Nothing -> putStrLn "     --> Nothing to do"
          Just b -> do
-            (BufferRelease _ ev) <- releaseBuffer mm b
-            err <- waitEvent ev
-            case err of
-               BufferReleaseSuccess -> putStrLn "     --> Release SUCCEEDED"
-               _ -> putStrLn $ "     --> Release FAILED: " ++ (show err)
+            releaseBuffer mm b
+            putStrLn "     --> Release SUCCEEDED"
 
   putStrLn "Done."
