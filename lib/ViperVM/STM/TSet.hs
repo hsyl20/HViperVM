@@ -1,9 +1,10 @@
 module ViperVM.STM.TSet where
 
 import Control.Concurrent.STM
-import Data.Set
 import qualified Data.Set as Set
+import Data.Set (Set)
 import ViperVM.STM.Common
+import Control.Applicative ( (<$>) )
 
 type TSet a = TVar (Set a)
 
@@ -45,3 +46,9 @@ elems = readTVar >=$> Set.elems
 
 toList :: TSet a -> STM [a]
 toList = readTVar >=$> Set.toList
+
+pop :: Ord a => TSet a -> STM a
+pop xs = do
+   x <- head <$> toList xs
+   delete x xs
+   return x

@@ -9,22 +9,21 @@ import ViperVM.Platform.Buffer
 import ViperVM.Platform.Memory
 import Control.Monad (void)
 import Foreign.Ptr
-import Data.Maybe (isJust)
 
-data TransferError = TransferError
-type TransferResult = Maybe TransferError
+data TransferResult = TransferSuccess | TransferError
 
 data Transfer = Transfer Link Buffer Region Buffer Region
+                deriving (Eq,Ord)
 
 -- | Start a new synchronous transfer
 submitTransfer :: Transfer -> IO TransferResult
-submitTransfer t = if (isJust r) then return r else transfer t
+submitTransfer t = if r then transfer t else return TransferError
    where r = checkTransfer t
    
 
 -- | Check that 
-checkTransfer :: Transfer -> TransferResult
-checkTransfer (Transfer l b1 r1 b2 r2) = if v then Nothing else Just TransferError
+checkTransfer :: Transfer -> Bool
+checkTransfer (Transfer l b1 r1 b2 r2) = v
   where
       (lm1,lm2) = linkEndpoints l
       m1 = getBufferMemory b1
@@ -41,7 +40,7 @@ transfer t = case t of
          e <- clEnqueueWriteBuffer lib cq buf True doff sz srcptr []
          void $ clWaitForEvents lib [e]
          void $ clReleaseEvent lib e
-         return Nothing
+         return TransferSuccess
 
   -- CL --> Host, Region1D, Region1D
   (Transfer (CLLink lib cq (CLMemory {}) HostMemory) (CLBuffer _ _ buf) (Region1D soff sz) (HostBuffer _ ptr) (Region1D doff _)) -> do
@@ -49,6 +48,6 @@ transfer t = case t of
          e <- clEnqueueReadBuffer lib cq buf True soff sz dstptr []
          void $ clWaitForEvents lib [e]
          void $ clReleaseEvent lib e
-         return Nothing
+         return TransferSuccess
 
-  _ -> return (Just TransferError)
+  _ -> return TransferError

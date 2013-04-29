@@ -41,13 +41,13 @@ initPlatform config = do
          let queueProps = [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, CL_QUEUE_PROFILING_ENABLE]
          queue <- clCreateCommandQueue lib context device queueProps
          let mem = CLMemory lib context device
-         let link = CLLink lib queue HostMemory mem
+         let link = [CLLink lib queue HostMemory mem, CLLink lib queue mem HostMemory]
          let proc = CLProcessor lib context queue device
          return (mem,link,proc)
 
 
    let mems = HostMemory : clMems 
-       lnks = clLinks
+       lnks = concat clLinks
        procs = clProcs
 
    return $ Platform mems lnks procs

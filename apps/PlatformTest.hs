@@ -18,8 +18,8 @@ main = do
   putStrLn "Querying platform infos..."
   putStr =<< platformInfo platform
 
-  putStrLn "Initializing memory manager..."
-  mm <- createMemoryManager platform
+  putStrLn "Initializing buffer manager..."
+  mm <- createBufferManager platform
 
   let bufferSize = 1024 * 1024
 

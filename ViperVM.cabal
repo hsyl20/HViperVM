@@ -29,14 +29,16 @@ library
 
     ViperVM.Platform
     ViperVM.Platform.Buffer
+    ViperVM.Platform.BufferManager
     ViperVM.Platform.Kernel
     ViperVM.Platform.Link
     ViperVM.Platform.Memory
     ViperVM.Platform.Processor
     ViperVM.Platform.Region
+    ViperVM.Platform.RegionManager
     ViperVM.Platform.DataDesc
     ViperVM.Platform.Transfer
-    ViperVM.Platform.MemoryManager
+    ViperVM.Platform.TransferManager
     ViperVM.Platform.Platform
 
     ViperVM.Event
@@ -58,6 +60,7 @@ library
 
     ViperVM.STM.Common
     ViperVM.STM.TSet
+    ViperVM.STM.TList
     ViperVM.STM.TMap
     ViperVM.STM.TIntSet
 
@@ -108,6 +111,14 @@ executable PlatformInfo
 
 executable PlatformTest
   main-is: PlatformTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    ViperVM
+
+executable TransferManagerTest
+  main-is: TransferManagerTest.hs
   hs-source-dirs: apps
   ghc-options: -Wall -threaded
   build-depends: 

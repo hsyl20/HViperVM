@@ -1,4 +1,4 @@
-module ViperVM.Platform.MemoryManager where
+module ViperVM.Platform.BufferManager where
 
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Buffer as Buffer
@@ -14,21 +14,21 @@ import Data.Set (Set)
 import Data.Traversable (forM)
 import Data.Foldable (forM_)
 
-data MemoryManager = MemoryManager {
+data BufferManager = BufferManager {
                         buffers :: Map Memory (TSet Buffer)
                      }
 
 -- | Initialize a new memory manager
-createMemoryManager :: Platform -> IO MemoryManager
-createMemoryManager pf = do
+createBufferManager :: Platform -> IO BufferManager
+createBufferManager pf = do
    let mems = memories pf
    bufs <- fromList . (mems `zip`) <$> (atomically $ forM mems (\_ -> TSet.empty))
       
-   return $ MemoryManager bufs
+   return $ BufferManager bufs
 
 
 -- | Allocate a buffer in a memory
-allocateBuffer :: MemoryManager -> Memory -> Word64 -> IO (Maybe Buffer)
+allocateBuffer :: BufferManager -> Memory -> Word64 -> IO (Maybe Buffer)
 allocateBuffer mm mem sz = do
    buf <- Buffer.allocate mem sz
    forM_ buf insertBuffer
@@ -40,7 +40,7 @@ allocateBuffer mm mem sz = do
       bufs = buffers mm ! mem
 
 -- | Release a buffer
-releaseBuffer :: MemoryManager -> Buffer -> IO ()
+releaseBuffer :: BufferManager -> Buffer -> IO ()
 releaseBuffer mm b = do
    let m = getBufferMemory b
        bufs = buffers mm ! m
@@ -48,5 +48,5 @@ releaseBuffer mm b = do
    Buffer.release b
 
 -- | Retrieved allocated buffers in a memory
-memoryBuffers :: MemoryManager -> Memory -> STM (Set Buffer)
+memoryBuffers :: BufferManager -> Memory -> STM (Set Buffer)
 memoryBuffers mm m = readTVar $ (buffers mm ! m)
