@@ -1,5 +1,6 @@
 module ViperVM.Platform.BufferManager (
-   BufferManager, createBufferManager, allocateBuffer, releaseBuffer, memoryBuffers
+   BufferManager, createBufferManager, allocateBuffer, releaseBuffer, memoryBuffers,
+   getPlatform
 ) where
 
 import ViperVM.Platform.Memory
@@ -17,6 +18,7 @@ import Data.Traversable (forM)
 import Data.Foldable (forM_)
 
 data BufferManager = BufferManager {
+                        platform :: Platform,
                         buffers :: Map Memory (TSet Buffer)
                      }
 
@@ -26,8 +28,12 @@ createBufferManager pf = do
    let mems = memories pf
    bufs <- fromList . (mems `zip`) <$> (atomically $ forM mems (\_ -> TSet.empty))
       
-   return $ BufferManager bufs
+   return $ BufferManager pf bufs
 
+
+-- | Retrieve platform used to create the buffer manager
+getPlatform :: BufferManager -> Platform
+getPlatform = platform
 
 -- | Allocate a buffer in a memory
 allocateBuffer :: BufferManager -> Memory -> Word64 -> IO (Maybe Buffer)

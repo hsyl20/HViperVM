@@ -11,6 +11,7 @@ import Control.Monad (void)
 import Foreign.Ptr
 
 data TransferResult = TransferSuccess | TransferError
+                      deriving (Eq,Ord)
 
 data Transfer = Transfer Link Buffer Region Buffer Region
                 deriving (Eq,Ord)

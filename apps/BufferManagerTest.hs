@@ -1,6 +1,5 @@
 import ViperVM.Platform
 import ViperVM.Platform.BufferManager
-import ViperVM.Event
 
 import Control.Monad
 import Text.Printf
