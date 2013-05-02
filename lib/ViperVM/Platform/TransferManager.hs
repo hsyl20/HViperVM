@@ -7,7 +7,8 @@ import ViperVM.Platform.RegionManager
 import ViperVM.Platform.Transfer
 import ViperVM.Platform.Link
 
-import ViperVM.STM.TMap as TMap
+import qualified ViperVM.STM.TMap as TMap
+import ViperVM.STM.TMap (TMap)
 import ViperVM.STM.TList as TList
 
 import Data.Map

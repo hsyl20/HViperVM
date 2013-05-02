@@ -47,6 +47,9 @@ elems = readTVar >=$> Set.elems
 toList :: TSet a -> STM [a]
 toList = readTVar >=$> Set.toList
 
+toSet :: TSet a -> STM (Set a)
+toSet = readTVar
+
 pop :: Ord a => TSet a -> STM a
 pop xs = do
    x <- head <$> toList xs

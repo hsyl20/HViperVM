@@ -4,6 +4,7 @@ import Control.Concurrent.STM
 import Data.Map
 import qualified Data.Map as Map
 import ViperVM.STM.Common
+import Control.Applicative ( (<$>) )
 
 type TMap a b = TVar (Map a b)
 
@@ -45,3 +46,6 @@ elems = readTVar >=$> Map.elems
 
 toList :: TMap a b -> STM [(a,b)]
 toList = readTVar >=$> Map.toList
+
+(!) :: Ord a => TMap a b -> a -> STM b
+(!) m k = (Map.! k) <$> readTVar m
