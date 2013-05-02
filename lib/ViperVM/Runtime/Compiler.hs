@@ -33,7 +33,7 @@ sendRequest ch req@(k,ps) = do
 compilerThread :: TChan CompilationRequest -> IO ()
 compilerThread ch = forever $ do
    (k,ps) <- atomically $ readTChan ch
-   ck <- Pf.compileKernels (kernelPeer k) (map procPeer ps)
+   ck <- Pf.compile (kernelPeer k) (map procPeer ps)
    
    let valids = catMaybes $ zipWith (\x y -> fmap (x,) y) ps ck
 

@@ -8,7 +8,7 @@ import ViperVM.Platform.Processor ( Processor(..) )
 
 import Data.List (sortBy, groupBy )
 import Data.Traversable (traverse)
-import Control.Monad ( liftM,forM_ )
+import Control.Monad ( liftM,forM_,void )
 import System.Exit
 import System.IO.Unsafe
 
@@ -23,8 +23,6 @@ data Kernel = CLKernel {
   constraints :: [KernelConstraint],
   options :: Options,
   source :: KernelSource
---  configure :: [(DataDesc,DataInstance)] -> KernelConfiguration
---  mutex :: MVar () -- ^ OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
 }
 
 data KernelConfiguration = CLKernelConfiguration {
@@ -77,8 +75,8 @@ isOpenCLProcessor (CLProcessor {}) = True
 isOpenCLProcessor _ = False
 
 -- | Try to compile kernel for the given processors
-compileKernels :: Kernel -> [Processor] -> IO [Maybe CompiledKernel]
-compileKernels ker@(CLKernel {..}) procs = do
+compile :: Kernel -> [Processor] -> IO [Maybe CompiledKernel]
+compile ker@(CLKernel {..}) procs = do
   -- Exclude devices that do not support constraints
   let validProcs = filter (`canExecute` ker) procs
   -- Group devices that are in the same context to compile in one pass
@@ -116,10 +114,10 @@ compileKernels ker@(CLKernel {..}) procs = do
       _ -> Nothing
 
 
--- | Execute a kernel on a given processor
-executeKernel :: Processor -> CompiledKernel -> KernelConfiguration -> IO () -> IO ()
+-- | Execute a kernel on a given processor synchronously
+execute :: Processor -> CompiledKernel -> KernelConfiguration -> IO ()
 
-executeKernel (CLProcessor lib _ cq _) (CLCompiledKernel _ clker) (CLKernelConfiguration {..}) callback = do
+execute (CLProcessor lib _ cq _) (CLCompiledKernel _ clker) (CLKernelConfiguration {..}) = do
 
    -- TODO: OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
    -- putMVar () (mutex ker)
@@ -128,12 +126,11 @@ executeKernel (CLProcessor lib _ cq _) (CLCompiledKernel _ clker) (CLKernelConfi
 
    let deps = []
    ev <- clEnqueueNDRangeKernel lib cq clker globalDim localDim deps
-
-   return ()
+   void $ clWaitForEvents lib [ev]
    
    -- TODO: Do not forget to release the mutex
    --void $ takeMVar (mutex ker)
 
-executeKernel proc ker _ _ = do
+execute proc ker _ = do
    putStrLn $ "We do not know how to execute kernel " ++ show ker ++ " on " ++ show proc
    exitFailure
