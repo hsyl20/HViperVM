@@ -1,4 +1,8 @@
-module ViperVM.Platform.RegionManager where
+module ViperVM.Platform.RegionManager (
+   RegionManager, RegionLockResult(..), BufferReleaseResult(..), LockMode(..),
+   createRegionManager, allocateBuffer, releaseBuffer, bufferLockedRegions, 
+   isLocked, lockRegion, unlockRegion
+) where
 
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Memory
@@ -12,9 +16,11 @@ import Control.Concurrent.STM
 import Control.Applicative ( (<$>) )
 import Data.Foldable (forM_)
 
-data ManagerResult = Success | RegionAlreadyLocked
+data RegionLockResult = LockSuccess | RegionAlreadyLocked
+                        deriving (Eq,Ord)
 
-data BufferReleaseResult = BufferReleaseSuccess | RemainingRegionError
+data BufferReleaseResult = BufferReleaseSuccess | RemainingRegion
+                           deriving (Eq,Ord)
 
 data LockMode = ReadOnly | ReadWrite deriving (Eq,Ord)
 data LockedRegion = LockedRegion Region LockMode deriving (Eq,Ord)
@@ -42,7 +48,7 @@ releaseBuffer :: RegionManager -> Buffer -> IO BufferReleaseResult
 releaseBuffer mg b = do
    n <- atomically $ (TSet.null =<< bufferLockedRegions mg b)
    if not n
-      then return RemainingRegionError
+      then return RemainingRegion
       else do
          BM.releaseBuffer (bufferManager mg) b
          return BufferReleaseSuccess
@@ -68,14 +74,14 @@ getLockRegion :: LockedRegion -> Region
 getLockRegion (LockedRegion r _) = r
 
 -- | Lock a region or retry
-lockRegion :: RegionManager -> Buffer -> Region -> LockMode -> STM ManagerResult
+lockRegion :: RegionManager -> Buffer -> Region -> LockMode -> STM RegionLockResult
 lockRegion m b r mode = do
    alreadyLocked <- isLocked m b r mode
    if alreadyLocked
       then return RegionAlreadyLocked
       else do
          TSet.insert (LockedRegion r mode) =<< bufferLockedRegions m b
-         return Success
+         return LockSuccess
 
 -- | Unlock a region
 unlockRegion :: RegionManager -> Buffer -> Region -> LockMode -> STM ()

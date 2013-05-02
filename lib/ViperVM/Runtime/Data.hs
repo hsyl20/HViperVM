@@ -3,6 +3,7 @@ module ViperVM.Runtime.Data where
 import ViperVM.Runtime.Nodes
 import ViperVM.STM.Common
 import qualified ViperVM.Platform as Pf
+import qualified ViperVM.Platform.BufferManager as Pf
 
 import Control.Applicative
 import Control.Concurrent.STM

@@ -1,4 +1,6 @@
-module ViperVM.Platform.BufferManager where
+module ViperVM.Platform.BufferManager (
+   BufferManager, createBufferManager, allocateBuffer, releaseBuffer, memoryBuffers
+) where
 
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Buffer as Buffer

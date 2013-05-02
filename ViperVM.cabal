@@ -109,12 +109,21 @@ executable PlatformInfo
     base,
     ViperVM
 
-executable PlatformTest
-  main-is: PlatformTest.hs
+executable BufferManagerTest
+  main-is: BufferManagerTest.hs
   hs-source-dirs: apps
   ghc-options: -Wall -threaded
   build-depends: 
     base,
+    ViperVM
+
+executable RegionManagerTest
+  main-is: RegionManagerTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    stm,
     ViperVM
 
 executable TransferManagerTest
