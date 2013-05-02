@@ -1,8 +1,8 @@
 module ViperVM.STM.TMap where
 
 import Control.Concurrent.STM
-import Data.Map
 import qualified Data.Map as Map
+import Data.Map (Map)
 import ViperVM.STM.Common
 import Control.Applicative ( (<$>) )
 
@@ -28,6 +28,9 @@ singleton k v = newTVar (Map.singleton k v)
 
 insert :: Ord a => a -> b -> TMap a b -> STM ()
 insert k v = withTVar (Map.insert k v)
+
+insert_ :: Ord a => TMap a b -> a -> b -> STM ()
+insert_ m k v = insert k v m
 
 delete :: Ord a => a -> TMap a b -> STM ()
 delete v = withTVar (Map.delete v)
