@@ -1,6 +1,7 @@
 module ViperVM.Platform.TransferManager (
-   TransferManager,
-   createTransferManager, prepareTransfer, performTransfer, cancelTransfer, waitForTransfer, performDirectTransfer
+   TransferManager, PrepareTransferResult(..),
+   createTransferManager, prepareTransfer, performTransfer, cancelTransfer, waitForTransfer,
+   prepareTransferIO
 ) where
 
 import ViperVM.Platform.Platform
@@ -21,14 +22,16 @@ import Control.Concurrent
 import Control.Monad (foldM)
 
 type TransferEvent = TVar (Maybe TransferResult)
-data TransferStep = TransferStep Link Buffer Region
 
 data TransferManager = TransferManager {
                            regionManager :: RegionManager,
-                           transferWorkers :: Map Link (TList (Transfer, TransferEvent))
+                           transferWorkers :: Map Link (TList (DirectTransfer, TransferEvent))
                        }
 
-data PrepareTransferResult = PrepareSuccess | LockError [(Buffer,Region,RegionLockResult)]
+data PrepareTransferResult = PrepareSuccess | 
+                             LockError [(Buffer,Region,RegionLockResult)] |
+                             InvalidTransfer
+                             deriving (Eq,Ord)
 
 -- | Initialize a new transfer manager
 createTransferManager :: RegionManager -> IO TransferManager
@@ -45,7 +48,7 @@ createTransferManager rm = do
 
 
 -- | Thread that perform transfers on a given link
-transferThread :: Link -> TList (Transfer, TransferEvent) -> IO ()
+transferThread :: Link -> TList (DirectTransfer, TransferEvent) -> IO ()
 transferThread lnk trs = do
    (tr,ev) <- atomically $ do
       cond <- TList.null trs
@@ -60,25 +63,31 @@ transferThread lnk trs = do
 -- | Prepare a transfer
 --
 -- Lock every region involved
-prepareTransfer :: TransferManager -> Buffer -> Region -> [TransferStep] -> STM PrepareTransferResult
-prepareTransfer tm srcBuf srcReg steps = do
+prepareTransfer :: TransferManager -> Transfer -> STM PrepareTransferResult
+prepareTransfer tm t@(Transfer srcBuf srcReg steps) = do
    let rm = regionManager tm
 
-   -- Lock all regions
-   r0 <- lockRegion rm srcBuf srcReg ReadOnly
-   rs <- forM steps $ \(TransferStep _ b r) -> lockRegion rm b r ReadWrite
-   let res0 = (srcBuf,srcReg,r0)
-       res1 = Prelude.map (\(TransferStep _ b r, res) -> (b,r,res)) (steps `zip` rs)
-       result = Prelude.filter (\(_,_,r) -> r /= LockSuccess) (res0:res1)
+   if not (checkTransfer t)
+      then return InvalidTransfer
+      else do
+         -- Lock all regions
+         r0 <- lockRegion rm srcBuf srcReg ReadOnly
+         rs <- forM steps $ \(TransferStep _ b r) -> lockRegion rm b r ReadWrite
+         let res0 = (srcBuf,srcReg,r0)
+             res1 = Prelude.map (\(TransferStep _ b r, res) -> (b,r,res)) (steps `zip` rs)
+             result = Prelude.filter (\(_,_,r) -> r /= LockSuccess) (res0:res1)
 
-   return $ if not (Prelude.null result) then LockError result else PrepareSuccess
+         return $ if not (Prelude.null result) then LockError result else PrepareSuccess
 
+
+prepareTransferIO :: TransferManager -> Transfer -> IO PrepareTransferResult
+prepareTransferIO tm t = atomically $ prepareTransfer tm t
 
 -- | Cancel a prepared transfer
 --
 -- Unlock every region involved
-cancelTransfer :: TransferManager -> Buffer -> Region -> [TransferStep] -> STM ()
-cancelTransfer tm srcBuf srcReg steps = do
+cancelTransfer :: TransferManager -> Transfer -> STM ()
+cancelTransfer tm (Transfer srcBuf srcReg steps) = do
    let rm = regionManager tm
 
    -- Unlock all regions
@@ -87,30 +96,24 @@ cancelTransfer tm srcBuf srcReg steps = do
 
 
 -- | Perform a transfer synchronously
-performTransfer :: TransferManager -> Buffer -> Region -> [TransferStep] -> IO [TransferResult]
-performTransfer tm srcBuf srcReg steps = do
+performTransfer :: TransferManager -> Transfer -> IO [TransferResult]
+performTransfer tm t@(Transfer srcBuf srcReg steps) = do
    evs <- atomically $ forM steps (const $ newTVar Nothing)
    (_,_,errs) <- foldM f (srcBuf,srcReg,[]) (steps `zip` evs)
+   atomically $ cancelTransfer tm t
    return (reverse errs)
    where
       f (b,r,errs) (TransferStep lnk tb tr, ev) = do
          if any (/= TransferSuccess) errs
             then return (b,r,errs)
             else do
-               performDirectTransferEvent tm (Transfer lnk b r tb tr) ev
+               submitDirectTransfer tm (DirectTransfer lnk b r tb tr) ev
                err <- waitForTransfer tm ev
                return (tb,tr,err:errs)
 
 
-performDirectTransfer :: TransferManager -> Transfer -> IO TransferEvent
-performDirectTransfer tm t@(Transfer lnk _ _ _ _) = atomically $ do
-   let workerSet = transferWorkers tm ! lnk
-   ev <- newTVar Nothing
-   TList.push workerSet (t,ev) 
-   return ev
-
-performDirectTransferEvent :: TransferManager -> Transfer -> TransferEvent -> IO ()
-performDirectTransferEvent tm t@(Transfer lnk _ _ _ _) ev = atomically $ TList.push workerSet (t,ev)
+submitDirectTransfer :: TransferManager -> DirectTransfer -> TransferEvent -> IO ()
+submitDirectTransfer tm t@(DirectTransfer lnk _ _ _ _) ev = atomically $ TList.push workerSet (t,ev)
    where
       workerSet = transferWorkers tm ! lnk
 

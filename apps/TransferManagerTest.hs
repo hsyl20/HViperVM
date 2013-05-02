@@ -29,14 +29,32 @@ main = do
       Just dstBuf <- allocateBuffer rm dst bufferSize
       let reg = Region1D 0 bufferSize
 
-      let t = Transfer link srcBuf reg dstBuf reg
-      putStr $ "Transferring on " ++ (show link) ++ "... "
+      putStrLn $ "Transferring on " ++ (show link) ++ "... "
+      let tr = Transfer srcBuf reg [TransferStep link dstBuf reg]
 
-      ev <- performDirectTransfer tm t
-      res <- waitForTransfer tm ev
-      case res of
-         TransferSuccess -> putStrLn "SUCCEEDED"
-         TransferError -> putStrLn "ERROR"
+      putStr " - Preparing transfer... "
+      res1 <- prepareTransferIO tm tr
+      if res1 /= PrepareSuccess
+         then putStrLn "ERROR"
+         else putStrLn "SUCCEEDED"
+
+      putStr " - Performing transfer... "
+      res2 <- performTransfer tm tr
+      if any (/= TransferSuccess) res2
+         then putStrLn "ERROR"
+         else putStrLn "SUCCEEDED"
+
+      putStr " - Preparing transfer... "
+      res3 <- prepareTransferIO tm tr
+      if res3 /= PrepareSuccess
+         then putStrLn "ERROR"
+         else putStrLn "SUCCEEDED"
+
+      putStr " - Performing transfer... "
+      res4 <- performTransfer tm tr
+      if any (/= TransferSuccess) res4
+         then putStrLn "ERROR"
+         else putStrLn "SUCCEEDED"
 
       void $ releaseBuffer rm srcBuf
       void $ releaseBuffer rm dstBuf
