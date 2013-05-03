@@ -7,8 +7,9 @@ import ViperVM.Backends.OpenCL
 import ViperVM.Platform.Processor ( Processor(..) )
 import ViperVM.Platform.Buffer
 
+import Control.Concurrent
 import Data.List (sortBy, groupBy )
-import Data.Traversable (traverse)
+import Data.Traversable (traverse,forM)
 import Data.Word
 import Control.Monad ( liftM,forM_,void )
 import System.Exit
@@ -72,7 +73,8 @@ instance Ord Kernel where
 
 data CompiledKernel = CLCompiledKernel {
   kernel :: Kernel,
-  peer :: CL.CLKernel
+  peer :: CL.CLKernel,
+  mutex :: MVar ()
 }
 
 
@@ -103,16 +105,20 @@ isOpenCLProcessor _ = False
 -- | Try to compile kernel for the given processors
 compile :: Kernel -> [Processor] -> IO [Maybe CompiledKernel]
 compile ker@(CLKernel {..}) procs = do
+
   -- Exclude devices that do not support constraints
   let validProcs = filter (`canExecute` ker) procs
+
   -- Group devices that are in the same context to compile in one pass
   let groups = groupBy eqProc $ sortBy compareProc validProcs
   let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap extractDev x)) groups
+
   programs <- traverse createProgram devGroups
   status <- liftM concat $ traverse buildProgram $ zip devGroups programs
   kernels <- liftM concat $ traverse createKernel $ zip devGroups programs
   let r = zipWith (\(x,a) (_,b) -> (x,(a,b))) status kernels
-  return $ fmap (returnIfValid r . extractDev) procs
+  
+  forM procs (returnIfValid r . extractDev)
   
   where
     procKey (CLProcessor lib ctx _ _) = (lib,ctx)
@@ -128,36 +134,42 @@ compile ker@(CLKernel {..}) procs = do
     extractLibCtx _ = undefined
 
     createProgram ((lib,ctx),_) = clCreateProgramWithSource lib ctx source
+
     buildProgram (((lib,_),devs),prog) = do
       clBuildProgram lib prog devs options
       status <- traverse (clGetProgramBuildStatus lib prog) devs :: IO [CLBuildStatus]
       return $ zip devs status
+
     createKernel (((lib,_),devs),prog) = do
       k <- clCreateKernel lib prog kernelName
       return $ fmap (\x -> (x,k)) devs
-    returnIfValid r dev = case lookup dev r of
-      Just (CL_BUILD_SUCCESS,k) -> Just (CLCompiledKernel ker k)
-      _ -> Nothing
+
+    returnIfValid r dev = do
+      case lookup dev r of
+         Just (CL_BUILD_SUCCESS,k) -> do
+            m <- newEmptyMVar
+            return $ Just (CLCompiledKernel ker k m)
+         _ -> return Nothing
 
 
 -- | Execute a kernel on a given processor synchronously
 execute :: Processor -> CompiledKernel -> [KernelParameter] -> IO ()
 
-execute (CLProcessor lib _ cq _) (CLCompiledKernel kernel peerKernel) params = do
+execute (CLProcessor lib _ cq _) ck@(CLCompiledKernel {}) params = do
 
    -- TODO: OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
-   -- putMVar () (mutex ker)
+   putMVar (mutex ck) ()
 
-   let config = configure kernel params
+   let config = configure (kernel ck) params
 
-   forM_ ([0..] `zip` parameters config) $ uncurry (setCLKernelArg lib peerKernel)
+   forM_ ([0..] `zip` parameters config) $ uncurry (setCLKernelArg lib (peer ck))
 
    let deps = []
-   ev <- clEnqueueNDRangeKernel lib cq peerKernel (globalDim config) (localDim config) deps
+   ev <- clEnqueueNDRangeKernel lib cq (peer ck) (globalDim config) (localDim config) deps
    void $ clWaitForEvents lib [ev]
    
    -- TODO: Do not forget to release the mutex
-   --void $ takeMVar (mutex ker)
+   void $ takeMVar (mutex ck)
 
 execute proc ker _ = do
    putStrLn $ "We do not know how to execute kernel " ++ show ker ++ " on " ++ show proc
