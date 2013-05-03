@@ -22,13 +22,13 @@ main = do
 
   runtime <- createRuntime platform 
 
-  registerFloatMatrixAdd runtime
-
-  a <- mapVectorIO runtime PrimFloat n v1ptr
-  b <- mapVectorIO runtime PrimFloat n v2ptr
-
-  [c] <- submitTaskIO runtime floatMatrixAdd [a,b]
-
-  waitDataIO runtime [c]
+--  registerFloatMatrixAdd runtime
+--
+--  a <- mapVectorIO runtime PrimFloat n v1ptr
+--  b <- mapVectorIO runtime PrimFloat n v2ptr
+--
+--  [c] <- submitTaskIO runtime floatMatrixAdd [a,b]
+--
+--  waitDataIO runtime [c]
 
   putStrLn "Done."

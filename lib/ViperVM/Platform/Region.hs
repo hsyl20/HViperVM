@@ -9,7 +9,7 @@ type RowCount = Word64
 
 data Region = Region1D Offset Size |
               Region2D Offset RowCount Size Padding
-                deriving (Eq,Ord,Show)
+              deriving (Eq,Ord,Show)
 
 checkCompatibleRegions :: Region -> Region -> Bool
 checkCompatibleRegions (Region1D _ s1) (Region1D _ s2) = s1 == s2

@@ -1,18 +1,21 @@
 {-# LANGUAGE TupleSections #-}
 
 module ViperVM.Platform.KernelManager (
-   KernelManager, KernelEvent, 
+   KernelManager, KernelEvent, KernelExecution(..),
    createKernelManager, registerKernel, compileKernel,
-   prepareKernelExecution
+   prepareKernelExecution, cancelKernelExecution, executeKernel
 ) where
 
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Processor
 import ViperVM.Platform.Kernel
+import ViperVM.Platform.Buffer
+import ViperVM.Platform.Region
 import ViperVM.Platform.RegionManager
+import ViperVM.Event
 import ViperVM.STM.TMap as TMap
 
-import Data.Map
+import Data.Map as Map
 import Data.Maybe
 import Data.Foldable (forM_)
 
@@ -20,13 +23,20 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad (forM)
 
-data PrepareExecutionResult = PrepareExecutionSuccess | RegionAlreadyLocked
+data PrepareExecutionResult = PrepareExecSuccess | PrepareExecRegionAlreadyLocked
 
-type KernelEvent = TVar (Maybe ())
+data KernelExecution = KernelExecution {
+      executableKernel :: CompiledKernel,
+      readOnlyRegions :: [(Buffer,Region)],
+      readWriteRegions :: [(Buffer,Region)],
+      kernelParameters :: [KernelParameter]
+   }
+
+type KernelEvent = Event ()
 
 data KernelManager = KernelManager {
       regionManager :: RegionManager,
-      procWorkers :: Map Processor (TChan (CompiledKernel, KernelConfiguration, KernelEvent)),
+      procWorkers :: Map Processor (TChan (KernelExecution, KernelEvent)),
       registered :: TMap Kernel KernelInfo
    }
 
@@ -51,12 +61,12 @@ createKernelManager rm = do
 
 
 -- | Thread that perform kernel execution on a given proc
-procThread :: Processor -> TChan (CompiledKernel, KernelConfiguration, KernelEvent) -> IO ()
+procThread :: Processor -> TChan (KernelExecution, KernelEvent) -> IO ()
 procThread proc trs = do
-   (k,conf,ev) <- atomically $ readTChan trs
+   (exec,ev) <- atomically $ readTChan trs
 
-   err <- execute proc k conf
-   atomically $ writeTVar ev (Just err)
+   err <- execute proc (executableKernel exec) (kernelParameters exec)
+   setEvent ev err
 
    procThread proc trs
 
@@ -90,6 +100,38 @@ compileKernel km k ps = do
 -- | Prepare a kernel execution
 --
 -- Lock regions that will be used
-prepareKernelExecution :: KernelManager -> CompiledKernel -> KernelConfiguration -> STM PrepareExecutionResult
-prepareKernelExecution km ck conf = do
-  return PrepareExecutionSuccess
+prepareKernelExecution :: KernelManager -> KernelExecution -> STM PrepareExecutionResult
+prepareKernelExecution km exec = do
+
+   let rm = regionManager km
+
+   r1 <- lockRegions rm ReadOnly (readOnlyRegions exec)
+   r2 <- lockRegions rm ReadWrite (readWriteRegions exec)
+
+   return $ if any (/= LockSuccess) (r1 ++ r2) 
+               then PrepareExecRegionAlreadyLocked
+               else PrepareExecSuccess
+
+
+-- | Cancel a prepared kernel execution
+--
+-- Unlock regions
+cancelKernelExecution :: KernelManager -> KernelExecution -> STM ()
+cancelKernelExecution km exec = do
+
+   let rm = regionManager km
+
+   unlockRegions rm ReadOnly (readOnlyRegions exec)
+   unlockRegions rm ReadWrite (readWriteRegions exec)
+
+
+-- | Execute a kernel
+executeKernel :: KernelManager -> Processor -> KernelExecution -> IO ()
+executeKernel km proc exec = do
+   
+   let ch = procWorkers km Map.! proc
+
+   ev <- newEvent
+   atomically $ writeTChan ch (exec, ev)
+   waitEvent ev
+   atomically $ cancelKernelExecution km exec

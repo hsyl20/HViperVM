@@ -5,9 +5,11 @@ module ViperVM.Platform.Kernel where
 import qualified ViperVM.Backends.OpenCL.Types as CL
 import ViperVM.Backends.OpenCL
 import ViperVM.Platform.Processor ( Processor(..) )
+import ViperVM.Platform.Buffer
 
 import Data.List (sortBy, groupBy )
 import Data.Traversable (traverse)
+import Data.Word
 import Control.Monad ( liftM,forM_,void )
 import System.Exit
 import System.IO.Unsafe
@@ -19,24 +21,48 @@ data KernelConstraint = DoublePrecisionSupportRequired
 
 -- | A kernel
 data Kernel = CLKernel {
-  kernelName :: KernelName,
-  constraints :: [KernelConstraint],
-  options :: Options,
-  source :: KernelSource
+   kernelName :: KernelName,
+   constraints :: [KernelConstraint],
+   options :: Options,
+   source :: KernelSource,
+   configure :: [KernelParameter] -> CLKernelConfiguration
 }
 
-data KernelConfiguration = CLKernelConfiguration {
+data KernelParameter = IntParam Int |
+                       FloatParam Float |
+                       DoubleParam Double |
+                       BufferParam Buffer
+
+data CLKernelConfiguration = CLKernelConfiguration {
    globalDim :: [Int],
    localDim :: [Int],
    parameters :: [CLKernelParameter]
 }
 
-data CLKernelParameter = CLKPMem CL.CLMem
-                       | CLKPInt CL.CLint
+data CLKernelParameter = CLMemParam CL.CLMem
+                       | CLIntParam CL.CLint
+                       | CLUIntParam CL.CLuint
+                       | CLULongParam CL.CLulong
+                       | CLBoolParam CL.CLbool
+
+clMemParam :: Buffer -> CLKernelParameter
+clMemParam b = CLMemParam (getCLBuffer b)
+
+clIntParam :: Int -> CLKernelParameter
+clIntParam i = CLIntParam (fromIntegral i)
+
+clUIntParam :: Word -> CLKernelParameter
+clUIntParam i = CLUIntParam (fromIntegral i)
+
+clULongParam :: Word64 -> CLKernelParameter
+clULongParam i = CLULongParam (fromIntegral i)
 
 setCLKernelArg :: OpenCLLibrary -> CL.CLKernel -> CL.CLuint -> CLKernelParameter -> IO ()
-setCLKernelArg lib kernel idx (CLKPMem mem) = clSetKernelArgSto lib kernel idx mem
-setCLKernelArg lib kernel idx (CLKPInt i) = clSetKernelArgSto lib kernel idx i
+setCLKernelArg lib kernel idx (CLMemParam mem) = clSetKernelArgSto lib kernel idx mem
+setCLKernelArg lib kernel idx (CLIntParam i) = clSetKernelArgSto lib kernel idx i
+setCLKernelArg lib kernel idx (CLUIntParam i) = clSetKernelArgSto lib kernel idx i
+setCLKernelArg lib kernel idx (CLULongParam i) = clSetKernelArgSto lib kernel idx i
+setCLKernelArg lib kernel idx (CLBoolParam i) = clSetKernelArgSto lib kernel idx i
 
 instance Eq Kernel where
   (==) k1 k2 = source k1 == source k2
@@ -115,17 +141,19 @@ compile ker@(CLKernel {..}) procs = do
 
 
 -- | Execute a kernel on a given processor synchronously
-execute :: Processor -> CompiledKernel -> KernelConfiguration -> IO ()
+execute :: Processor -> CompiledKernel -> [KernelParameter] -> IO ()
 
-execute (CLProcessor lib _ cq _) (CLCompiledKernel _ clker) (CLKernelConfiguration {..}) = do
+execute (CLProcessor lib _ cq _) (CLCompiledKernel kernel peerKernel) params = do
 
    -- TODO: OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
    -- putMVar () (mutex ker)
 
-   forM_ ([0..] `zip` parameters) $ uncurry (setCLKernelArg lib clker)
+   let config = configure kernel params
+
+   forM_ ([0..] `zip` parameters config) $ uncurry (setCLKernelArg lib peerKernel)
 
    let deps = []
-   ev <- clEnqueueNDRangeKernel lib cq clker globalDim localDim deps
+   ev <- clEnqueueNDRangeKernel lib cq peerKernel (globalDim config) (localDim config) deps
    void $ clWaitForEvents lib [ev]
    
    -- TODO: Do not forget to release the mutex

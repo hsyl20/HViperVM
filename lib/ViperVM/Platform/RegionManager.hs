@@ -1,7 +1,7 @@
 module ViperVM.Platform.RegionManager (
    RegionManager, RegionLockResult(..), BufferReleaseResult(..), LockMode(..),
    createRegionManager, allocateBuffer, releaseBuffer, bufferLockedRegions, getPlatform,
-   isLocked, lockRegion, unlockRegion
+   isLocked, lockRegion, lockRegions, unlockRegion, unlockRegions
 ) where
 
 import ViperVM.Platform.Platform
@@ -15,6 +15,7 @@ import ViperVM.STM.TMap as TMap
 import Data.Word
 import Control.Concurrent.STM
 import Control.Applicative ( (<$>) )
+import Control.Monad (forM)
 import Data.Foldable (forM_)
 
 data RegionLockResult = LockSuccess | RegionAlreadyLocked
@@ -79,8 +80,8 @@ getLockRegion :: LockedRegion -> Region
 getLockRegion (LockedRegion r _) = r
 
 -- | Lock a region or retry
-lockRegion :: RegionManager -> Buffer -> Region -> LockMode -> STM RegionLockResult
-lockRegion m b r mode = do
+lockRegion :: RegionManager -> LockMode -> Buffer -> Region -> STM RegionLockResult
+lockRegion m mode b r = do
    alreadyLocked <- isLocked m b r mode
    if alreadyLocked
       then return RegionAlreadyLocked
@@ -88,8 +89,15 @@ lockRegion m b r mode = do
          TSet.insert (LockedRegion r mode) =<< bufferLockedRegions m b
          return LockSuccess
 
+-- | Lock several regions with the same mode
+lockRegions :: RegionManager -> LockMode -> [(Buffer,Region)] -> STM [RegionLockResult]
+lockRegions rm mode brs = forM brs (uncurry (lockRegion rm mode))
+
 -- | Unlock a region
-unlockRegion :: RegionManager -> Buffer -> Region -> LockMode -> STM ()
-unlockRegion m b r mode = TSet.delete (LockedRegion r mode) =<< bufferLockedRegions m b
+unlockRegion :: RegionManager -> LockMode -> Buffer -> Region -> STM ()
+unlockRegion m mode b r = TSet.delete (LockedRegion r mode) =<< bufferLockedRegions m b
 
 
+-- | Unlock several regions with the same mode
+unlockRegions :: RegionManager -> LockMode -> [(Buffer,Region)] -> STM ()
+unlockRegions rm mode brs = forM_ brs (uncurry (unlockRegion rm mode))

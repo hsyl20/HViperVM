@@ -33,6 +33,7 @@ library
     ViperVM.Platform.Kernel
     ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
+    ViperVM.Platform.Primitive
     ViperVM.Platform.Memory
     ViperVM.Platform.Processor
     ViperVM.Platform.Region

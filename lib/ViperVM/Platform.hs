@@ -11,6 +11,7 @@ import ViperVM.Platform.Kernel as X
 import ViperVM.Platform.Link as X
 import ViperVM.Platform.Memory as X
 import ViperVM.Platform.Platform as X
+import ViperVM.Platform.Primitive as X
 import ViperVM.Platform.Processor as X
 import ViperVM.Platform.Region as X
 import ViperVM.Platform.Transfer as X

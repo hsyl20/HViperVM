@@ -1,10 +1,7 @@
 module ViperVM.Library.FloatMatrixAdd (
-  registerFloatMatrixAdd,
-  floatMatrixAdd,
   floatMatrixAddCL
   ) where
 
-import ViperVM.Runtime hiding (DataInstance,Kernel)
 import ViperVM.Platform
 
 floatMatrixAddCL :: Kernel
@@ -12,6 +9,7 @@ floatMatrixAddCL = CLKernel {
    kernelName = "floatMatrixAdd",
    constraints = [],
    options = "",
+   configure = floatMatrixAddCLConfig,
    source = "\
   \__kernel void floatMatrixAdd(const int width, const int height,\
   \                        __global float* A, __global float* B, __global float* C) {\
@@ -23,28 +21,23 @@ floatMatrixAddCL = CLKernel {
   \  }\
   \\
   \}"
-  --configure = floatMatrixAddCLConfig
 }
 
-floatMatrixAddCLConfig :: [(DataDesc,[(Buffer,Region)])] -> KernelConfiguration
-floatMatrixAddCLConfig dis = CLKernelConfiguration gDim lDim params
+floatMatrixAddCLConfig :: [KernelParameter] -> CLKernelConfiguration
+floatMatrixAddCLConfig params = CLKernelConfiguration gDim lDim clParams
    where
-      -- TODO: we shouldn't use vectors. We should use region offset
-      (VectorDesc PrimFloat n1, [(buf1, Region1D {})]) = head dis
-      (VectorDesc PrimFloat _,  [(buf2, Region1D {})]) = head (tail dis)
-      (VectorDesc PrimFloat _,  [(buf3, Region1D {})]) = head (tail (tail dis))
-      gDim = [fromIntegral n1,1,1]
-      lDim = []
-      params = [CLKPInt (fromIntegral n1), CLKPInt 1, CLKPMem (getCLBuffer buf1), CLKPMem (getCLBuffer buf2), CLKPMem (getCLBuffer buf3)]
+      [IntParam width, IntParam height, BufferParam a, BufferParam b, BufferParam c] = params
+      gDim = [width + (mod width 32), height + (mod height 32),1]
+      lDim = [32,32,1]
+      clParams = [clIntParam width, clIntParam height, 
+                  clMemParam a, clMemParam b, clMemParam c]
 
 
-floatMatrixAdd :: KernelInterface
-floatMatrixAdd = KernelInterface {
-  name = "Float Matrix Addition",
-  paramCount = (2,1),
-  makeParameters = \ [a,b] -> [KPReadOnly a, KPReadOnly b, KPReadOnly a],
-  makeResult = \[_,_,c] -> [c]
-}
+--floatMatrixAdd :: KernelInterface
+--floatMatrixAdd = KernelInterface {
+--  name = "Float Matrix Addition",
+--  paramCount = (2,1),
+--  makeParameters = \ [a,b] -> [KPReadOnly a, KPReadOnly b, KPReadOnly a],
+--  makeResult = \[_,_,c] -> [c]
+--}
 
-registerFloatMatrixAdd :: Runtime -> IO ()
-registerFloatMatrixAdd r = registerKernelsIO r floatMatrixAdd [floatMatrixAddCL]

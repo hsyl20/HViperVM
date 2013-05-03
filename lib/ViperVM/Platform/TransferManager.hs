@@ -71,8 +71,8 @@ prepareTransfer tm t@(Transfer srcBuf srcReg steps) = do
       then return InvalidTransfer
       else do
          -- Lock all regions
-         r0 <- lockRegion rm srcBuf srcReg ReadOnly
-         rs <- forM steps $ \(TransferStep _ b r) -> lockRegion rm b r ReadWrite
+         r0 <- lockRegion rm ReadOnly srcBuf srcReg
+         rs <- forM steps $ \(TransferStep _ b r) -> lockRegion rm ReadWrite b r
          let res0 = (srcBuf,srcReg,r0)
              res1 = Prelude.map (\(TransferStep _ b r, res) -> (b,r,res)) (steps `zip` rs)
              result = Prelude.filter (\(_,_,r) -> r /= LockSuccess) (res0:res1)
@@ -91,8 +91,8 @@ cancelTransfer tm (Transfer srcBuf srcReg steps) = do
    let rm = regionManager tm
 
    -- Unlock all regions
-   unlockRegion rm srcBuf srcReg ReadOnly
-   forM_ steps $ \(TransferStep _ b r) -> unlockRegion rm b r ReadWrite
+   unlockRegion rm ReadOnly srcBuf srcReg
+   forM_ steps $ \(TransferStep _ b r) -> unlockRegion rm ReadWrite b r
 
 
 -- | Perform a transfer synchronously

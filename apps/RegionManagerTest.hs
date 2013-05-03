@@ -30,13 +30,13 @@ main = do
          Nothing -> putStrLn "  FAILED"
          Just b  -> do
             putStrLn " - Locking regions... "
-            res1 <- atomically $ lockRegion rm b r1 ReadOnly
-            res2 <- atomically $ lockRegion rm b r1 ReadOnly
-            res3 <- atomically $ lockRegion rm b r1 ReadWrite
-            res6 <- atomically $ lockRegion rm b r2 ReadWrite
+            res1 <- atomically $ lockRegion rm ReadOnly b r1
+            res2 <- atomically $ lockRegion rm ReadOnly b r1
+            res3 <- atomically $ lockRegion rm ReadWrite b r1
+            res6 <- atomically $ lockRegion rm ReadWrite b r2
             res4 <- releaseBuffer rm b
-            atomically $ unlockRegion rm b r1 ReadOnly
-            atomically $ unlockRegion rm b r1 ReadOnly
+            atomically $ unlockRegion rm ReadOnly b r1
+            atomically $ unlockRegion rm ReadOnly b r1
             res5 <- releaseBuffer rm b
             if (res1 == LockSuccess &&
                 res2 == LockSuccess && 
