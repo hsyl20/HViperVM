@@ -136,6 +136,14 @@ executable TransferManagerTest
     base,
     ViperVM
 
+executable KernelExecOpenCLTest
+  main-is: KernelExecOpenCLTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    ViperVM
+
 executable RuntimeTest
   main-is: RuntimeTest.hs
   hs-source-dirs: apps

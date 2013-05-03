@@ -12,6 +12,7 @@ import Control.Monad
 
 import qualified ViperVM.STM.TSet as TSet
 import qualified ViperVM.Platform as Pf
+import qualified ViperVM.Platform.Primitive as Prim
 import ViperVM.Runtime.Nodes
 import ViperVM.Runtime.Data
 import ViperVM.Runtime.Kernel
@@ -24,7 +25,7 @@ mapVectorIO r prim n ptr = atomically $ mapVector r prim n ptr
 mapVector :: Runtime -> Pf.Primitive -> Word64 -> Ptr () -> STM Data
 mapVector r prim n ptr = do
    let desc = Pf.VectorDesc prim n
-       sz   = n * Pf.primitiveSize prim
+       sz   = n * Prim.size prim
        buf  = Pf.HostBuffer sz ptr
        reg  = Pf.Region1D 0 sz
 

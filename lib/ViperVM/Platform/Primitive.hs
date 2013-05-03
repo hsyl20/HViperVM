@@ -1,14 +1,15 @@
 module ViperVM.Platform.Primitive where
 
+import Prelude hiding (Float,Double)
 import Data.Word
 
-data Primitive = PrimFloat | PrimDouble
+data Primitive = Float | Double
                  deriving (Eq,Ord)
 
 instance Show Primitive where
-  show PrimFloat = "Float"
-  show PrimDouble = "Double"
+  show Float = "Float"
+  show Double = "Double"
 
-primitiveSize :: Primitive -> Word64
-primitiveSize PrimFloat = 4
-primitiveSize PrimDouble = 8
+size :: Primitive -> Word64
+size Float = 4
+size Double = 8

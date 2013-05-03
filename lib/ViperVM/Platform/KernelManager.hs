@@ -126,10 +126,15 @@ cancelKernelExecution km exec = do
 
 
 -- | Execute a kernel
-executeKernel :: KernelManager -> Processor -> KernelExecution -> IO ()
-executeKernel km proc exec = do
+executeKernel :: KernelManager -> Processor -> Kernel -> [(Buffer,Region)] -> [(Buffer,Region)] -> [KernelParameter] -> IO ()
+executeKernel km proc k ro rw params = do
+
+   ck <- atomically $ do
+      info <- registered km TMap.! k
+      compiled info TMap.! proc
    
    let ch = procWorkers km Map.! proc
+       exec = KernelExecution ck ro rw params
 
    ev <- newEvent
    atomically $ writeTChan ch (exec, ev)
