@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, TupleSections #-}
 
 module ViperVM.Platform.Kernel where
 
@@ -8,10 +8,11 @@ import ViperVM.Platform.Processor ( Processor(..) )
 import ViperVM.Platform.Buffer
 
 import Control.Concurrent
+import Control.Applicative ( (<$>) )
 import Data.List (sortBy, groupBy )
 import Data.Traversable (traverse,forM)
 import Data.Word
-import Control.Monad ( liftM,forM_,void )
+import Control.Monad (forM_,void)
 import System.Exit
 import System.IO.Unsafe
 
@@ -113,14 +114,18 @@ compile ker@(CLKernel {..}) procs = do
   let groups = groupBy eqProc $ sortBy compareProc validProcs
   let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap extractDev x)) groups
 
-  programs <- traverse createProgram devGroups
-  status <- liftM concat $ traverse buildProgram $ zip devGroups programs
-  kernels <- liftM concat $ traverse createKernel $ zip devGroups programs
+  devGroupsProg <- forAssocM devGroups createProgram
+
+  status <- concat <$> forM devGroupsProg buildProgram
+
+  kernels <- concat <$> forM devGroupsProg createKernel
   let r = zipWith (\(x,a) (_,b) -> (x,(a,b))) status kernels
   
   forM procs (returnIfValid r . extractDev)
   
   where
+    forAssocM xs f = zip xs <$> traverse f xs
+
     procKey (CLProcessor lib ctx _ _) = (lib,ctx)
     procKey _ = undefined
 
@@ -137,12 +142,11 @@ compile ker@(CLKernel {..}) procs = do
 
     buildProgram (((lib,_),devs),prog) = do
       clBuildProgram lib prog devs options
-      status <- traverse (clGetProgramBuildStatus lib prog) devs :: IO [CLBuildStatus]
-      return $ zip devs status
+      forAssocM devs (clGetProgramBuildStatus lib prog)
 
     createKernel (((lib,_),devs),prog) = do
       k <- clCreateKernel lib prog kernelName
-      return $ fmap (\x -> (x,k)) devs
+      return $ fmap (,k) devs
 
     returnIfValid r dev = do
       case lookup dev r of
