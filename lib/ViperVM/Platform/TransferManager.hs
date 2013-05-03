@@ -1,6 +1,6 @@
 module ViperVM.Platform.TransferManager (
    TransferManager, PrepareTransferResult(..),
-   createTransferManager, prepareTransfer, performTransfer, cancelTransfer, waitForTransfer,
+   createTransferManager, prepareTransfer, performTransfer, cancelTransfer,
    prepareTransferIO
 ) where
 
@@ -10,8 +10,7 @@ import ViperVM.Platform.Region
 import ViperVM.Platform.RegionManager
 import ViperVM.Platform.Transfer
 import ViperVM.Platform.Link
-
-import ViperVM.STM.TList as TList
+import ViperVM.Event
 
 import Data.Map
 import Data.Traversable (forM)
@@ -21,11 +20,11 @@ import Control.Concurrent.STM
 import Control.Concurrent
 import Control.Monad (foldM)
 
-type TransferEvent = TVar (Maybe TransferResult)
+type TransferEvent = Event TransferResult
 
 data TransferManager = TransferManager {
                            regionManager :: RegionManager,
-                           transferWorkers :: Map Link (TList (DirectTransfer, TransferEvent))
+                           transferWorkers :: Map Link (TChan (DirectTransfer, TransferEvent))
                        }
 
 data PrepareTransferResult = PrepareSuccess | 
@@ -40,7 +39,7 @@ createTransferManager rm = do
 
    -- Create transfer threads
    threads <- forM (links pf) $ \link -> do
-      trs <- atomically TList.empty
+      trs <- atomically newTChan
       _ <- forkOS (transferThread link trs)
       return (link, trs)
       
@@ -48,16 +47,14 @@ createTransferManager rm = do
 
 
 -- | Thread that perform transfers on a given link
-transferThread :: Link -> TList (DirectTransfer, TransferEvent) -> IO ()
-transferThread lnk trs = do
-   (tr,ev) <- atomically $ do
-      cond <- TList.null trs
-      if cond then retry else pop trs
+transferThread :: Link -> TChan (DirectTransfer, TransferEvent) -> IO ()
+transferThread lnk ch = do
+   (tr,ev) <- atomically $ readTChan ch
 
    err <- transfer tr
-   atomically $ writeTVar ev (Just err)
+   setEvent ev err
 
-   transferThread lnk trs
+   transferThread lnk ch
    
 
 -- | Prepare a transfer
@@ -98,7 +95,7 @@ cancelTransfer tm (Transfer srcBuf srcReg steps) = do
 -- | Perform a transfer synchronously
 performTransfer :: TransferManager -> Transfer -> IO [TransferResult]
 performTransfer tm t@(Transfer srcBuf srcReg steps) = do
-   evs <- atomically $ forM steps (const $ newTVar Nothing)
+   evs <- forM steps (const $ newEvent)
    (_,_,errs) <- foldM f (srcBuf,srcReg,[]) (steps `zip` evs)
    atomically $ cancelTransfer tm t
    return (reverse errs)
@@ -108,19 +105,11 @@ performTransfer tm t@(Transfer srcBuf srcReg steps) = do
             then return (b,r,errs)
             else do
                submitDirectTransfer tm (DirectTransfer lnk b r tb tr) ev
-               err <- waitForTransfer tm ev
+               err <- waitEvent ev
                return (tb,tr,err:errs)
 
 
 submitDirectTransfer :: TransferManager -> DirectTransfer -> TransferEvent -> IO ()
-submitDirectTransfer tm t@(DirectTransfer lnk _ _ _ _) ev = atomically $ TList.push workerSet (t,ev)
+submitDirectTransfer tm t@(DirectTransfer lnk _ _ _ _) ev = atomically $ writeTChan ch (t,ev)
    where
-      workerSet = transferWorkers tm ! lnk
-
--- | Wait for a transfer to complete
-waitForTransfer :: TransferManager -> TransferEvent -> IO TransferResult
-waitForTransfer _ ev = atomically $ do
-   res <- readTVar ev
-   case res of
-      Nothing -> retry
-      Just r -> return r
+      ch = transferWorkers tm ! lnk

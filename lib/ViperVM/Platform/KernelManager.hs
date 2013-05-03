@@ -51,7 +51,7 @@ createKernelManager rm = do
 
    -- Create proc threads
    threads <- forM (processors pf) $ \proc -> do
-      trs <- atomically $ newTChan
+      trs <- atomically newTChan
       _ <- forkOS (procThread proc trs)
       return (proc, trs)
 
@@ -62,13 +62,13 @@ createKernelManager rm = do
 
 -- | Thread that perform kernel execution on a given proc
 procThread :: Processor -> TChan (KernelExecution, KernelEvent) -> IO ()
-procThread proc trs = do
-   (exec,ev) <- atomically $ readTChan trs
+procThread proc ch = do
+   (exec,ev) <- atomically $ readTChan ch
 
    err <- execute proc (executableKernel exec) (kernelParameters exec)
    setEvent ev err
 
-   procThread proc trs
+   procThread proc ch
 
 
 -- | Register a kernel and load associated information saved from previous runs
