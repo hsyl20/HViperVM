@@ -5,6 +5,7 @@ import ViperVM.Platform.BufferManager (createBufferManager)
 
 import Control.Monad
 import Text.Printf
+import Data.Maybe
 
 main :: IO ()
 main = do
@@ -58,5 +59,37 @@ main = do
 
       void $ releaseBuffer rm srcBuf
       void $ releaseBuffer rm dstBuf
+
+
+  putStrLn $ printf "\nTrying to perform multi-step (ping pong) transfer of %d KB on each couple of links..." (bufferSize `div` 1024)
+  forM_ (links platform) $ \link -> do
+      let (src,dst) = linkEndpoints link
+
+      -- Find associated reverse link
+      let r = listToMaybe $ filter (\x -> linkEndpoints x == (dst,src)) (links platform)
+      case r of
+         Just link2 -> do
+
+            Just srcBuf <- allocateBuffer rm src bufferSize
+            Just step1Buf <- allocateBuffer rm dst bufferSize
+            Just step2Buf <- allocateBuffer rm src bufferSize
+            Just dstBuf <- allocateBuffer rm dst bufferSize
+            let reg = Region1D 0 bufferSize
+
+            putStrLn $ "Ping-pong through " ++ show link ++ " and " ++ show link2 ++ "... "
+            let tr = Transfer srcBuf reg [
+                        TransferStep link step1Buf reg,
+                        TransferStep link2 step2Buf reg,
+                        TransferStep link dstBuf reg
+                     ]
+
+            res <- performTransfer tm tr
+            if any (/= TransferSuccess) res
+               then putStrLn "ERROR"
+               else putStrLn "SUCCEEDED"
+
+            forM_ [srcBuf, step1Buf, step2Buf, dstBuf] (releaseBuffer rm)
+
+         Nothing -> return ()
 
   putStrLn "Done."
