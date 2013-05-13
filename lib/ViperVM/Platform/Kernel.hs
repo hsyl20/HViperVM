@@ -31,13 +31,15 @@ data Kernel = CLKernel {
 }
 
 data KernelParameter = IntParam Int |
+                       WordParam Word |
                        FloatParam Float |
                        DoubleParam Double |
                        BufferParam Buffer
+                       deriving (Show)
 
 data CLKernelConfiguration = CLKernelConfiguration {
-   globalDim :: [Int],
-   localDim :: [Int],
+   globalDim :: [Word],
+   localDim :: [Word],
    parameters :: [CLKernelParameter]
 }
 

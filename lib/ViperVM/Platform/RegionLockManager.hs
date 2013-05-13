@@ -1,6 +1,6 @@
-module ViperVM.Platform.RegionManager (
-   RegionManager, RegionLockResult(..), BufferReleaseResult(..), LockMode(..),
-   createRegionManager, allocateBuffer, releaseBuffer, bufferLockedRegions, getPlatform,
+module ViperVM.Platform.RegionLockManager (
+   RegionLockManager, RegionLockResult(..), BufferReleaseResult(..), LockMode(..),
+   createRegionLockManager, allocateBuffer, releaseBuffer, bufferLockedRegions, getPlatform,
    isLocked, lockRegion, lockRegions, unlockRegion, unlockRegions
 ) where
 
@@ -27,21 +27,21 @@ data BufferReleaseResult = BufferReleaseSuccess | RemainingRegion
 data LockMode = ReadOnly | ReadWrite deriving (Eq,Ord)
 data LockedRegion = LockedRegion Region LockMode deriving (Eq,Ord)
 
-data RegionManager = RegionManager {
+data RegionLockManager = RegionLockManager {
                         bufferManager :: BM.BufferManager,
                         lockedRegions :: TMap Buffer (TSet LockedRegion)
                      }
 
 -- | Initialize a region manager
-createRegionManager :: BM.BufferManager -> IO RegionManager
-createRegionManager b = atomically (RegionManager b <$> TMap.empty)
+createRegionLockManager :: BM.BufferManager -> IO RegionLockManager
+createRegionLockManager b = atomically (RegionLockManager b <$> TMap.empty)
 
 -- | Retrive platform used to create the buffer manager associated to this region manager
-getPlatform :: RegionManager -> Platform
+getPlatform :: RegionLockManager -> Platform
 getPlatform rm = BM.getPlatform (bufferManager rm)
 
 -- | Allocate a buffer in memory with region support)
-allocateBuffer :: RegionManager -> Memory -> Word64 -> IO (Maybe Buffer)
+allocateBuffer :: RegionLockManager -> Memory -> Word64 -> IO (Maybe Buffer)
 allocateBuffer mg m sz = do
    buf <- BM.allocateBuffer (bufferManager mg) m sz
    forM_ buf $ \b -> 
@@ -50,7 +50,7 @@ allocateBuffer mg m sz = do
       
 
 -- | Release a buffer if no locked region remains
-releaseBuffer :: RegionManager -> Buffer -> IO BufferReleaseResult
+releaseBuffer :: RegionLockManager -> Buffer -> IO BufferReleaseResult
 releaseBuffer mg b = do
    n <- atomically $ (TSet.null =<< bufferLockedRegions mg b)
    if not n
@@ -61,11 +61,11 @@ releaseBuffer mg b = do
 
 
 -- | Return locked regions of a buffer
-bufferLockedRegions :: RegionManager -> Buffer -> STM (TSet LockedRegion)
+bufferLockedRegions :: RegionLockManager -> Buffer -> STM (TSet LockedRegion)
 bufferLockedRegions m b = lockedRegions m ! b
    
 -- | Check if a region is locked
-isLocked :: RegionManager -> Buffer -> Region -> LockMode -> STM Bool
+isLocked :: RegionLockManager -> Buffer -> Region -> LockMode -> STM Bool
 isLocked m b r mode = f . g <$> (TSet.toList =<< bufferLockedRegions m b)
    where 
       f = any (overlaps r) . map getLockRegion
@@ -80,7 +80,7 @@ getLockRegion :: LockedRegion -> Region
 getLockRegion (LockedRegion r _) = r
 
 -- | Lock a region or retry
-lockRegion :: RegionManager -> LockMode -> Buffer -> Region -> STM RegionLockResult
+lockRegion :: RegionLockManager -> LockMode -> Buffer -> Region -> STM RegionLockResult
 lockRegion m mode b r = do
    alreadyLocked <- isLocked m b r mode
    if alreadyLocked
@@ -90,14 +90,14 @@ lockRegion m mode b r = do
          return LockSuccess
 
 -- | Lock several regions with the same mode
-lockRegions :: RegionManager -> LockMode -> [(Buffer,Region)] -> STM [RegionLockResult]
+lockRegions :: RegionLockManager -> LockMode -> [(Buffer,Region)] -> STM [RegionLockResult]
 lockRegions rm mode brs = forM brs (uncurry (lockRegion rm mode))
 
 -- | Unlock a region
-unlockRegion :: RegionManager -> LockMode -> Buffer -> Region -> STM ()
+unlockRegion :: RegionLockManager -> LockMode -> Buffer -> Region -> STM ()
 unlockRegion m mode b r = TSet.delete (LockedRegion r mode) =<< bufferLockedRegions m b
 
 
 -- | Unlock several regions with the same mode
-unlockRegions :: RegionManager -> LockMode -> [(Buffer,Region)] -> STM ()
+unlockRegions :: RegionLockManager -> LockMode -> [(Buffer,Region)] -> STM ()
 unlockRegions rm mode brs = forM_ brs (uncurry (unlockRegion rm mode))

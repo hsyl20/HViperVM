@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module ViperVM.Platform.Transfer where
+module ViperVM.Platform.RegionTransfer where
 
 import ViperVM.Platform.Region
 import ViperVM.Backends.OpenCL
@@ -10,47 +10,47 @@ import ViperVM.Platform.Memory
 import Control.Monad (void)
 import Foreign.Ptr
 
-data TransferResult = TransferSuccess | TransferError
+data RegionTransferResult = RegionTransferSuccess | RegionTransferError
                       deriving (Eq,Ord)
 
-data TransferStep = TransferStep Link Buffer Region
+data RegionTransferStep = RegionTransferStep Link Buffer Region
                     deriving (Eq,Ord)
 
-data DirectTransfer = DirectTransfer Link Buffer Region Buffer Region
+data DirectRegionTransfer = DirectRegionTransfer Link Buffer Region Buffer Region
 
-data Transfer = Transfer Buffer Region [TransferStep]
+data RegionTransfer = RegionTransfer Buffer Region [RegionTransferStep]
                 deriving (Eq,Ord)
 
 -- | Check a transfer
-checkTransfer :: Transfer -> Bool
-checkTransfer (Transfer _ _ []) = True
-checkTransfer (Transfer b1 r1 ((TransferStep l b2 r2):xs)) = w
+checkRegionTransfer :: RegionTransfer -> Bool
+checkRegionTransfer (RegionTransfer _ _ []) = True
+checkRegionTransfer (RegionTransfer b1 r1 ((RegionTransferStep l b2 r2):xs)) = w
   where
       (lm1,lm2) = linkEndpoints l
       m1 = getBufferMemory b1
       m2 = getBufferMemory b2
       v = lm1 == m1 && lm2 == m2 && checkCompatibleRegions r1 r2
-      w = v && checkTransfer (Transfer b2 r2 xs)
+      w = v && checkRegionTransfer (RegionTransfer b2 r2 xs)
 
                       
 -- | Perform synchronous transfer of a region
-transfer :: DirectTransfer -> IO TransferResult
+transfer :: DirectRegionTransfer -> IO RegionTransferResult
 transfer dt = case dt of
 
    -- Host --> CL, Region1D, Region1D
-   DirectTransfer (CLLink lib cq HostMemory (CLMemory {})) (HostBuffer _ ptr) (Region1D soff sz) (CLBuffer _ _ buf) (Region1D doff _) -> do
+   DirectRegionTransfer (CLLink lib cq HostMemory (CLMemory {})) (HostBuffer _ ptr) (Region1D soff sz) (CLBuffer _ _ buf) (Region1D doff _) -> do
       let srcptr = plusPtr ptr (fromIntegral soff)
       e <- clEnqueueWriteBuffer lib cq buf True doff sz srcptr []
       void $ clWaitForEvents lib [e]
       void $ clReleaseEvent lib e
-      return TransferSuccess
+      return RegionTransferSuccess
 
    -- CL --> Host, Region1D, Region1D
-   DirectTransfer (CLLink lib cq (CLMemory {}) HostMemory) (CLBuffer _ _ buf) (Region1D soff sz) (HostBuffer _ ptr) (Region1D doff _) -> do
+   DirectRegionTransfer (CLLink lib cq (CLMemory {}) HostMemory) (CLBuffer _ _ buf) (Region1D soff sz) (HostBuffer _ ptr) (Region1D doff _) -> do
       let dstptr = plusPtr ptr (fromIntegral doff)
       e <- clEnqueueReadBuffer lib cq buf True soff sz dstptr []
       void $ clWaitForEvents lib [e]
       void $ clReleaseEvent lib e
-      return TransferSuccess
+      return RegionTransferSuccess
 
-   _ -> return TransferError
+   _ -> return RegionTransferError

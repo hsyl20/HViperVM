@@ -10,6 +10,6 @@ instance Show Primitive where
   show Float = "Float"
   show Double = "Double"
 
-size :: Primitive -> Word64
-size Float = 4
-size Double = 8
+sizeOf :: Primitive -> Word64
+sizeOf Float = 4
+sizeOf Double = 8

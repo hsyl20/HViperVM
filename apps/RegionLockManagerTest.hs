@@ -1,6 +1,6 @@
 import ViperVM.Platform
 import ViperVM.Platform.BufferManager (createBufferManager)
-import ViperVM.Platform.RegionManager
+import ViperVM.Platform.RegionLockManager
 
 import Control.Monad
 import Control.Concurrent.STM
@@ -16,7 +16,7 @@ main = do
 
   putStrLn "Initializing region manager..."
   bm <- createBufferManager platform
-  rm <- createRegionManager bm
+  rm <- createRegionLockManager bm
 
   let bufferSize = 1024 * 1024
       r1 = Region1D 100 500

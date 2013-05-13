@@ -31,16 +31,18 @@ library
     ViperVM.Platform.Buffer
     ViperVM.Platform.BufferManager
     ViperVM.Platform.Kernel
+    ViperVM.Platform.Object
+    ViperVM.Platform.ObjectManager
     ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
     ViperVM.Platform.Primitive
     ViperVM.Platform.Memory
     ViperVM.Platform.Processor
     ViperVM.Platform.Region
-    ViperVM.Platform.RegionManager
+    ViperVM.Platform.RegionLockManager
     ViperVM.Platform.DataDesc
-    ViperVM.Platform.Transfer
-    ViperVM.Platform.TransferManager
+    ViperVM.Platform.RegionTransfer
+    ViperVM.Platform.RegionTransferManager
     ViperVM.Platform.Platform
 
     ViperVM.Event
@@ -119,8 +121,8 @@ executable BufferManagerTest
     base,
     ViperVM
 
-executable RegionManagerTest
-  main-is: RegionManagerTest.hs
+executable RegionLockManagerTest
+  main-is: RegionLockManagerTest.hs
   hs-source-dirs: apps
   ghc-options: -Wall -threaded
   build-depends: 
@@ -128,8 +130,8 @@ executable RegionManagerTest
     stm,
     ViperVM
 
-executable TransferManagerTest
-  main-is: TransferManagerTest.hs
+executable RegionTransferManagerTest
+  main-is: RegionTransferManagerTest.hs
   hs-source-dirs: apps
   ghc-options: -Wall -threaded
   build-depends: 
@@ -138,6 +140,14 @@ executable TransferManagerTest
 
 executable KernelExecOpenCLTest
   main-is: KernelExecOpenCLTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    ViperVM
+
+executable KernelObjectOpenCLTest
+  main-is: KernelObjectOpenCLTest.hs
   hs-source-dirs: apps
   ghc-options: -Wall -threaded
   build-depends: 

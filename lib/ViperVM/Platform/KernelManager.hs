@@ -11,7 +11,7 @@ import ViperVM.Platform.Processor
 import ViperVM.Platform.Kernel
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Region
-import ViperVM.Platform.RegionManager
+import ViperVM.Platform.RegionLockManager
 import ViperVM.Event
 import ViperVM.STM.TMap as TMap
 
@@ -35,7 +35,7 @@ data KernelExecution = KernelExecution {
 type KernelEvent = Event ()
 
 data KernelManager = KernelManager {
-      regionManager :: RegionManager,
+      regionManager :: RegionLockManager,
       procWorkers :: Map Processor (TChan (KernelExecution, KernelEvent)),
       registered :: TMap Kernel KernelInfo
    }
@@ -45,7 +45,7 @@ data KernelInfo = KernelInfo {
    }
 
 
-createKernelManager :: RegionManager -> IO KernelManager
+createKernelManager :: RegionLockManager -> IO KernelManager
 createKernelManager rm = do
    let pf = getPlatform rm
 

@@ -14,5 +14,5 @@ backingBufferSize (VectorDesc Prim.Double n) = 8 * n
 
 
 defaultRegion :: DataDesc -> Region
-defaultRegion (VectorDesc p n) = Region1D 0 (n * Prim.size p)
+defaultRegion (VectorDesc p n) = Region1D 0 (n * Prim.sizeOf p)
 

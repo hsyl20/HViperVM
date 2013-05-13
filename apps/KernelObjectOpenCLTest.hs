@@ -1,6 +1,7 @@
 import ViperVM.Platform
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.RegionLockManager
+import ViperVM.Platform.ObjectManager
 import ViperVM.Platform.BufferManager (createBufferManager)
 
 import ViperVM.Library.FloatMatrixAdd
@@ -20,13 +21,12 @@ main = do
    bm <- createBufferManager platform
    rm <- createRegionLockManager bm
    km <- createKernelManager rm
+   om <- createObjectManager rm
 
    let (w,h) = (1024, 512)
        padding = 11
-       bufferSize = (w + padding) * h * (Prim.sizeOf Prim.Float) 
        openclProcs = filter isOpenCLProcessor (processors platform)
        ker = floatMatrixAddCL
-       reg = Region2D 0 h w padding
 
    putStrLn "Registering kernel..." 
    registerKernel km ker
@@ -46,18 +46,12 @@ main = do
       putStrLn ("Executing kernel on " ++ show proc)
       let mem = head (processorMemories proc)
 
-      Just a <- allocateBuffer rm mem bufferSize
-      Just b <- allocateBuffer rm mem bufferSize
-      Just c <- allocateBuffer rm mem bufferSize
+      Just a <- allocateMatrixObject om mem Prim.Float w h padding
+      Just b <- allocateMatrixObject om mem Prim.Float w h padding
+      Just c <- allocateMatrixObject om mem Prim.Float w h padding
 
-      let roRegions = [(a,reg),(b,reg)] 
-          rwRegions = [(c,reg)] 
-          params = [WordParam $ fromIntegral w, WordParam $ fromIntegral h, BufferParam a, BufferParam b, BufferParam c]
+      let (params, roRegions, rwRegions) = paramsFromObjects [a,b,c]
 
       executeKernel km proc ker roRegions rwRegions params
-
-      void $ releaseBuffer rm a
-      void $ releaseBuffer rm b
-      void $ releaseBuffer rm c
 
    putStrLn "Done."

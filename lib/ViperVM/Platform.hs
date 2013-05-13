@@ -14,5 +14,6 @@ import ViperVM.Platform.Platform as X
 import ViperVM.Platform.Primitive as X
 import ViperVM.Platform.Processor as X
 import ViperVM.Platform.Region as X
-import ViperVM.Platform.Transfer as X
+import ViperVM.Platform.RegionTransfer as X
+import ViperVM.Platform.Object as X
 

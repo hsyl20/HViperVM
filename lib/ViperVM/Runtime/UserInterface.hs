@@ -25,7 +25,7 @@ mapVectorIO r prim n ptr = atomically $ mapVector r prim n ptr
 mapVector :: Runtime -> Pf.Primitive -> Word64 -> Ptr () -> STM Data
 mapVector r prim n ptr = do
    let desc = Pf.VectorDesc prim n
-       sz   = n * Prim.size prim
+       sz   = n * Prim.sizeOf prim
        buf  = Pf.HostBuffer sz ptr
        reg  = Pf.Region1D 0 sz
 

@@ -1,5 +1,5 @@
 module ViperVM.Library.FloatMatrixAdd (
-  floatMatrixAddCL
+  floatMatrixAddCL, paramsFromObjects
   ) where
 
 import ViperVM.Platform
@@ -9,9 +9,9 @@ floatMatrixAddCL = CLKernel {
    kernelName = "floatMatrixAdd",
    constraints = [],
    options = "",
-   configure = floatMatrixAddCLConfig,
+   configure = configFromParamsCL,
    source = "\
-  \__kernel void floatMatrixAdd(const int width, const int height,\
+  \__kernel void floatMatrixAdd(const uint width, const uint height,\
   \                        __global float* A, __global float* B, __global float* C) {\
   \  int gx = get_global_id(0);\
   \  int gy = get_global_id(1);\
@@ -23,14 +23,27 @@ floatMatrixAddCL = CLKernel {
   \}"
 }
 
-floatMatrixAddCLConfig :: [KernelParameter] -> CLKernelConfiguration
-floatMatrixAddCLConfig params = CLKernelConfiguration gDim lDim clParams
+configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
+configFromParamsCL params = CLKernelConfiguration gDim lDim clParams
    where
-      [IntParam width, IntParam height, BufferParam a, BufferParam b, BufferParam c] = params
+      [WordParam width, WordParam height, BufferParam a, BufferParam b, BufferParam c] = params
       gDim = [width + (mod width 32), height + (mod height 32),1]
       lDim = [32,32,1]
-      clParams = [clIntParam width, clIntParam height, 
+      clParams = [clUIntParam width, clUIntParam height, 
                   clMemParam a, clMemParam b, clMemParam c]
+
+
+paramsFromObjects :: [Object] -> ([KernelParameter], [(Buffer,Region)], [(Buffer,Region)])
+paramsFromObjects objs = (params, readOnlyRegions, readWriteRegions)
+   where
+      [MatrixObject ma, MatrixObject mb, MatrixObject mc] = objs
+      params = [WordParam (fromIntegral width), WordParam (fromIntegral height), BufferParam a, BufferParam b, BufferParam c]
+      (width, height) = matrixDimensions ma
+      a = matrixBuffer ma
+      b = matrixBuffer mb
+      c = matrixBuffer mc
+      readOnlyRegions = [(a, matrixRegion ma), (b, matrixRegion mb)]
+      readWriteRegions = [(c, matrixRegion mc)]
 
 
 --floatMatrixAdd :: KernelInterface

@@ -1,6 +1,6 @@
 import ViperVM.Platform
-import ViperVM.Platform.TransferManager
-import ViperVM.Platform.RegionManager
+import ViperVM.Platform.RegionTransferManager
+import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.BufferManager (createBufferManager)
 
 import Control.Monad
@@ -17,8 +17,8 @@ main = do
 
   putStrLn "Initializing transfer manager..."
   bm <- createBufferManager platform
-  rm <- createRegionManager bm
-  tm <- createTransferManager rm
+  rm <- createRegionLockManager bm
+  tm <- createRegionTransferManager rm
 
   let bufferSize = 1024 * 1024
 
@@ -30,29 +30,29 @@ main = do
       let reg = Region1D 0 bufferSize
 
       putStrLn $ "Transferring on " ++ (show link) ++ "... "
-      let tr = Transfer srcBuf reg [TransferStep link dstBuf reg]
+      let tr = RegionTransfer srcBuf reg [RegionTransferStep link dstBuf reg]
 
       putStr " - Preparing transfer... "
-      res1 <- prepareTransferIO tm tr
+      res1 <- prepareRegionTransferIO tm tr
       if res1 /= PrepareSuccess
          then putStrLn "ERROR"
          else putStrLn "SUCCEEDED"
 
       putStr " - Performing transfer... "
-      res2 <- performTransfer tm tr
-      if any (/= TransferSuccess) res2
+      res2 <- performRegionTransfer tm tr
+      if any (/= RegionTransferSuccess) res2
          then putStrLn "ERROR"
          else putStrLn "SUCCEEDED"
 
       putStr " - Preparing transfer... "
-      res3 <- prepareTransferIO tm tr
+      res3 <- prepareRegionTransferIO tm tr
       if res3 /= PrepareSuccess
          then putStrLn "ERROR"
          else putStrLn "SUCCEEDED"
 
       putStr " - Performing transfer... "
-      res4 <- performTransfer tm tr
-      if any (/= TransferSuccess) res4
+      res4 <- performRegionTransfer tm tr
+      if any (/= RegionTransferSuccess) res4
          then putStrLn "ERROR"
          else putStrLn "SUCCEEDED"
 
@@ -74,14 +74,14 @@ main = do
          let reg = Region1D 0 bufferSize
 
          putStrLn $ "Ping-pong through " ++ show link ++ " and " ++ show link2 ++ "... "
-         let tr = Transfer srcBuf reg [
-                     TransferStep link step1Buf reg,
-                     TransferStep link2 step2Buf reg,
-                     TransferStep link dstBuf reg
+         let tr = RegionTransfer srcBuf reg [
+                     RegionTransferStep link step1Buf reg,
+                     RegionTransferStep link2 step2Buf reg,
+                     RegionTransferStep link dstBuf reg
                   ]
 
-         res <- performTransfer tm tr
-         if any (/= TransferSuccess) res
+         res <- performRegionTransfer tm tr
+         if any (/= RegionTransferSuccess) res
             then putStrLn "ERROR"
             else putStrLn "SUCCEEDED"
 
