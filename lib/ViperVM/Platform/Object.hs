@@ -8,12 +8,13 @@ import Data.Word
 
 data Object = VectorObject Vector |
               MatrixObject Matrix
+              deriving (Show,Eq,Ord)
 
 data Vector = Vector {
       vectorBuffer :: Buffer,
       vectorRegion :: Region,
       vectorCellType :: Primitive
-   }
+   } deriving (Show,Eq,Ord)
 
 createVector :: Buffer -> Region -> Primitive -> Vector
 createVector b r@(Region1D {}) p = Vector b r p
@@ -30,7 +31,7 @@ data Matrix = Matrix {
       matrixBuffer :: Buffer,
       matrixRegion :: Region,
       matrixCellType :: Primitive
-   }
+   } deriving (Show,Eq,Ord)
 
 createMatrix :: Buffer -> Region -> Primitive -> Matrix
 createMatrix b r@(Region2D {}) p = Matrix b r p

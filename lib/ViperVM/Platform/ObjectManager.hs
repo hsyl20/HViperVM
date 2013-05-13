@@ -1,21 +1,49 @@
-module ViperVM.Platform.ObjectManager where
+module ViperVM.Platform.ObjectManager (
+      createObjectManager,
+      allocateVector, allocateVectorObject,
+      allocateMatrix, allocateMatrixObject
+   ) where
 
+import ViperVM.STM.TSet as TSet
 import ViperVM.Platform.Object
 import ViperVM.Platform.Primitive
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.RegionLockManager
+import ViperVM.Platform.Platform
 
-import Control.Monad
+import Control.Concurrent.STM
+import Data.Foldable (forM_)
+import Data.Traversable (forM)
+import Control.Monad (liftM)
 import Control.Applicative
 import Data.Word
+import Data.Map
 
 data ObjectManager = ObjectManager {
-      regionLockManager :: RegionLockManager
+      regionLockManager :: RegionLockManager,
+      objects :: Map Memory (TSet Object)
    }
 
 createObjectManager :: RegionLockManager -> IO ObjectManager
-createObjectManager rm = return (ObjectManager rm)
+createObjectManager rm = do
+   let mems = memories (getPlatform rm)
+   objs <- atomically $ forM mems (const TSet.empty)
+   let memObjs = fromList $ zip mems objs
+   return (ObjectManager rm memObjs)
+
+
+registerObject :: ObjectManager -> Memory -> Object -> STM ()
+registerObject om mem obj = do
+   let objs = objects om ! mem
+   TSet.insert obj objs 
+
+
+unregisterObject :: ObjectManager -> Memory -> Object -> STM ()
+unregisterObject om mem obj = do
+   let objs = objects om ! mem
+   TSet.delete obj objs 
+
 
 allocateVector :: ObjectManager -> Memory -> Primitive -> Word64 -> IO (Maybe Vector)
 allocateVector om mem p sz = do
@@ -24,7 +52,11 @@ allocateVector om mem p sz = do
        reg = Region1D 0 bufferSize
        makeVec buf = createVector buf reg p
 
-   liftM (fmap makeVec) (allocateBuffer rm mem bufferSize)
+   ret <- liftM (fmap makeVec) (allocateBuffer rm mem bufferSize)
+
+   forM_ (VectorObject <$> ret) (atomically . registerObject om mem)
+
+   return ret
 
 
 allocateVectorObject :: ObjectManager -> Memory -> Primitive -> Word64 -> IO (Maybe Object)
@@ -38,7 +70,11 @@ allocateMatrix om mem p width height padding = do
        reg = Region2D 0 height rowSize padding
        makeMat buf = createMatrix buf reg p
 
-   liftM (fmap makeMat) (allocateBuffer rm mem bufferSize)
+   ret <- liftM (fmap makeMat) (allocateBuffer rm mem bufferSize)
+
+   forM_ (MatrixObject <$> ret) (atomically . registerObject om mem)
+
+   return ret
 
 allocateMatrixObject :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Padding -> IO (Maybe Object)
 allocateMatrixObject om mem p width height padding = liftM MatrixObject <$> allocateMatrix om mem p width height padding
