@@ -21,9 +21,10 @@ import Data.Foldable (forM_)
 
 import Control.Concurrent
 import Control.Concurrent.STM
-import Control.Monad (forM)
+import Control.Monad (forM,when)
 
 data PrepareExecutionResult = PrepareExecSuccess | PrepareExecRegionAlreadyLocked
+                              deriving (Eq)
 
 data KernelExecution = KernelExecution {
       executableKernel :: CompiledKernel,
@@ -135,6 +136,10 @@ executeKernel km proc k ro rw params = do
    
    let ch = procWorkers km Map.! proc
        exec = KernelExecution ck ro rw params
+
+   atomically $ do
+      r <- prepareKernelExecution km exec
+      when (r /= PrepareExecSuccess) retry
 
    ev <- newEvent
    atomically $ writeTChan ch (exec, ev)

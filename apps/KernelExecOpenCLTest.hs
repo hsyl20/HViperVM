@@ -25,7 +25,7 @@ main = do
        padding = 11
        bufferSize = (w + padding) * h * (Prim.sizeOf Prim.Float) 
        openclProcs = filter isOpenCLProcessor (processors platform)
-       ker = floatMatrixAddCL
+       ker = floatMatrixAddKernelCL
        reg = Region2D 0 h w padding
 
    putStrLn "Registering kernel..." 

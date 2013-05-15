@@ -1,11 +1,11 @@
 module ViperVM.Library.FloatMatrixAdd (
-  floatMatrixAddCL, paramsFromObjects
+  floatMatrixAddKernelCL, floatMatrixAddObjectKernelCL
   ) where
 
 import ViperVM.Platform
 
-floatMatrixAddCL :: Kernel
-floatMatrixAddCL = CLKernel {
+floatMatrixAddKernelCL :: Kernel
+floatMatrixAddKernelCL = CLKernel {
    kernelName = "floatMatrixAdd",
    constraints = [],
    options = "",
@@ -24,26 +24,29 @@ floatMatrixAddCL = CLKernel {
 }
 
 configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
-configFromParamsCL params = CLKernelConfiguration gDim lDim clParams
+configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
    where
-      [WordParam width, WordParam height, BufferParam a, BufferParam b, BufferParam c] = params
+      [WordParam width, WordParam height, BufferParam a, BufferParam b, BufferParam c] = pms
       gDim = [width + (mod width 32), height + (mod height 32),1]
       lDim = [32,32,1]
       clParams = [clUIntParam width, clUIntParam height, 
                   clMemParam a, clMemParam b, clMemParam c]
 
 
-paramsFromObjects :: [Object] -> ([KernelParameter], [(Buffer,Region)], [(Buffer,Region)])
-paramsFromObjects objs = (params, readOnlyRegions, readWriteRegions)
+floatMatrixAddObjectKernelCL :: ObjectKernel
+floatMatrixAddObjectKernelCL = ObjectKernel floatMatrixAddKernelCL paramsFromObjects
+
+paramsFromObjects :: [Object] -> KernelObjectConfig
+paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
    where
       [MatrixObject ma, MatrixObject mb, MatrixObject mc] = objs
-      params = [WordParam (fromIntegral width), WordParam (fromIntegral height), BufferParam a, BufferParam b, BufferParam c]
+      pms = [WordParam (fromIntegral width), WordParam (fromIntegral height), BufferParam a, BufferParam b, BufferParam c]
       (width, height) = matrixDimensions ma
       a = matrixBuffer ma
       b = matrixBuffer mb
       c = matrixBuffer mc
-      readOnlyRegions = [(a, matrixRegion ma), (b, matrixRegion mb)]
-      readWriteRegions = [(c, matrixRegion mc)]
+      roRegions = [(a, matrixRegion ma), (b, matrixRegion mb)]
+      rwRegions = [(c, matrixRegion mc)]
 
 
 --floatMatrixAdd :: KernelInterface

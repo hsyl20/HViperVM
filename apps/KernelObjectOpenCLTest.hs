@@ -27,16 +27,16 @@ main = do
    let (w,h) = (1024, 512)
        padding = 11
        openclProcs = filter isOpenCLProcessor (processors platform)
-       ker = floatMatrixAddCL
+       ker = floatMatrixAddObjectKernelCL
 
    putStrLn "Registering kernel..." 
-   registerKernel km ker
+   registerObjectKernel km ker
 
    putStrLn "OpenCL processors:"
    forM_ openclProcs (putStrLn . show)
 
    putStrLn "\nCompiling kernel..." 
-   validProcs <- compileKernel km ker openclProcs
+   validProcs <- compileObjectKernel km ker openclProcs
 
    putStrLn "Compilation succeeded for processors:" 
    forM_ validProcs (putStrLn . show)
@@ -56,8 +56,7 @@ main = do
          lockObjectRetry om ReadOnly b
          lockObjectRetry om ReadWrite c
 
-      let (params, roRegions, rwRegions) = paramsFromObjects [a,b,c]
-      executeKernel km proc ker roRegions rwRegions params
+      executeObjectKernel km proc ker [a,b,c]
 
       forM_ [a,b,c] (releaseObject om)
 

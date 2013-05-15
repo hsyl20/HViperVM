@@ -33,6 +33,7 @@ library
     ViperVM.Platform.Kernel
     ViperVM.Platform.Object
     ViperVM.Platform.ObjectManager
+    ViperVM.Platform.ObjectKernel
     ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
     ViperVM.Platform.Primitive
