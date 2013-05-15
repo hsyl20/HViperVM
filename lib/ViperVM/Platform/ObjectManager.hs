@@ -1,4 +1,5 @@
 module ViperVM.Platform.ObjectManager (
+      ObjectManager, kernelManager,
       createObjectManager, releaseObject, lockObject, unlockObject, lockObjectRetry,
       allocateVector, allocateVectorObject, releaseVector,
       allocateMatrix, allocateMatrixObject, releaseMatrix
@@ -12,6 +13,7 @@ import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.RegionLockManager (RegionLockManager, LockMode(..), getPlatform, allocateBuffer)
 import ViperVM.Platform.Platform
+import ViperVM.Platform.KernelManager
 
 import Control.Monad (when)
 import Control.Concurrent.STM
@@ -27,19 +29,20 @@ data ObjectLockResult = LockSuccess | LockError
 
 data ObjectManager = ObjectManager {
       regionLockManager :: RegionLockManager,
+      kernelManager :: KernelManager,
       objects :: Map Memory (TSet Object),
       locks :: TMap Object (LockMode,Int)
    }
 
-createObjectManager :: RegionLockManager -> IO ObjectManager
-createObjectManager rm = do
+createObjectManager :: RegionLockManager -> KernelManager -> IO ObjectManager
+createObjectManager rm km = do
    let mems = memories (getPlatform rm)
    (objs,lcks) <- atomically $ do
       os <- forM mems (const TSet.empty)
       ls <- TMap.empty
       return (os,ls)
    let memObjs = fromList $ zip mems objs
-   return (ObjectManager rm memObjs lcks)
+   return (ObjectManager rm km memObjs lcks)
 
 
 registerObject :: ObjectManager -> Memory -> Object -> STM ()

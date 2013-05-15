@@ -34,7 +34,9 @@ configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
 
 
 floatMatrixAddObjectKernelCL :: ObjectKernel
-floatMatrixAddObjectKernelCL = ObjectKernel floatMatrixAddKernelCL paramsFromObjects
+floatMatrixAddObjectKernelCL = ObjectKernel floatMatrixAddKernelCL modes paramsFromObjects
+   where
+      modes = [ReadOnly,ReadOnly,ReadWrite]
 
 paramsFromObjects :: [Object] -> KernelObjectConfig
 paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions

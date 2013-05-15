@@ -17,4 +17,5 @@ import ViperVM.Platform.Region as X
 import ViperVM.Platform.RegionTransfer as X
 import ViperVM.Platform.Object as X
 import ViperVM.Platform.ObjectKernel as X
+import ViperVM.Platform.LockMode as X
 

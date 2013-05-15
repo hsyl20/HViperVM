@@ -9,6 +9,7 @@ import ViperVM.Platform.Buffer
 import ViperVM.Platform.Memory
 import qualified ViperVM.Platform.BufferManager as BM
 import ViperVM.Platform.Region
+import ViperVM.Platform.LockMode
 import ViperVM.STM.TSet as TSet
 import ViperVM.STM.TMap as TMap
 
@@ -24,7 +25,6 @@ data RegionLockResult = LockSuccess | RegionAlreadyLocked
 data BufferReleaseResult = BufferReleaseSuccess | RemainingRegion
                            deriving (Eq,Ord)
 
-data LockMode = ReadOnly | ReadWrite deriving (Eq,Ord)
 data LockedRegion = LockedRegion Region LockMode deriving (Eq,Ord)
 
 data RegionLockManager = RegionLockManager {
