@@ -12,7 +12,7 @@ import ViperVM.Platform.Object
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Region
 import ViperVM.Platform.ObjectManager
-import ViperVM.Platform.RegionLockManager (LockMode)
+import ViperVM.Platform.LockMode
 
 import Control.Concurrent.STM
 import Data.Foldable (forM_)
