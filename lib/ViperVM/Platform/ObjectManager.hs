@@ -1,7 +1,7 @@
 module ViperVM.Platform.ObjectManager (
-      createObjectManager, releaseObject,
-      allocateVector, allocateVectorObject, releaseVector,
-      allocateMatrix, allocateMatrixObject, releaseMatrix
+      createObjectManager, releaseObject, lockObject, unlockObject,
+      allocateVector, allocateVectorObject, releaseVector, lockVector, unlockVector,
+      allocateMatrix, allocateMatrixObject, releaseMatrix, lockMatrix, unlockMatrix
    ) where
 
 import ViperVM.STM.TSet as TSet
@@ -13,6 +13,7 @@ import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.Platform
 
 import Control.Concurrent.STM
+import Control.Monad (void)
 import Data.Foldable (forM_)
 import Data.Traversable (forM)
 import Control.Monad (liftM)
@@ -48,6 +49,14 @@ releaseObject :: ObjectManager -> Object -> IO ()
 releaseObject om o = do
    atomically $ unregisterObject om (objectMemory o) o
 
+lockObject :: ObjectManager -> LockMode -> Object -> IO ()
+lockObject om mode (VectorObject v) = lockVector om mode v
+lockObject om mode (MatrixObject m) = lockMatrix om mode m
+
+unlockObject :: ObjectManager -> LockMode -> Object -> IO ()
+unlockObject om mode (VectorObject v) = unlockVector om mode v
+unlockObject om mode (MatrixObject m) = unlockMatrix om mode m
+
 ------------------------------------------
 -- Vector
 --
@@ -72,8 +81,18 @@ allocateVectorObject om mem p sz = liftM VectorObject <$> allocateVector om mem 
 releaseVector :: ObjectManager -> Vector -> IO ()
 releaseVector om v = releaseObject om (VectorObject v)
 
+lockVector :: ObjectManager -> LockMode -> Vector -> IO ()
+lockVector om mode v = void $ atomically $ lockRegion rm mode (vectorBuffer v) (vectorRegion v)
+   where
+      rm = regionLockManager om
+   
+unlockVector :: ObjectManager -> LockMode -> Vector -> IO ()
+unlockVector om mode v = atomically $ unlockRegion rm mode (vectorBuffer v) (vectorRegion v)
+   where
+      rm = regionLockManager om
+
 ------------------------------------------
--- Matrux
+-- Matrix
 --
 
 allocateMatrix :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Padding -> IO (Maybe Matrix)
@@ -95,3 +114,13 @@ allocateMatrixObject om mem p width height padding = liftM MatrixObject <$> allo
 
 releaseMatrix :: ObjectManager -> Matrix -> IO ()
 releaseMatrix om v = releaseObject om (MatrixObject v)
+
+lockMatrix :: ObjectManager -> LockMode -> Matrix -> IO ()
+lockMatrix om mode v = void $ atomically $ lockRegion rm mode (matrixBuffer v) (matrixRegion v)
+   where
+      rm = regionLockManager om
+
+unlockMatrix :: ObjectManager -> LockMode -> Matrix -> IO ()
+unlockMatrix om mode v = atomically $ unlockRegion rm mode (matrixBuffer v) (matrixRegion v)
+   where
+      rm = regionLockManager om
