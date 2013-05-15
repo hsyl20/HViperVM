@@ -1,7 +1,7 @@
 module ViperVM.Platform.ObjectManager (
-      createObjectManager,
-      allocateVector, allocateVectorObject,
-      allocateMatrix, allocateMatrixObject
+      createObjectManager, releaseObject,
+      allocateVector, allocateVectorObject, releaseVector,
+      allocateMatrix, allocateMatrixObject, releaseMatrix
    ) where
 
 import ViperVM.STM.TSet as TSet
@@ -44,6 +44,13 @@ unregisterObject om mem obj = do
    let objs = objects om ! mem
    TSet.delete obj objs 
 
+releaseObject :: ObjectManager -> Object -> IO ()
+releaseObject om o = do
+   atomically $ unregisterObject om (objectMemory o) o
+
+------------------------------------------
+-- Vector
+--
 
 allocateVector :: ObjectManager -> Memory -> Primitive -> Word64 -> IO (Maybe Vector)
 allocateVector om mem p sz = do
@@ -62,6 +69,13 @@ allocateVector om mem p sz = do
 allocateVectorObject :: ObjectManager -> Memory -> Primitive -> Word64 -> IO (Maybe Object)
 allocateVectorObject om mem p sz = liftM VectorObject <$> allocateVector om mem p sz
 
+releaseVector :: ObjectManager -> Vector -> IO ()
+releaseVector om v = releaseObject om (VectorObject v)
+
+------------------------------------------
+-- Matrux
+--
+
 allocateMatrix :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Padding -> IO (Maybe Matrix)
 allocateMatrix om mem p width height padding = do
    let rm = regionLockManager om
@@ -78,3 +92,6 @@ allocateMatrix om mem p width height padding = do
 
 allocateMatrixObject :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Padding -> IO (Maybe Object)
 allocateMatrixObject om mem p width height padding = liftM MatrixObject <$> allocateMatrix om mem p width height padding
+
+releaseMatrix :: ObjectManager -> Matrix -> IO ()
+releaseMatrix om v = releaseObject om (MatrixObject v)

@@ -1,7 +1,14 @@
-module ViperVM.Platform.Object where
+module ViperVM.Platform.Object (
+      Object(..), Vector, Matrix,
+      objectMemory,
+      createVector, vectorBuffer, vectorRegion, vectorCellType, vectorSize,
+      createMatrix, matrixBuffer, matrixRegion, matrixCellType,
+      matrixWidth, matrixHeight, matrixDimensions
+   ) where
 
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Region
+import ViperVM.Platform.Memory
 import ViperVM.Platform.Primitive
 
 import Data.Word
@@ -9,6 +16,10 @@ import Data.Word
 data Object = VectorObject Vector |
               MatrixObject Matrix
               deriving (Show,Eq,Ord)
+
+objectMemory :: Object -> Memory
+objectMemory (VectorObject o) = getBufferMemory (vectorBuffer o)
+objectMemory (MatrixObject o) = getBufferMemory (matrixBuffer o)
 
 data Vector = Vector {
       vectorBuffer :: Buffer,

@@ -54,4 +54,6 @@ main = do
 
       executeKernel km proc ker roRegions rwRegions params
 
+      forM_ [a,b,c] (releaseObject om)
+
    putStrLn "Done."
