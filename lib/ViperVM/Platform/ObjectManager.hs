@@ -1,61 +1,96 @@
 module ViperVM.Platform.ObjectManager (
-      createObjectManager, releaseObject, lockObject, unlockObject,
-      allocateVector, allocateVectorObject, releaseVector, lockVector, unlockVector,
-      allocateMatrix, allocateMatrixObject, releaseMatrix, lockMatrix, unlockMatrix
+      createObjectManager, releaseObject, lockObject, unlockObject, lockObjectRetry,
+      allocateVector, allocateVectorObject, releaseVector,
+      allocateMatrix, allocateMatrixObject, releaseMatrix
    ) where
 
 import ViperVM.STM.TSet as TSet
+import ViperVM.STM.TMap as TMap
 import ViperVM.Platform.Object
 import ViperVM.Platform.Primitive
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
-import ViperVM.Platform.RegionLockManager
+import ViperVM.Platform.RegionLockManager (RegionLockManager, LockMode(..), getPlatform, allocateBuffer)
 import ViperVM.Platform.Platform
 
+import Control.Monad (when)
 import Control.Concurrent.STM
-import Control.Monad (void)
 import Data.Foldable (forM_)
 import Data.Traversable (forM)
 import Control.Monad (liftM)
 import Control.Applicative
 import Data.Word
-import Data.Map
+import Data.Map as Map
+
+data ObjectLockResult = LockSuccess | LockError
+                        deriving (Show,Eq,Ord)
 
 data ObjectManager = ObjectManager {
       regionLockManager :: RegionLockManager,
-      objects :: Map Memory (TSet Object)
+      objects :: Map Memory (TSet Object),
+      locks :: TMap Object (LockMode,Int)
    }
 
 createObjectManager :: RegionLockManager -> IO ObjectManager
 createObjectManager rm = do
    let mems = memories (getPlatform rm)
-   objs <- atomically $ forM mems (const TSet.empty)
+   (objs,lcks) <- atomically $ do
+      os <- forM mems (const TSet.empty)
+      ls <- TMap.empty
+      return (os,ls)
    let memObjs = fromList $ zip mems objs
-   return (ObjectManager rm memObjs)
+   return (ObjectManager rm memObjs lcks)
 
 
 registerObject :: ObjectManager -> Memory -> Object -> STM ()
 registerObject om mem obj = do
-   let objs = objects om ! mem
+   let objs = objects om Map.! mem
    TSet.insert obj objs 
 
 
 unregisterObject :: ObjectManager -> Memory -> Object -> STM ()
 unregisterObject om mem obj = do
-   let objs = objects om ! mem
+   let objs = objects om Map.! mem
    TSet.delete obj objs 
 
 releaseObject :: ObjectManager -> Object -> IO ()
-releaseObject om o = do
-   atomically $ unregisterObject om (objectMemory o) o
+releaseObject om o = atomically $ do
+   unregisterObject om (objectMemory o) o
 
-lockObject :: ObjectManager -> LockMode -> Object -> IO ()
-lockObject om mode (VectorObject v) = lockVector om mode v
-lockObject om mode (MatrixObject m) = lockMatrix om mode m
+lockObject :: ObjectManager -> LockMode -> Object -> STM ObjectLockResult
+lockObject om mode o = do
+   let lcks = locks om
+   isMember <- TMap.member o lcks
+   if not isMember
+      then do
+         TMap.insert o (mode,1) lcks
+         return LockSuccess
+      else do
+         if mode == ReadWrite 
+            then return LockError
+            else do
+               (currentMode,n) <- lcks TMap.! o
+               if currentMode == ReadWrite
+                  then return LockError
+                  else do
+                     TMap.insert o (currentMode, n+1) lcks
+                     return LockSuccess
 
-unlockObject :: ObjectManager -> LockMode -> Object -> IO ()
-unlockObject om mode (VectorObject v) = unlockVector om mode v
-unlockObject om mode (MatrixObject m) = unlockMatrix om mode m
+lockObjectRetry :: ObjectManager -> LockMode -> Object -> STM ()
+lockObjectRetry om mode o = do
+   r <- lockObject om mode o
+   when (r /= LockSuccess) retry
+
+unlockObject :: ObjectManager -> Object -> STM ()
+unlockObject om o = do
+   let lcks = locks om
+   (currentMode,n) <- lcks TMap.! o
+   if n == 1
+      then
+         TMap.delete o lcks
+      else
+         TMap.insert o (currentMode,n-1) lcks
+
 
 ------------------------------------------
 -- Vector
@@ -81,16 +116,6 @@ allocateVectorObject om mem p sz = liftM VectorObject <$> allocateVector om mem 
 releaseVector :: ObjectManager -> Vector -> IO ()
 releaseVector om v = releaseObject om (VectorObject v)
 
-lockVector :: ObjectManager -> LockMode -> Vector -> IO ()
-lockVector om mode v = void $ atomically $ lockRegion rm mode (vectorBuffer v) (vectorRegion v)
-   where
-      rm = regionLockManager om
-   
-unlockVector :: ObjectManager -> LockMode -> Vector -> IO ()
-unlockVector om mode v = atomically $ unlockRegion rm mode (vectorBuffer v) (vectorRegion v)
-   where
-      rm = regionLockManager om
-
 ------------------------------------------
 -- Matrix
 --
@@ -114,13 +139,3 @@ allocateMatrixObject om mem p width height padding = liftM MatrixObject <$> allo
 
 releaseMatrix :: ObjectManager -> Matrix -> IO ()
 releaseMatrix om v = releaseObject om (MatrixObject v)
-
-lockMatrix :: ObjectManager -> LockMode -> Matrix -> IO ()
-lockMatrix om mode v = void $ atomically $ lockRegion rm mode (matrixBuffer v) (matrixRegion v)
-   where
-      rm = regionLockManager om
-
-unlockMatrix :: ObjectManager -> LockMode -> Matrix -> IO ()
-unlockMatrix om mode v = atomically $ unlockRegion rm mode (matrixBuffer v) (matrixRegion v)
-   where
-      rm = regionLockManager om

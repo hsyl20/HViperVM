@@ -152,6 +152,7 @@ executable KernelObjectOpenCLTest
   ghc-options: -Wall -threaded
   build-depends: 
     base,
+    stm,
     ViperVM
 
 executable RuntimeTest

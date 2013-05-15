@@ -8,6 +8,7 @@ import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Platform.Primitive as Prim
 
 import Control.Monad
+import Control.Concurrent.STM
 
 main :: IO ()
 main = do
@@ -50,8 +51,12 @@ main = do
       Just b <- allocateMatrixObject om mem Prim.Float w h padding
       Just c <- allocateMatrixObject om mem Prim.Float w h padding
 
-      let (params, roRegions, rwRegions) = paramsFromObjects [a,b,c]
+      atomically $ do
+         lockObjectRetry om ReadOnly a
+         lockObjectRetry om ReadOnly b
+         lockObjectRetry om ReadWrite c
 
+      let (params, roRegions, rwRegions) = paramsFromObjects [a,b,c]
       executeKernel km proc ker roRegions rwRegions params
 
       forM_ [a,b,c] (releaseObject om)
