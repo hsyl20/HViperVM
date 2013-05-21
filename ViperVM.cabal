@@ -35,6 +35,8 @@ library
     ViperVM.Platform.ObjectManager
     ViperVM.Platform.ObjectKernel
     ViperVM.Platform.LockMode
+    ViperVM.Platform.SharedObject
+    ViperVM.Platform.SharedObjectManager
     ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
     ViperVM.Platform.Primitive
