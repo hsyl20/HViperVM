@@ -38,7 +38,7 @@ transfer :: DirectRegionTransfer -> IO RegionTransferResult
 transfer dt = case dt of
 
    -- Host --> CL, Region1D, Region1D
-   DirectRegionTransfer (CLLink lib cq HostMemory (CLMemory {})) (HostBuffer _ ptr) (Region1D soff sz) (CLBuffer _ _ buf) (Region1D doff _) -> do
+   DirectRegionTransfer (CLLink lib cq HostMemory (CLMemory {})) (HostBuffer _ ptr) (Region1D soff sz) (CLBuffer _ _ buf _) (Region1D doff _) -> do
       let srcptr = plusPtr ptr (fromIntegral soff)
       e <- clEnqueueWriteBuffer lib cq buf True doff sz srcptr []
       void $ clWaitForEvents lib [e]
@@ -46,7 +46,7 @@ transfer dt = case dt of
       return RegionTransferSuccess
 
    -- CL --> Host, Region1D, Region1D
-   DirectRegionTransfer (CLLink lib cq (CLMemory {}) HostMemory) (CLBuffer _ _ buf) (Region1D soff sz) (HostBuffer _ ptr) (Region1D doff _) -> do
+   DirectRegionTransfer (CLLink lib cq (CLMemory {}) HostMemory) (CLBuffer _ _ buf _) (Region1D soff sz) (HostBuffer _ ptr) (Region1D doff _) -> do
       let dstptr = plusPtr ptr (fromIntegral doff)
       e <- clEnqueueReadBuffer lib cq buf True soff sz dstptr []
       void $ clWaitForEvents lib [e]
