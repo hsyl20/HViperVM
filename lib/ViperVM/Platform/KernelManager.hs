@@ -48,7 +48,7 @@ data KernelInfo = KernelInfo {
 
 createKernelManager :: RegionLockManager -> IO KernelManager
 createKernelManager rm = do
-   let pf = getPlatform rm
+   let pf = getRegionManagerPlatform rm
 
    -- Create proc threads
    threads <- forM (processors pf) $ \proc -> do

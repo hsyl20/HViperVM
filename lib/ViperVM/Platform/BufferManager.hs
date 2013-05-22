@@ -1,6 +1,9 @@
+-- | A buffer manager maintains the set of allocated buffers in each memory
+--
 module ViperVM.Platform.BufferManager (
-   BufferManager, createBufferManager, allocateBuffer, releaseBuffer, memoryBuffers,
-   getPlatform
+   BufferManager, createBufferManager, releaseBufferManager,
+   allocateBuffer, releaseBuffer,
+   getMemoryBuffers, getBufferManagerPlatform
 ) where
 
 import ViperVM.Platform.Memory
@@ -17,12 +20,17 @@ import Data.Set (Set)
 import Data.Traversable (forM)
 import Data.Foldable (forM_)
 
+-- | A buffer manager
+--
+-- Use 'allocateBuffer' and 'releaseBuffer' instead of
+-- 'ViperVM.Platform.Buffer.allocate' and 'ViperVM.Platform.Buffer.release'
+-- otherwise buffers will not be known by the buffer manager
 data BufferManager = BufferManager {
                         platform :: Platform,
                         buffers :: Map Memory (TSet Buffer)
                      }
 
--- | Initialize a new memory manager
+-- | Initialize a new buffer manager
 createBufferManager :: Platform -> IO BufferManager
 createBufferManager pf = do
    let mems = memories pf
@@ -30,10 +38,13 @@ createBufferManager pf = do
       
    return $ BufferManager pf bufs
 
+-- | Release a buffer manager
+releaseBufferManager :: BufferManager -> IO ()
+releaseBufferManager _ = return ()
 
 -- | Retrieve platform used to create the buffer manager
-getPlatform :: BufferManager -> Platform
-getPlatform = platform
+getBufferManagerPlatform :: BufferManager -> Platform
+getBufferManagerPlatform = platform
 
 -- | Allocate a buffer in a memory
 allocateBuffer :: BufferManager -> Memory -> Word64 -> IO (Maybe Buffer)
@@ -56,5 +67,5 @@ releaseBuffer mm b = do
    Buffer.release b
 
 -- | Retrieved allocated buffers in a memory
-memoryBuffers :: BufferManager -> Memory -> STM (Set Buffer)
-memoryBuffers mm m = readTVar $ (buffers mm ! m)
+getMemoryBuffers :: BufferManager -> Memory -> STM (Set Buffer)
+getMemoryBuffers mm m = readTVar $ (buffers mm ! m)

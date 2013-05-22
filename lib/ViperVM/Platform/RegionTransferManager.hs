@@ -35,7 +35,7 @@ data PrepareRegionTransferResult = PrepareSuccess |
 -- | Initialize a new transfer manager
 createRegionTransferManager :: RegionLockManager -> IO RegionTransferManager
 createRegionTransferManager rm = do
-   let pf = getPlatform rm
+   let pf = getRegionManagerPlatform rm
 
    -- Create transfer threads
    threads <- forM (links pf) $ \link -> do

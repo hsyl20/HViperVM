@@ -1,6 +1,6 @@
 module ViperVM.Platform.RegionLockManager (
    RegionLockManager, RegionLockResult(..), BufferReleaseResult(..), LockMode(..),
-   createRegionLockManager, allocateBuffer, releaseBuffer, bufferLockedRegions, getPlatform,
+   createRegionLockManager, allocateBuffer, releaseBuffer, bufferLockedRegions, getRegionManagerPlatform,
    isLocked, lockRegion, lockRegions, unlockRegion, unlockRegions
 ) where
 
@@ -37,8 +37,8 @@ createRegionLockManager :: BM.BufferManager -> IO RegionLockManager
 createRegionLockManager b = atomically (RegionLockManager b <$> TMap.empty)
 
 -- | Retrive platform used to create the buffer manager associated to this region manager
-getPlatform :: RegionLockManager -> Platform
-getPlatform rm = BM.getPlatform (bufferManager rm)
+getRegionManagerPlatform :: RegionLockManager -> Platform
+getRegionManagerPlatform rm = BM.getBufferManagerPlatform (bufferManager rm)
 
 -- | Allocate a buffer in memory with region support)
 allocateBuffer :: RegionLockManager -> Memory -> Word64 -> IO (Maybe Buffer)

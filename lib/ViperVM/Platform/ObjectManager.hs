@@ -11,7 +11,7 @@ import ViperVM.Platform.Object
 import ViperVM.Platform.Primitive
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
-import ViperVM.Platform.RegionLockManager (RegionLockManager, LockMode(..), getPlatform, allocateBuffer)
+import ViperVM.Platform.RegionLockManager (RegionLockManager, LockMode(..), getRegionManagerPlatform, allocateBuffer)
 import ViperVM.Platform.Platform
 import ViperVM.Platform.KernelManager
 
@@ -36,7 +36,7 @@ data ObjectManager = ObjectManager {
 
 createObjectManager :: RegionLockManager -> KernelManager -> IO ObjectManager
 createObjectManager rm km = do
-   let mems = memories (getPlatform rm)
+   let mems = memories (getRegionManagerPlatform rm)
    (objs,lcks) <- atomically $ do
       os <- forM mems (const TSet.empty)
       ls <- TMap.empty
