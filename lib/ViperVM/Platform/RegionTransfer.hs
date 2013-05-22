@@ -29,7 +29,7 @@ checkRegionTransfer (RegionTransfer b1 r1 ((RegionTransferStep l b2 r2):xs)) = w
       (lm1,lm2) = linkEndpoints l
       m1 = getBufferMemory b1
       m2 = getBufferMemory b2
-      v = lm1 == m1 && lm2 == m2 && checkCompatibleRegions r1 r2
+      v = lm1 == m1 && lm2 == m2 && regionsWithSameShape r1 r2
       w = v && checkRegionTransfer (RegionTransfer b2 r2 xs)
 
                       

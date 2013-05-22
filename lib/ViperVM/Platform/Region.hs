@@ -1,20 +1,31 @@
-module ViperVM.Platform.Region where
+-- | A region is the shape of a set of memory cells in a buffer with an offset
+module ViperVM.Platform.Region (
+        Region(..), getRegionOffset,
+        regionsWithSameShape, overlapsAny, overlaps
+) where
 
 import Data.Word
 
-type Offset = Word64
-type Size = Word64
-type Padding = Word64
-type RowCount = Word64
+type Offset = Word64    -- ^ Offset in bytes
+type Size = Word64      -- ^ Size in bytes
+type Padding = Word64   -- ^ Padding (may be changed to a smaller type in the future)
+type RowCount = Word64  -- ^ Number of rows
 
-data Region = Region1D Offset Size |
-              Region2D Offset RowCount Size Padding
+-- | Shape of a set of memory cells at a given offset
+data Region = Region1D Offset Size                    -- ^ Contiguous set of cells
+            | Region2D Offset RowCount Size Padding   -- ^ Rectangular set of cells
               deriving (Eq,Ord,Show)
 
-checkCompatibleRegions :: Region -> Region -> Bool
-checkCompatibleRegions (Region1D _ s1) (Region1D _ s2) = s1 == s2
-checkCompatibleRegions (Region2D _ idx1 s1 _) (Region2D _ idx2 s2 _) = (s1 == s2) && (idx1 == idx2)
-checkCompatibleRegions _ _ = False
+-- | Check if two regions have the same shape (discarding offset and padding)
+regionsWithSameShape :: Region -> Region -> Bool
+regionsWithSameShape (Region1D _ s1) (Region1D _ s2) = s1 == s2
+regionsWithSameShape (Region2D _ idx1 s1 _) (Region2D _ idx2 s2 _) = (s1 == s2) && (idx1 == idx2)
+regionsWithSameShape _ _ = False
+
+-- | Return region offset in buffer
+getRegionOffset :: Region -> Offset
+getRegionOffset (Region1D off _) = off
+getRegionOffset (Region2D off _ _ _) = off
 
 
 -- | Retrieve regions that overlap with the given region

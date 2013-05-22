@@ -123,7 +123,7 @@ releaseVector om v = releaseObject om (VectorObject v)
 -- Matrix
 --
 
-allocateMatrix :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Padding -> IO (Maybe Matrix)
+allocateMatrix :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Word64 -> IO (Maybe Matrix)
 allocateMatrix om mem p width height padding = do
    let rm = regionLockManager om
        rowSize = width * (sizeOf p)
@@ -137,7 +137,7 @@ allocateMatrix om mem p width height padding = do
 
    return ret
 
-allocateMatrixObject :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Padding -> IO (Maybe Object)
+allocateMatrixObject :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Word64 -> IO (Maybe Object)
 allocateMatrixObject om mem p width height padding = liftM MatrixObject <$> allocateMatrix om mem p width height padding
 
 releaseMatrix :: ObjectManager -> Matrix -> IO ()
