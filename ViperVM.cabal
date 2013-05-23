@@ -76,6 +76,7 @@ library
     ViperVM.Library.FloatMatrixAdd
 
     ViperVM.Parsing.Parser
+    ViperVM.Parsing.Lisp
 
   -- other-modules:       
   build-depends:       
@@ -92,6 +93,7 @@ library
     stm ==2.4.*,
     monad-loops,
     random,
+    parsec,
     future
 
   build-tools: 
@@ -172,6 +174,14 @@ executable RuntimeTest
 
 executable GraphReduce
   main-is: GraphReducer.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    ViperVM
+
+executable LispParser
+  main-is: LispParser.hs
   hs-source-dirs: apps
   ghc-options: -Wall -threaded
   build-depends: 

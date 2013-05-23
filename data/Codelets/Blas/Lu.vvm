@@ -2,3 +2,5 @@ module Blas where
 
 dummy :: Int -> Int -> Int -> Int
 dummy x y z = (x + y) * (x +z)
+
+main = putStrln (show 10)
