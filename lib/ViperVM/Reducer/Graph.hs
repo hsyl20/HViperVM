@@ -4,8 +4,11 @@ import Control.Concurrent.STM
 import Control.Monad (forM)
 import Control.Concurrent.Future
 import Control.Applicative
+import Control.Concurrent
+import System.Random
 import Text.Printf
 import Data.Map as Map
+
 
 type NodeId = Int
 type DataId = Int
@@ -76,6 +79,7 @@ reduceExpr (App op args) = do
         case redex of
                 [Symbol s, Data x, Data y]  -> do
                         putStrLn (printf "Submit task %s with args %d %d then wait" s x y)
+                        threadDelay =<< ((`mod` 3000000) <$> randomIO)
                         return (Data (10+x+y))
                 _ -> do
                         error "Don't know what to do with this"

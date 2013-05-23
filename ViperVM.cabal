@@ -91,6 +91,7 @@ library
     haskell-src-exts ==1.13.*,
     stm ==2.4.*,
     monad-loops,
+    random,
     future
 
   build-tools: 
