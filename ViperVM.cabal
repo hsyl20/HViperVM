@@ -50,6 +50,7 @@ library
     ViperVM.Platform.Platform
 
     ViperVM.Event
+    ViperVM.Reducer.Graph
 
     ViperVM.Runtime
     ViperVM.Runtime.Data
@@ -89,7 +90,8 @@ library
     haskell-src-meta ==0.6.*,
     haskell-src-exts ==1.13.*,
     stm ==2.4.*,
-    monad-loops
+    monad-loops,
+    future
 
   build-tools: 
     c2hs
@@ -161,6 +163,14 @@ executable KernelObjectOpenCLTest
 
 executable RuntimeTest
   main-is: RuntimeTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    ViperVM
+
+executable GraphReduce
+  main-is: GraphReducer.hs
   hs-source-dirs: apps
   ghc-options: -Wall -threaded
   build-depends: 
