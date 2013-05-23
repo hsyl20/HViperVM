@@ -90,9 +90,11 @@ reduceExpr ea@(App op args) = do
         redex <- forM threads get
 
         case redex of
-                [Abs e, e'] -> reduceNode (shiftReplaceNode 0 e' e)
+                [Abs e, e'] -> reduceNode =<< shiftReplaceNode 0 e' e
 
-                Abs e:e':_ -> reduceExpr $ App (shiftReplaceNode 0 e' e) (tail args)
+                Abs e:e':_ -> do
+                  op'' <- shiftReplaceNode 0 e' e
+                  reduceExpr $ App op'' (tail args)
 
                 App op2 args2:_ -> reduceExpr $ App op2 (args2 ++ args)
 
@@ -103,17 +105,20 @@ reduceExpr ea@(App op args) = do
 
                 _ -> return ea
 
-shiftReplaceNode :: Int -> Expr -> Node-> Node
-shiftReplaceNode i e n = Node (shiftReplace i e (getNodeExpr n)) (getNodeVar n)
+shiftReplaceNode :: Int -> Expr -> Node-> IO Node
+shiftReplaceNode i e n = newNodeIO =<< shiftReplace i e (getNodeExpr n)
 
 -- | Replace Var with given Expr and shift all other Vars
-shiftReplace :: Int -> Expr -> Expr -> Expr
-shiftReplace i n (Var j) | i == j = n
-                         | j > i = Var (j-1)
-                         | j < i = Var j
-shiftReplace i n (Abs e) = Abs (shiftReplaceNode (i+1) n e)
-shiftReplace i n (App op args) = App (shiftReplaceNode i n op) (fmap (shiftReplaceNode i n) args)
-shiftReplace _ _ e = e
+shiftReplace :: Int -> Expr -> Expr -> IO Expr
+shiftReplace i n (Var j) | i == j = return n
+                         | j > i = return (Var (j-1))
+                         | j < i = return (Var j)
+shiftReplace i n (Abs e) = Abs <$> shiftReplaceNode (i+1) n e
+shiftReplace i n (App op args) = do
+   op' <- shiftReplaceNode i n op
+   args' <- forM args (shiftReplaceNode i n)
+   return (App op' args')
+shiftReplace _ _ e = return e
 
 
 cse :: Node -> Node
