@@ -23,11 +23,22 @@ instance Eq Node where
 instance Ord Node where
    compare a b = compare (getNodeExpr a) (getNodeExpr b)
 
+instance Show Node where
+   show (Node x _) = show x
+
 data Expr = Symbol String 
           | App Node [Node]
           | Data DataId
+          | Var Int
+          | Abs Node
           deriving (Eq,Ord)
 
+instance Show Expr where
+   show (Symbol s) = s
+   show (App op args) = "(" ++ show op ++ (concat $ fmap (\x -> " " ++ show x) args) ++ ")"
+   show (Data i) = "#" ++ show i
+   show (Var i) = "v" ++ show i
+   show (Abs n) = "λ. " ++ show n
 
 newNode :: Expr -> STM Node
 newNode e = Node e <$> (newTVar Inactive)
@@ -68,8 +79,10 @@ reduceNode node = do
 
 reduceExpr :: Expr -> IO Expr
 reduceExpr e@(Symbol {}) = return e
+reduceExpr e@(Var {}) = return e
 reduceExpr e@(Data {}) = return e
-reduceExpr (App op args) = do
+reduceExpr e@(Abs {} ) = return e
+reduceExpr ea@(App op args) = do
         op' <- forkPromise (reduceNode op)
         args' <- forM args (forkPromise . reduceNode)
 
@@ -77,12 +90,30 @@ reduceExpr (App op args) = do
         redex <- forM threads get
 
         case redex of
+                [Abs e, e'] -> reduceNode (shiftReplaceNode 0 e' e)
+
+                Abs e:e':_ -> reduceExpr $ App (shiftReplaceNode 0 e' e) (tail args)
+
+                App op2 args2:_ -> reduceExpr $ App op2 (args2 ++ args)
+
                 [Symbol s, Data x, Data y]  -> do
                         putStrLn (printf "Submit task %s with args %d %d then wait" s x y)
-                        threadDelay =<< ((`mod` 3000000) <$> randomIO)
+                        threadDelay =<< ((`mod` 1000000) <$> randomIO)
                         return (Data (10+x+y))
-                _ -> do
-                        error "Don't know what to do with this"
+
+                _ -> return ea
+
+shiftReplaceNode :: Int -> Expr -> Node-> Node
+shiftReplaceNode i e n = Node (shiftReplace i e (getNodeExpr n)) (getNodeVar n)
+
+-- | Replace Var with given Expr and shift all other Vars
+shiftReplace :: Int -> Expr -> Expr -> Expr
+shiftReplace i n (Var j) | i == j = n
+                         | j > i = Var (j-1)
+                         | j < i = Var j
+shiftReplace i n (Abs e) = Abs (shiftReplaceNode (i+1) n e)
+shiftReplace i n (App op args) = App (shiftReplaceNode i n op) (fmap (shiftReplaceNode i n) args)
+shiftReplace _ _ e = e
 
 
 cse :: Node -> Node
@@ -95,7 +126,9 @@ cse = snd . cse' Map.empty
          where
             (ns,n) = case getNodeExpr node of
                    Symbol {} -> (nodes,node)
+                   Var {} -> (nodes,node)
                    Data {}   -> (nodes,node)
+                   Abs e -> let (_,n') = cse' nodes e in (nodes, Node (Abs n') (getNodeVar node)) -- we do not return ns as it could contain Var
                    App op args -> (ns2, Node (App op' args') (getNodeVar node))
                         where
                            (ns1,op') = cse' nodes op
