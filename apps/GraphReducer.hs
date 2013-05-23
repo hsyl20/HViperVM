@@ -9,10 +9,12 @@ main = do
    plus <- newNodeIO (Symbol "+")
    mul <- newNodeIO (Symbol "*")
    apb <- newNodeIO (App plus [a,b])
+   apb' <- newNodeIO (App plus [a,b])
    apc <- newNodeIO (App plus [a,c])
    apbmapc <- newNodeIO (App mul [apb,apc])
+   apbmapcmapb <- newNodeIO (App mul [apbmapc,apb'])
 
-   e <- reduceNode apbmapc
+   e <- reduceNode (cse apbmapcmapb)
 
    case e of
       Data x -> putStrLn $ "Data " ++ show x

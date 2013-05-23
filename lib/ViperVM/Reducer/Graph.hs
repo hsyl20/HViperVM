@@ -5,6 +5,7 @@ import Control.Monad (forM)
 import Control.Concurrent.Future
 import Control.Applicative
 import Text.Printf
+import Data.Map as Map
 
 type NodeId = Int
 type DataId = Int
@@ -12,10 +13,17 @@ type DataId = Int
 data Status = Inactive | Computing | Computed Expr
 
 data Node = Node Expr (TVar Status)
+            
+instance Eq Node where
+   (==) a b = getNodeExpr a == getNodeExpr b
+
+instance Ord Node where
+   compare a b = compare (getNodeExpr a) (getNodeExpr b)
 
 data Expr = Symbol String 
           | App Node [Node]
           | Data DataId
+          deriving (Eq,Ord)
 
 
 newNode :: Expr -> STM Node
@@ -23,6 +31,9 @@ newNode e = Node e <$> (newTVar Inactive)
 
 newNodeIO :: Expr -> IO Node
 newNodeIO = atomically . newNode
+
+getNodeVar :: Node -> TVar Status
+getNodeVar (Node _ stat) = stat
 
 getNodeStatus :: Node -> STM Status
 getNodeStatus (Node _ stat) = readTVar stat
@@ -68,3 +79,23 @@ reduceExpr (App op args) = do
                         return (Data (10+x+y))
                 _ -> do
                         error "Don't know what to do with this"
+
+
+cse :: Node -> Node
+cse = snd . cse' Map.empty
+   where
+      cse' :: Map Node Node -> Node -> (Map Node Node, Node)
+      cse' nodes node = case Map.lookup n ns of
+                            Just a -> (ns,a)
+                            Nothing -> (insert n n ns, n)
+         where
+            (ns,n) = case getNodeExpr node of
+                   Symbol {} -> (nodes,node)
+                   Data {}   -> (nodes,node)
+                   App op args -> (ns2, Node (App op' args') (getNodeVar node))
+                        where
+                           (ns1,op') = cse' nodes op
+                           (ns2,args') = f ns1 args []
+                           f ns3 [] as = (ns3,as)
+                           f ns3 (x:xs) as = let (ns4,a) = cse' ns3 x in f ns4 xs (a:as)
+
