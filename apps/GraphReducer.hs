@@ -6,6 +6,7 @@ main = do
    a <- newNodeIO (Data 0)
    b <- newNodeIO (Data 1)
    c <- newNodeIO (Data 2)
+   d <- newNodeIO (Data 3)
    plus <- newNodeIO (Symbol "+")
    mul <- newNodeIO (Symbol "*")
    apb <- newNodeIO (App plus [a,b])
@@ -26,10 +27,12 @@ main = do
    apv0v1 <- newNodeIO (Abs pv0v1)
    add <- newNodeIO (Abs apv0v1)
    addab <- newNodeIO (App add [a,b])
+   addcd <- newNodeIO (App add [c,d])
+   addabcd <- newNodeIO (App add [addab,addcd])
 
-   putStrLn (show addab)
+   putStrLn (show addabcd)
 
-   f <- reduceNode (addab)
+   f <- reduceNode (addabcd)
    case f of
       Data x -> putStrLn $ "Data " ++ show x
       res -> putStrLn ("Reduced to something else than a data: " ++ show res)

@@ -101,7 +101,7 @@ reduceExpr ea@(App op args) = do
                 [Symbol s, Data x, Data y]  -> do
                         putStrLn (printf "Submit task %s with args %d %d then wait" s x y)
                         threadDelay =<< ((`mod` 1000000) <$> randomIO)
-                        return (Data (10+x+y))
+                        return (Data (x+y))
 
                 _ -> return ea
 
