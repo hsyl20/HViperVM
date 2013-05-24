@@ -61,7 +61,7 @@ parseExpr = parseAtom
                return x
 
 parseModule :: Parser [LispVal]
-parseModule = many (parseExpr <* skipMany space)
+parseModule = many (parseExpr <* skipMany space) <* eof
 
 readExpr :: String -> IO Node
 readExpr input = case parse parseExpr "lisp" input of
