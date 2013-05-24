@@ -3,7 +3,7 @@ module ViperVM.Parsing.Lisp where
 import ViperVM.Reducer.Graph
 
 import Control.Monad (void, forM, liftM, foldM)
-import Control.Applicative ( (<$>), (<*>) )
+import Control.Applicative ( (<$>), (<*>) , (<*))
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Map as Map
 
@@ -59,7 +59,7 @@ parseExpr = parseAtom
                return x
 
 parseModule :: Parser [LispVal]
-parseModule = many parseExpr
+parseModule = many (parseExpr <* skipMany space)
 
 readExpr :: String -> IO Node
 readExpr input = case parse parseExpr "lisp" input of

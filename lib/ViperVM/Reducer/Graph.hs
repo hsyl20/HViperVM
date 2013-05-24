@@ -91,6 +91,9 @@ reduceExpr ctx ea@(App op args) = do
    op' <- get =<< forkPromise (reduceNode ctx op)
 
    case op' of
+
+      -- Beta reduction
+      
       Abs e -> case args of
                   [] -> return ea
                   [x] -> do
@@ -99,7 +102,11 @@ reduceExpr ctx ea@(App op args) = do
                      op'' <- shiftReplace 0 x e
                      reduceExpr ctx $ App op'' xs
 
+      -- Application composition
+   
       App op2 args2 -> reduceExpr ctx $ App op2 (args2 ++ args)
+
+      -- Binary operations
 
       Symbol "+" -> evalBinOp ea ctx args $ \case
             [ConstInteger x, ConstInteger y] -> return (ConstInteger (x+y))
@@ -113,6 +120,25 @@ reduceExpr ctx ea@(App op args) = do
             [ConstInteger x, ConstInteger y] -> return (ConstInteger (x*y))
             a -> error ("Do not know how to multiply this: " ++ show a)
 
+      Symbol "==" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstBool (x == y))
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Symbol "/=" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstBool (x /= y))
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      -- Conditions
+
+      Symbol "if" | length args == 3 -> do
+            let [cond,thn,els] = args
+            cond' <- reduceNode ctx cond
+            case cond' of
+               ConstBool True -> reduceNode ctx thn
+               ConstBool False -> reduceNode ctx els
+               _ -> error "If condition does not evaluate to a boolean"
+
+      -- Kernel execution
       Symbol s -> do
             -- TODO: kernel launching
             args' <- reduceNodes ctx args
