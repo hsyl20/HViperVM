@@ -1,6 +1,7 @@
 module ViperVM.Parsing.Lisp where
 
-import ViperVM.Reducer.Graph
+import ViperVM.Reducer.Graph (newNodeIO, Node)
+import qualified ViperVM.Reducer.Graph as G
 
 import Control.Monad (void, forM, liftM, foldM)
 import Control.Applicative ( (<$>), (<*>) , (<*))
@@ -12,10 +13,11 @@ data LispVal = Atom String
               | Number Integer
               | String String
               | Bool Bool
+              | Quote LispVal
               deriving (Show)
 
 symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+symbol = oneOf "!#$%&|*+-/:<=>?@^_~."
 
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -45,7 +47,7 @@ parseQuoted :: Parser LispVal
 parseQuoted = do
    void $ char '\''
    x <- parseExpr
-   return $ List [Atom "quote", x]
+   return $ Quote x
 
 
 parseExpr :: Parser LispVal
@@ -81,13 +83,13 @@ makeLambda (List [Atom "defun", Atom name, List args, String _, List body]) =
    makeLambda (List [Atom "defun", Atom name, List args, List body])
 
 makeLambda (List [Atom "defun", Atom name, List args, body]) = do
-   argNodes <- forM [0.. (length args)-1] (newNodeIO . Var)
+   argNodes <- forM [0.. (length args)-1] (newNodeIO . G.Var)
 
    let argNames = fmap (\(Atom x) -> x) args
        ctx = Map.fromList $ argNames `zip` (reverse argNodes)
    
    bodyNode <- makeExpr ctx body
-   node <- foldM (\n _ -> newNodeIO (Abs n)) bodyNode argNodes
+   node <- foldM (\n _ -> newNodeIO (G.Abs n)) bodyNode argNodes
    return (name, node)
 
 makeLambda _ = error "Module should only contain function declarations"
@@ -99,12 +101,14 @@ makeExpr :: Map String Node -> LispVal -> IO Node
 
 makeExpr ctx (Atom s) = case Map.lookup s ctx of
                            Just n -> return n
-                           Nothing -> newNodeIO (Symbol s)
+                           Nothing -> newNodeIO (G.Symbol s)
 
 makeExpr ctx (List (x:xs)) = 
-   newNodeIO =<< (App <$> makeExpr ctx x <*> forM xs (makeExpr ctx))
+   newNodeIO =<< (G.App <$> makeExpr ctx x <*> forM xs (makeExpr ctx))
 
 makeExpr _ (List []) = error "Empty lists are not supported"
 makeExpr _ (String _) = error "Strings are not supported"
-makeExpr _ (Number i) = newNodeIO (ConstInteger i)
-makeExpr _ (Bool b) = newNodeIO (ConstBool b)
+makeExpr _ (Number i) = newNodeIO (G.ConstInteger i)
+makeExpr _ (Bool b) = newNodeIO (G.ConstBool b)
+makeExpr ctx (Quote (List x)) = newNodeIO =<< (G.List <$> forM x (makeExpr ctx))
+makeExpr _ (Quote a) = error ("Thou shalt not quote " ++ show a)

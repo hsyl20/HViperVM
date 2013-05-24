@@ -34,6 +34,7 @@ data Expr = Symbol String
           | Abs Node
           | ConstInteger Integer
           | ConstBool Bool
+          | List [Node]
           deriving (Eq,Ord)
 
 instance Show Expr where
@@ -44,6 +45,7 @@ instance Show Expr where
    show (Abs n) = "λ. " ++ show n
    show (ConstInteger i) = show i
    show (ConstBool i) = show i
+   show (List i) = show i
 
 newNode :: Expr -> STM Node
 newNode e = Node e <$> (newTVar Inactive)
@@ -147,6 +149,18 @@ reduceExpr ctx ea@(App op args) = do
             [ConstInteger x, ConstInteger y] -> return (ConstBool (x <= y))
             a -> error ("Do not know how to compare this: " ++ show a)
 
+      Symbol "List.head" -> reduceNode ctx (head args) >>= \case
+               List [] -> error ("List.head applied to an empty list")
+               List (x:_) -> reduceNode ctx x
+               a -> error ("List.head can only be applied to a list (found " ++ show a ++")")
+
+      Symbol "List.tail" -> reduceNode ctx (head args) >>= \case
+               List (_:xs) -> reduceNode ctx =<< newNodeIO (List xs)
+               a -> error ("List.tail can only be applied to a list (found " ++ show a ++")")
+
+      Symbol "List.null" -> reduceNode ctx (head args) >>= \case
+               List xs -> return (ConstBool $ Prelude.null xs)
+               a -> error ("List.null can only be applied to a list (found " ++ show a ++")")
 
       -- Conditions
 

@@ -17,7 +17,12 @@ sample1 = "(defun f (a b c d)\
           \     \"Recursive higher-order function\"\
           \     (if (/= n 0)\
           \           (f (recf f init a (- n 1)) a)\
-          \           init))"
+          \           init))\
+          \(defun sum (xs)\
+          \     \"Sum numbers in the list\"\
+          \     (if (List.null xs)\
+          \           0\
+          \           (+ (List.head xs) (sum (List.tail xs))))))"
 
 
 
@@ -31,6 +36,7 @@ main = do
    ch "(+ (f 5 1 4 3) (f 2 1 3 1))"
    ch "(rec 5 10)"
    ch "(recf - 1000 5 10)"
+   ch "(sum '(1 2 3 4 5))"
 
 
 
