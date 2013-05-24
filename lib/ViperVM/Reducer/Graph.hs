@@ -31,6 +31,8 @@ data Expr = Symbol String
           | Data DataId
           | Var Int
           | Abs Node
+          | ConstInteger Integer
+          | ConstBool Bool
           deriving (Eq,Ord)
 
 instance Show Expr where
@@ -39,6 +41,8 @@ instance Show Expr where
    show (Data i) = "#" ++ show i
    show (Var i) = "v" ++ show i
    show (Abs n) = "λ. " ++ show n
+   show (ConstInteger i) = show i
+   show (ConstBool i) = show i
 
 newNode :: Expr -> STM Node
 newNode e = Node e <$> (newTVar Inactive)
@@ -58,45 +62,54 @@ setNodeStatus (Node _ stat) s = writeTVar stat s
 getNodeExpr :: Node -> Expr
 getNodeExpr (Node e _) = e
 
-reduceNode :: Node -> IO Expr
-reduceNode node = do
+reduceNode :: Map String Node -> Node -> IO Expr
+reduceNode ctx node = do
 
-        stat <- atomically $ do
-                stat <- getNodeStatus node
-                case stat of
-                        Computing -> retry  -- Block if already computing
-                        Inactive -> setNodeStatus node Computing >> return Computing
-                        Computed _ -> return stat
-        
-        case stat of
-                Inactive -> error "Should not be inactive"
-                Computed e -> return e
-                Computing -> do
-                        e <- reduceExpr (getNodeExpr node)
-                        atomically $ setNodeStatus node (Computed e)
-                        return e
+   stat <- atomically $ do
+          stat <- getNodeStatus node
+          case stat of
+                  Computing -> retry  -- Block if already computing
+                  Inactive -> setNodeStatus node Computing >> return Computing
+                  Computed _ -> return stat
+  
+   case stat of
+          Inactive -> error "Should not be inactive"
+          Computed e -> return e
+          Computing -> do
+                  e <- reduceExpr ctx (getNodeExpr node)
+                  atomically $ setNodeStatus node (Computed e)
+                  return e
 
 
-reduceExpr :: Expr -> IO Expr
-reduceExpr e@(Symbol {}) = return e
-reduceExpr e@(Var {}) = return e
-reduceExpr e@(Data {}) = return e
-reduceExpr e@(Abs {} ) = return e
-reduceExpr ea@(App op args) = do
-        op' <- forkPromise (reduceNode op)
-        args' <- forM args (forkPromise . reduceNode)
+reduceExpr :: Map String Node -> Expr -> IO Expr
+
+reduceExpr ctx (Symbol s) | Map.member s ctx =
+   return $ getNodeExpr (ctx Map.! s)
+
+reduceExpr ctx ea@(App op args) = do
+        op' <- forkPromise (reduceNode ctx op)
+        args' <- forM args (forkPromise . reduceNode ctx)
 
         let threads = op':args'
         redex <- forM threads get
 
         case redex of
-                [Abs e, e'] -> reduceNode =<< shiftReplaceNode 0 e' e
+                [Abs e, e'] -> reduceNode ctx =<< shiftReplaceNode 0 e' e
 
                 Abs e:e':_ -> do
                   op'' <- shiftReplaceNode 0 e' e
-                  reduceExpr $ App op'' (tail args)
+                  reduceExpr ctx $ App op'' (tail args)
 
-                App op2 args2:_ -> reduceExpr $ App op2 (args2 ++ args)
+                App op2 args2:_ -> reduceExpr ctx $ App op2 (args2 ++ args)
+
+                [Symbol "+", ConstInteger x, ConstInteger y] -> 
+                        return (ConstInteger (x+y))
+
+                [Symbol "-", ConstInteger x, ConstInteger y] -> 
+                        return (ConstInteger (x-y))
+
+                [Symbol "*", ConstInteger x, ConstInteger y] -> 
+                        return (ConstInteger (x*y))
 
                 [Symbol s, Data x, Data y]  -> do
                         putStrLn (printf "Submit task %s with args %d %d then wait" s x y)
@@ -104,6 +117,8 @@ reduceExpr ea@(App op args) = do
                         return (Data (x+y))
 
                 _ -> return ea
+
+reduceExpr _ e = return e
 
 shiftReplaceNode :: Int -> Expr -> Node-> IO Node
 shiftReplaceNode i e n = newNodeIO =<< shiftReplace i e (getNodeExpr n)
@@ -130,9 +145,6 @@ cse = snd . cse' Map.empty
                             Nothing -> (insert n n ns, n)
          where
             (ns,n) = case getNodeExpr node of
-                   Symbol {} -> (nodes,node)
-                   Var {} -> (nodes,node)
-                   Data {}   -> (nodes,node)
                    Abs e -> let (_,n') = cse' nodes e in (nodes, Node (Abs n') (getNodeVar node)) -- we do not return ns as it could contain Var
                    App op args -> (ns2, Node (App op' args') (getNodeVar node))
                         where
@@ -140,4 +152,5 @@ cse = snd . cse' Map.empty
                            (ns2,args') = f ns1 args []
                            f ns3 [] as = (ns3,as)
                            f ns3 (x:xs) as = let (ns4,a) = cse' ns3 x in f ns4 xs (a:as)
+                   _ -> (nodes,node)
 

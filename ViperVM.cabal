@@ -178,6 +178,7 @@ executable GraphReduce
   ghc-options: -Wall -threaded
   build-depends: 
     base,
+    containers,
     ViperVM
 
 executable LispParser
@@ -186,6 +187,7 @@ executable LispParser
   ghc-options: -Wall -threaded
   build-depends: 
     base,
+    containers,
     ViperVM
 
 executable ParseTest
