@@ -94,6 +94,8 @@ reduceExpr ctx (List xs) =
    -- Deep list evaluation
    List <$> (reduceNodes ctx xs >>= traverse (newNodeIO))
 
+reduceExpr ctx (App op []) = reduceNode ctx op
+
 reduceExpr ctx ea@(App op args) = do
    opFuture <- forkPromise (reduceNode ctx op)
 

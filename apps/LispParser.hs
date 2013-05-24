@@ -20,6 +20,7 @@ main = do
    ch "(sum '(1 2 3 4 5))"
    ch "(sum '((+ 1 2) 3 4 5))"
    ch "(map (+ 1) '(1 2 3 4))"
+   ch "(constant)"
 
 
 
