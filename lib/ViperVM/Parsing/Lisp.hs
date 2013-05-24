@@ -84,7 +84,7 @@ makeLambda (List [Atom "defun", Atom name, List args, body]) = do
    argNodes <- forM [0.. (length args)-1] (newNodeIO . Var)
 
    let argNames = fmap (\(Atom x) -> x) args
-       ctx = Map.fromList $ argNames `zip` argNodes
+       ctx = Map.fromList $ argNames `zip` (reverse argNodes)
    
    bodyNode <- makeExpr ctx body
    node <- foldM (\n _ -> newNodeIO (Abs n)) bodyNode argNodes

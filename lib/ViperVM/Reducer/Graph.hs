@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module ViperVM.Reducer.Graph where
 
 import Control.Concurrent.STM
@@ -87,53 +88,65 @@ reduceExpr ctx (Symbol s) | Map.member s ctx =
    return $ getNodeExpr (ctx Map.! s)
 
 reduceExpr ctx ea@(App op args) = do
-        op' <- forkPromise (reduceNode ctx op)
-        args' <- forM args (forkPromise . reduceNode ctx)
+   op' <- get =<< forkPromise (reduceNode ctx op)
 
-        let threads = op':args'
-        redex <- forM threads get
+   case op' of
+      Abs e -> case args of
+                  [] -> return ea
+                  [x] -> do
+                     reduceNode ctx =<< shiftReplace 0 x e
+                  x:xs -> do
+                     op'' <- shiftReplace 0 x e
+                     reduceExpr ctx $ App op'' xs
 
-        case redex of
-                [Abs e, e'] -> reduceNode ctx =<< shiftReplaceNode 0 e' e
+      App op2 args2 -> reduceExpr ctx $ App op2 (args2 ++ args)
 
-                Abs e:e':_ -> do
-                  op'' <- shiftReplaceNode 0 e' e
-                  reduceExpr ctx $ App op'' (tail args)
+      Symbol "+" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstInteger (x+y))
+            a -> error ("Do not know how to add this: " ++ show a)
 
-                App op2 args2:_ -> reduceExpr ctx $ App op2 (args2 ++ args)
+      Symbol "-" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstInteger (x-y))
+            a -> error ("Do not know how to subtract this: " ++ show a)
 
-                [Symbol "+", ConstInteger x, ConstInteger y] -> 
-                        return (ConstInteger (x+y))
+      Symbol "*" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstInteger (x*y))
+            a -> error ("Do not know how to multiply this: " ++ show a)
 
-                [Symbol "-", ConstInteger x, ConstInteger y] -> 
-                        return (ConstInteger (x-y))
+      Symbol s -> do
+            -- TODO: kernel launching
+            args' <- reduceNodes ctx args
+            putStrLn (printf "Submit task %s with args %s then wait" s (show args'))
+            threadDelay =<< ((`mod` 1000000) <$> randomIO)
+            return (Data 999)
 
-                [Symbol "*", ConstInteger x, ConstInteger y] -> 
-                        return (ConstInteger (x*y))
-
-                [Symbol s, Data x, Data y]  -> do
-                        putStrLn (printf "Submit task %s with args %d %d then wait" s x y)
-                        threadDelay =<< ((`mod` 1000000) <$> randomIO)
-                        return (Data (x+y))
-
-                _ -> return ea
+      _ -> return ea
 
 reduceExpr _ e = return e
 
-shiftReplaceNode :: Int -> Expr -> Node-> IO Node
-shiftReplaceNode i e n = newNodeIO =<< shiftReplace i e (getNodeExpr n)
+evalBinOp :: Expr -> Map String Node -> [Node] -> ([Expr] -> IO Expr) -> IO Expr
+evalBinOp ea ctx args f = if length args /= 2 
+   then return ea
+   else f =<< reduceNodes ctx args
+
+-- | Reduce a list of nodes in parallel (blocking)
+reduceNodes :: Map String Node -> [Node] -> IO [Expr]
+reduceNodes ctx nodes = do
+   nodes' <- forM nodes (forkPromise . reduceNode ctx)
+   forM nodes' get
 
 -- | Replace Var with given Expr and shift all other Vars
-shiftReplace :: Int -> Expr -> Expr -> IO Expr
-shiftReplace i n (Var j) | i == j = return n
-                         | j > i = return (Var (j-1))
-                         | j < i = return (Var j)
-shiftReplace i n (Abs e) = Abs <$> shiftReplaceNode (i+1) n e
-shiftReplace i n (App op args) = do
-   op' <- shiftReplaceNode i n op
-   args' <- forM args (shiftReplaceNode i n)
-   return (App op' args')
-shiftReplace _ _ e = return e
+shiftReplace :: Int -> Node -> Node -> IO Node
+shiftReplace i n e = case getNodeExpr e of
+   (Var j) | i == j  -> return n
+   (Var j) | j > i   -> newNodeIO (Var (j-1))
+   (Var j) | j < i   -> newNodeIO (Var j)
+   (Abs body)        -> newNodeIO =<< Abs <$> shiftReplace (i+1) n body
+   (App op args)     -> do
+                           op' <- shiftReplace i n op
+                           args' <- forM args (shiftReplace i n)
+                           newNodeIO (App op' args')
+   _                 -> return e
 
 
 cse :: Node -> Node
