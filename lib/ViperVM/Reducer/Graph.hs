@@ -9,6 +9,7 @@ import Control.Concurrent
 import System.Random
 import Text.Printf
 import Data.Map as Map
+import Data.Traversable (traverse)
 
 
 type NodeId = Int
@@ -88,6 +89,10 @@ reduceExpr :: Map String Node -> Expr -> IO Expr
 
 reduceExpr ctx (Symbol s) | Map.member s ctx =
    return $ getNodeExpr (ctx Map.! s)
+
+reduceExpr ctx (List xs) = 
+   -- Deep list evaluation
+   List <$> (reduceNodes ctx xs >>= traverse (newNodeIO))
 
 reduceExpr ctx ea@(App op args) = do
    opFuture <- forkPromise (reduceNode ctx op)

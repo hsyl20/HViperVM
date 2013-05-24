@@ -22,7 +22,14 @@ sample1 = "(defun f (a b c d)\
           \     \"Sum numbers in the list\"\
           \     (if (List.null xs)\
           \           0\
-          \           (+ (List.head xs) (sum (List.tail xs))))))"
+          \           (+ (List.head xs) (sum (List.tail xs)))))\
+          \(defun map (f xs)\
+          \     \"Map f on xs\"\
+          \     (if (List.null xs)\
+          \          '()\
+          \          (List.cons\
+          \                (f (List.head xs))\
+          \                (map f (List.tail xs)))))"
 
 
 
@@ -37,6 +44,8 @@ main = do
    ch "(rec 5 10)"
    ch "(recf - 1000 5 10)"
    ch "(sum '(1 2 3 4 5))"
+   ch "(sum '((+ 1 2) 3 4 5))"
+   ch "(map (+ 1) '(1 2 3 4))"
 
 
 
