@@ -63,6 +63,8 @@ setNodeStatus (Node _ stat) s = writeTVar stat s
 getNodeExpr :: Node -> Expr
 getNodeExpr (Node e _) = e
 
+
+-- | Perform graph reduction starting on the given node
 reduceNode :: Map String Node -> Node -> IO Expr
 reduceNode ctx node = do
 
@@ -131,6 +133,23 @@ reduceExpr ctx ea@(App op args) = do
             [ConstInteger x, ConstInteger y] -> return (ConstBool (x /= y))
             a -> error ("Do not know how to compare this: " ++ show a)
 
+      Symbol ">" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstBool (x > y))
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Symbol "<" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstBool (x < y))
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Symbol ">=" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstBool (x >= y))
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Symbol "<=" -> evalBinOp ea ctx args $ \case
+            [ConstInteger x, ConstInteger y] -> return (ConstBool (x <= y))
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+
       -- Conditions
 
       Symbol "if" | length args == 3 -> do
@@ -178,6 +197,7 @@ shiftReplace i n e = case getNodeExpr e of
    _                 -> return e
 
 
+-- | Common sub-expression elimination
 cse :: Node -> Node
 cse = snd . cse' Map.empty
    where
