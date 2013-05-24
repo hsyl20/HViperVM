@@ -149,18 +149,22 @@ reduceExpr ctx ea@(App op args) = do
             [ConstInteger x, ConstInteger y] -> return (ConstBool (x <= y))
             a -> error ("Do not know how to compare this: " ++ show a)
 
-      Symbol "List.head" -> reduceNode ctx (head args) >>= \case
+      Symbol "List.head" -> if length args /= 1 then return ea else reduceNode ctx (head args) >>= \case
                List [] -> error ("List.head applied to an empty list")
                List (x:_) -> reduceNode ctx x
                a -> error ("List.head can only be applied to a list (found " ++ show a ++")")
 
-      Symbol "List.tail" -> reduceNode ctx (head args) >>= \case
+      Symbol "List.tail" -> if length args /= 1 then return ea else reduceNode ctx (head args) >>= \case
                List (_:xs) -> reduceNode ctx =<< newNodeIO (List xs)
                a -> error ("List.tail can only be applied to a list (found " ++ show a ++")")
 
-      Symbol "List.null" -> reduceNode ctx (head args) >>= \case
+      Symbol "List.null" -> if length args /= 1 then return ea else reduceNode ctx (head args) >>= \case
                List xs -> return (ConstBool $ Prelude.null xs)
                a -> error ("List.null can only be applied to a list (found " ++ show a ++")")
+
+      Symbol "List.cons" -> if length args /= 2 then return ea else reduceNode ctx (head $ tail args) >>= \case
+               List xs -> reduceExpr ctx (List (head args : xs))
+               a -> error ("List.cons can only be applied to a list (found " ++ show a ++")")
 
       -- Conditions
 
