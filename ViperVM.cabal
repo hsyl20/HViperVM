@@ -13,6 +13,7 @@ cabal-version:       >=1.8
 
 data-files: 
   data/Codelets/Blas/Lu.vvm
+  apps/samples/lisp/Sample.lisp
 
 library
   exposed-modules:     
