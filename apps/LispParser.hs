@@ -8,11 +8,16 @@ sample1 = "(defun f (a b c d)\
           \     \"Sum of multiplications\"\
           \     (+ (* a b) (* c d)))\
           \ \
-          \(defun recf (a n)\
+          \(defun rec (a n)\
           \     \"Recursive function\"\
           \     (if (/= n 0)\
-          \           (+ a (recf a (- n 1)))\
-          \           0))"
+          \           (+ a (rec a (- n 1)))\
+          \           0))\
+          \(defun recf (f init a n)\
+          \     \"Recursive higher-order function\"\
+          \     (if (/= n 0)\
+          \           (f (recf f init a (- n 1)) a)\
+          \           init))"
 
 
 
@@ -24,7 +29,8 @@ main = do
    let ch = check s1
 
    ch "(+ (f 5 1 4 3) (f 2 1 3 1))"
-   ch "(recf 5 10)"
+   ch "(rec 5 10)"
+   ch "(recf - 1000 5 10)"
 
 
 

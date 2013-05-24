@@ -88,9 +88,12 @@ reduceExpr ctx (Symbol s) | Map.member s ctx =
    return $ getNodeExpr (ctx Map.! s)
 
 reduceExpr ctx ea@(App op args) = do
-   op' <- get =<< forkPromise (reduceNode ctx op)
+   opFuture <- forkPromise (reduceNode ctx op)
 
-   case op' of
+   -- If we want to be greedy, we can reduce "args" here too.
+   -- However, we may compute "if" branches that will be not taken
+
+   get opFuture >>= \case
 
       -- Beta reduction
       
