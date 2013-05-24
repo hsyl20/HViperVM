@@ -68,20 +68,18 @@ getNodeExpr (Node e _) = e
 reduceNode :: Map String Node -> Node -> IO Expr
 reduceNode ctx node = do
 
-   stat <- atomically $ do
-          stat <- getNodeStatus node
-          case stat of
-                  Computing -> retry  -- Block if already computing
-                  Inactive -> setNodeStatus node Computing >> return Computing
-                  Computed _ -> return stat
+   stat <- atomically $ getNodeStatus node >>= \case
+      Computing -> retry  -- Block if already computing
+      Inactive -> setNodeStatus node Computing >> return Computing
+      Computed a -> return (Computed a)
   
    case stat of
-          Inactive -> error "Should not be inactive"
-          Computed e -> return e
-          Computing -> do
-                  e <- reduceExpr ctx (getNodeExpr node)
-                  atomically $ setNodeStatus node (Computed e)
-                  return e
+      Inactive -> error "Should not be inactive"
+      Computed e -> return e
+      Computing -> do
+          e <- reduceExpr ctx (getNodeExpr node)
+          atomically $ setNodeStatus node (Computed e)
+          return e
 
 
 reduceExpr :: Map String Node -> Expr -> IO Expr
@@ -154,11 +152,10 @@ reduceExpr ctx ea@(App op args) = do
 
       Symbol "if" | length args == 3 -> do
             let [cond,thn,els] = args
-            cond' <- reduceNode ctx cond
-            case cond' of
+            reduceNode ctx cond >>= \case
                ConstBool True -> reduceNode ctx thn
                ConstBool False -> reduceNode ctx els
-               _ -> error "If condition does not evaluate to a boolean"
+               a -> error ("If condition does not evaluate to a boolean: " ++ show a)
 
       -- Kernel execution
       Symbol s -> do
