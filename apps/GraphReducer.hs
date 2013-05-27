@@ -17,7 +17,7 @@ main = do
    apbmapc <- newNodeIO (App mul [apb,apc])
    apbmapcmapb <- newNodeIO (App mul [apbmapc,apb'])
 
-   e <- reduceNode Map.empty (cse apbmapcmapb)
+   e <- reduceNodeExpr Map.empty (cse apbmapcmapb)
    case e of
       Data x -> putStrLn $ "Data " ++ show x
       _ -> putStrLn "Reduced to something else than a data"
@@ -34,7 +34,7 @@ main = do
 
    putStrLn (show addabcd)
 
-   f <- reduceNode Map.empty (addabcd)
+   f <- reduceNodeExpr Map.empty (addabcd)
    case f of
       Data x -> putStrLn $ "Data " ++ show x
       res -> putStrLn ("Reduced to something else than a data: " ++ show res)
