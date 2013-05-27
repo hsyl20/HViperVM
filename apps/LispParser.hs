@@ -21,6 +21,8 @@ main = do
    ch "(sum '((+ 1 2) 3 4 5))"
    ch "(map (+ 1) '(1 2 3 4))"
    ch "(constant)"
+   ch "(matrix1)"
+   ch "(letsgo 10 5)"
 
 
 

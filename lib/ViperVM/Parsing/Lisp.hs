@@ -1,10 +1,11 @@
+{-# LANGUAGE TupleSections #-}
 module ViperVM.Parsing.Lisp where
 
 import ViperVM.Reducer.Graph (newNodeIO, Node)
 import qualified ViperVM.Reducer.Graph as G
 
-import Control.Monad (void, forM, liftM, foldM)
-import Control.Applicative ( (<$>), (<*>) , (<*))
+import Control.Monad (void, forM, foldM)
+import Control.Applicative ( (<$>), (<*>) , (<*), (*>))
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Map as Map
 
@@ -20,7 +21,7 @@ symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~."
 
 spaces :: Parser ()
-spaces = skipMany1 space
+spaces = skipMany1 (space <|> newline)
 
 parseString :: Parser LispVal
 parseString = do void $ char '"'
@@ -38,10 +39,10 @@ parseAtom = do first <- letter <|> symbol
                           _    -> Atom atom
 
 parseNumber :: Parser LispVal
-parseNumber = liftM (Number . read) $ many1 digit
+parseNumber = Number . read <$> many1 digit
 
 parseList :: Parser LispVal
-parseList = liftM List $ sepBy parseExpr spaces
+parseList = optional spaces *> (List <$> sepBy parseExpr spaces)
 
 parseQuoted :: Parser LispVal
 parseQuoted = do
@@ -102,6 +103,12 @@ makeExpr :: Map String Node -> LispVal -> IO Node
 makeExpr ctx (Atom s) = case Map.lookup s ctx of
                            Just n -> return n
                            Nothing -> newNodeIO (G.Symbol s)
+
+makeExpr ctx (List [Atom "let",bdgs,body]) = do
+   let (List assocs2) = bdgs
+   bindings <- forM assocs2 (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
+   let ctx2 = Map.union ctx (Map.fromList bindings)
+   makeExpr ctx2 body
 
 makeExpr ctx (List (x:xs)) = 
    newNodeIO =<< (G.App <$> makeExpr ctx x <*> forM xs (makeExpr ctx))
