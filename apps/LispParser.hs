@@ -24,7 +24,7 @@ main = do
    ch "(matrix1)"
    ch "(letsgo 10 5)"
    ch "(letsgo* 10 5)"
-
+   ch "(cholesky matrix1)"
 
 
 check :: Map String Node -> String -> IO ()

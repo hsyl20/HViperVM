@@ -56,3 +56,13 @@
       (e (+ c d)))
          e))
 
+(defun cholesky (m)
+   (let* (
+      (a (List.head (List.head m)))
+      (b (List.tail (List.head m)))
+      (c (List.tail m))
+      (a' (potrf a))
+      (b' (map (trsm a') b))
+      (c' c)
+      )
+         (List.cons (List.cons a' b') c')))

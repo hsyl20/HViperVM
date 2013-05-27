@@ -5,7 +5,7 @@ import ViperVM.Reducer.Graph (newNodeIO, Node)
 import qualified ViperVM.Reducer.Graph as G
 
 import Control.Monad (void, forM, foldM)
-import Control.Applicative ( (<$>), (<*>) , (<*), (*>))
+import Control.Applicative ( (<$>), (<*>) , (<*))
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Map as Map
 
@@ -31,7 +31,7 @@ parseString = do void $ char '"'
 
 parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
-               rest <- many (letter <|> digit <|> symbol)
+               rest <- many (letter <|> digit <|> symbol <|> char '\'')
                let atom = first:rest
                return $ case atom of 
                           "#t" -> Bool True
@@ -42,7 +42,7 @@ parseNumber :: Parser LispVal
 parseNumber = Number . read <$> many1 digit
 
 parseList :: Parser LispVal
-parseList = optional spaces *> (List <$> sepBy parseExpr spaces)
+parseList = List <$> sepEndBy parseExpr spaces
 
 parseQuoted :: Parser LispVal
 parseQuoted = do
@@ -57,7 +57,9 @@ parseExpr = parseAtom
         <|> parseNumber
         <|> parseQuoted
         <|> do void $ char '('
+               void $ optional spaces
                x <- parseList
+               void $ optional spaces
                void $ char ')'
                return x
 
