@@ -23,6 +23,7 @@ main = do
    ch "(constant)"
    ch "(matrix1)"
    ch "(letsgo 10 5)"
+   ch "(letsgo* 10 5)"
 
 
 

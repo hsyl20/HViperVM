@@ -47,3 +47,12 @@
    "Test for let"
    (let ((c (+ a b)) (d (- a b)))
       (+ c d)))
+
+(defun letsgo* (a b)
+   "Test for let*"
+   (let* (
+      (c (+ a b)) 
+      (d (- a b))
+      (e (+ c d)))
+         e))
+

@@ -110,6 +110,14 @@ makeExpr ctx (List [Atom "let",bdgs,body]) = do
    let ctx2 = Map.union ctx (Map.fromList bindings)
    makeExpr ctx2 body
 
+makeExpr ctx (List [Atom "let*",bdgs,body]) = do
+   let (List assocs2) = bdgs
+   let insertCtx name lspval contxt = do
+         e <- makeExpr contxt lspval
+         return (Map.insert name e contxt)
+   ctx3 <- foldM (\ctx2 (List [Atom name, e]) -> insertCtx name e ctx2) ctx assocs2
+   makeExpr ctx3 body
+
 makeExpr ctx (List (x:xs)) = 
    newNodeIO =<< (G.App <$> makeExpr ctx x <*> forM xs (makeExpr ctx))
 
