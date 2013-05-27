@@ -45,8 +45,8 @@
 
 (defun letsgo (a b)
    "Test for let"
-   (let ((c (+ a b)) (d (- a b)))
-      (+ c d)))
+   (let ((c (+ a b)))
+      (+ c c)))
 
 (defun letsgo* (a b)
    "Test for let*"
@@ -54,7 +54,7 @@
       (c (+ a b)) 
       (d (- a b))
       (e (+ c d)))
-         e))
+         (- e e)))
 
 (defun cholesky (m)
    (let* (

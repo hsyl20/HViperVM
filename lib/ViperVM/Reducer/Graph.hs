@@ -1,36 +1,42 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, TupleSections #-}
 module ViperVM.Reducer.Graph where
 
 import Control.Concurrent.STM
-import Control.Monad (forM)
+import Control.Monad (forM_,void,foldM, (<=<))
 import Control.Concurrent.Future
 import Control.Applicative
 import Control.Concurrent
+import Data.Traversable (forM, traverse)
 import System.Random
 import Text.Printf
 import Data.Map as Map
+import Data.Maybe (fromMaybe,isJust)
 import System.IO.Unsafe
 
 
 type NodeId = Int
 type DataId = Int
 
-data Status = Inactive | Computing | Computed Node
+data Status = Inactive | Computing | Computed
 
-data Node = Node Expr (TVar Status)
+data Node = Node (TVar Expr) (TVar Status)
             
 instance Eq Node where
-   (==) a b = getNodeExpr a == getNodeExpr b
+   (==) a b = unsafePerformIO $ do
+                  a' <- atomically $ getNodeExpr a
+                  b' <- atomically $ getNodeExpr b
+                  return (a' == b')
 
 instance Ord Node where
-   compare a b = compare (getNodeExpr a) (getNodeExpr b)
+   compare a b = unsafePerformIO $ do
+                  a' <- atomically $ getNodeExpr a
+                  b' <- atomically $ getNodeExpr b
+                  return (compare a' b')
 
 instance Show Node where
-   show (Node x stat) = unsafePerformIO $ do
-                           s <- atomically $ readTVar stat
-                           case s of 
-                              Computed n -> return $ show (getNodeExpr n)
-                              _          -> return $ show x
+   show (Node expr _) = unsafePerformIO $ do
+                           e <- atomically $ readTVar expr
+                           return (show e)
 
 data Expr = Symbol String 
           | App Node [Node]
@@ -40,6 +46,8 @@ data Expr = Symbol String
           | ConstInteger Integer
           | ConstBool Bool
           | List [Node]
+          | Kernel String Int
+          | Alias Node
           deriving (Eq,Ord)
 
 instance Show Expr where
@@ -51,9 +59,12 @@ instance Show Expr where
    show (ConstInteger i) = show i
    show (ConstBool i) = show i
    show (List i) = show i
+   show (Kernel n _) = show ("Kernel " ++ n)
+   show (Alias n) = show n
+
 
 newNode :: Expr -> STM Node
-newNode e = Node e <$> (newTVar Inactive)
+newNode e = Node <$> newTVar e <*> newTVar Inactive
 
 newNodeIO :: Expr -> IO Node
 newNodeIO = atomically . newNode
@@ -67,185 +78,237 @@ getNodeStatus (Node _ stat) = readTVar stat
 setNodeStatus :: Node -> Status -> STM ()
 setNodeStatus (Node _ stat) s = writeTVar stat s
 
-getNodeExpr :: Node -> Expr
-getNodeExpr (Node e _) = e
+getNodeExpr :: Node -> STM Expr
+getNodeExpr (Node e _) = readTVar e
 
-reduceNodeExpr :: Map String Node -> Node -> IO Expr
-reduceNodeExpr ctx node = getNodeExpr <$> reduceNode ctx node
+getNodeExprIO :: Node -> IO Expr
+getNodeExprIO node = atomically $ getNodeExpr node
+
+setNodeExpr :: Node -> Expr -> STM ()
+setNodeExpr (Node e _) ex = writeTVar e ex
 
 -- | Perform graph reduction starting on the given node
-reduceNode :: Map String Node -> Node -> IO Node
+reduceNode :: Map String Node -> Node -> IO Expr
 reduceNode ctx node = do
 
-   stat <- atomically $ getNodeStatus node >>= \case
-      Computing -> retry  -- Block if already computing
-      Inactive -> setNodeStatus node Computing >> return Computing
-      Computed a -> return (Computed a)
+   -- Check that the node is not being reduced (block in this case)
+   -- Set status to Computing if this thread will handle the reduction
+   -- Return the computed result
+   (stat,expr) <- atomically $ do
+                     getNodeStatus node >>= \case
+                        Computing -> retry  -- Block if already computing
+                        Inactive -> setNodeStatus node Computing >> ((Computing,) <$> getNodeExpr node)
+                        Computed -> (Computed,) <$> getNodeExpr node
   
+   -- Perform the reduction if appropriate
    case stat of
       Inactive -> error "Should not be inactive"
-      Computed e -> return e
+      Computed -> return expr
       Computing -> do
-          n <- case getNodeExpr node of
-                  Symbol s | Map.member s ctx -> 
-                        -- Perform node substitution
-                        return (ctx Map.! s)
-
-                  List xs ->
-                        -- Deep list evaluation
-                        newNodeIO =<< List <$> (reduceNodes ctx xs)
-
-                  App op [] ->
-                        reduceNode ctx op
-
-                  App op args -> do
-                     opFuture <- forkPromise (reduceNode ctx op)
-
-                     -- If we want to be greedy, we can reduce "args" here too.
-                     -- However, we may compute "if" branches that will be not taken
-
-                     (getNodeExpr <$> get opFuture) >>= \case
-
-                        -- Beta reduction
-                        Abs e -> case args of
-                                    [] -> return node
-                                    [x] -> do
-                                       reduceNode ctx =<< shiftReplace 0 x e
-                                    x:xs -> do
-                                       op'' <- shiftReplace 0 x e
-                                       reduceNode ctx =<< newNodeIO (App op'' xs)
-
-                        -- Application composition
-                     
-                        App op2 args2 -> reduceNode ctx =<< newNodeIO (App op2 (args2 ++ args))
-
-                        -- Binary operations
-
-                        Symbol "+" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstInteger (x+y))
-                              a -> error ("Do not know how to add this: " ++ show a)
-
-                        Symbol "-" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstInteger (x-y))
-                              a -> error ("Do not know how to subtract this: " ++ show a)
-
-                        Symbol "*" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstInteger (x*y))
-                              a -> error ("Do not know how to multiply this: " ++ show a)
-
-                        Symbol "==" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstBool (x == y))
-                              a -> error ("Do not know how to compare this: " ++ show a)
-
-                        Symbol "/=" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstBool (x /= y))
-                              a -> error ("Do not know how to compare this: " ++ show a)
-
-                        Symbol ">" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstBool (x > y))
-                              a -> error ("Do not know how to compare this: " ++ show a)
-
-                        Symbol "<" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstBool (x < y))
-                              a -> error ("Do not know how to compare this: " ++ show a)
-
-                        Symbol ">=" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstBool (x >= y))
-                              a -> error ("Do not know how to compare this: " ++ show a)
-
-                        Symbol "<=" -> evalBinOp node ctx args $ \case
-                              [ConstInteger x, ConstInteger y] -> newNodeIO (ConstBool (x <= y))
-                              a -> error ("Do not know how to compare this: " ++ show a)
-
-                        Symbol "List.head" | length args == 1 -> 
-                              (getNodeExpr <$> reduceNode ctx (head args)) >>= \case
-                                 List [] -> error ("List.head applied to an empty list")
-                                 List (x:_) -> reduceNode ctx x
-                                 a -> error ("List.head can only be applied to a list (found " ++ show a ++")")
-
-                        Symbol "List.tail" | length args == 1 ->
-                              (getNodeExpr <$> reduceNode ctx (head args)) >>= \case
-                                 List (_:xs) -> reduceNode ctx =<< newNodeIO (List xs)
-                                 a -> error ("List.tail can only be applied to a list (found " ++ show a ++")")
-
-                        Symbol "List.null" | length args == 1 ->
-                              (getNodeExpr <$> reduceNode ctx (head args)) >>= \case
-                                 List xs -> newNodeIO (ConstBool $ Prelude.null xs)
-                                 a -> error ("List.null can only be applied to a list (found " ++ show a ++")")
-
-                        Symbol "List.cons" | length args == 2 ->
-                              (getNodeExpr <$> reduceNode ctx (head $ tail args)) >>= \case
-                                 List xs -> reduceNode ctx =<< newNodeIO (List (head args : xs))
-                                 a -> error ("List.cons can only be applied to a list (found " ++ show a ++")")
-
-                        -- Conditions
-
-                        Symbol "if" | length args == 3 -> do
-                              let [cond,thn,els] = args
-                              (getNodeExpr <$> reduceNode ctx cond) >>= \case
-                                 ConstBool True -> reduceNode ctx thn
-                                 ConstBool False -> reduceNode ctx els
-                                 a -> error ("If condition does not evaluate to a boolean: " ++ show a)
-
-                        -- Kernel execution
-                        Symbol s -> do
-                              -- TODO: kernel launching
-                              args' <- reduceNodes ctx args
-                              putStrLn (printf "Submit task %s with args %s then wait" s (show args'))
-                              threadDelay =<< ((`mod` 1000000) <$> randomIO)
-                              newNodeIO (Data 999)
-
-                        _ -> return node
-
-                  _ -> return node
-
-
+          --putStrLn (show expr)
+          expr' <- reduceExpr ctx expr
           atomically $ do
-            setNodeStatus node (Computed n)
-            setNodeStatus n (Computed n)
-          return n
+            setNodeExpr node expr'
+            setNodeStatus node Computed
+          return expr'
 
-evalBinOp :: Node -> Map String Node -> [Node] -> ([Expr] -> IO Node) -> IO Node
+
+reduceExpr :: Map String Node -> Expr -> IO Expr
+reduceExpr ctx expr = case expr of
+
+   Alias e -> reduceNode ctx e
+
+   Symbol s | Map.member s ctx -> 
+         -- Perform node substitution
+         --reduceNode ctx (ctx Map.! s)
+         atomically (getNodeExpr (ctx Map.! s))
+
+   List xs -> do
+         -- Deep list evaluation
+         void $ reduceNodes ctx xs
+         return expr
+
+   App op [] ->
+         reduceNode ctx op
+
+   App op args -> do
+
+      opFuture <- forkPromise (reduceNode ctx op)
+
+      op' <- get opFuture
+
+      -- Compute args greedily
+      --case op' of
+      --   Symbol "if" -> return ()
+      --   _ -> void $ reduceNodes ctx args
+
+      case op' of
+
+         -- Beta reduction
+         Abs e -> case args of
+                     [] -> return expr
+                     [x] -> do
+                        x' <- reduceNode ctx x
+                        reduceNode ctx =<< atomically (newNode =<< shiftReplace 0 x' =<< getNodeExpr e)
+                     x:xs -> do
+                        x' <- reduceNode ctx x
+                        op'' <- atomically (newNode =<< shiftReplace 0 x' =<< getNodeExpr e)
+                        reduceNode ctx =<< newNodeIO (App op'' xs)
+
+         -- Application composition
+      
+         App op2 args2 -> reduceNode ctx =<< newNodeIO (App op2 (args2 ++ args))
+
+         -- Binary operations
+
+         Symbol "+" -> do
+            putStrLn "+"
+            evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstInteger (x+y)
+               a -> error ("Do not know how to add this: " ++ show a)
+
+         Symbol "-" -> evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstInteger (x-y)
+               a -> error ("Do not know how to subtract this: " ++ show a)
+
+         Symbol "*" -> evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstInteger (x*y)
+               a -> error ("Do not know how to multiply this: " ++ show a)
+
+         Symbol "==" -> evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x == y)
+               a -> error ("Do not know how to compare this: " ++ show a)
+
+         Symbol "/=" -> evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x /= y)
+               a -> error ("Do not know how to compare this: " ++ show a)
+
+         Symbol ">" -> evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x > y)
+               a -> error ("Do not know how to compare this: " ++ show a)
+
+         Symbol "<" -> evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x < y)
+               a -> error ("Do not know how to compare this: " ++ show a)
+
+         Symbol ">=" -> evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x >= y)
+               a -> error ("Do not know how to compare this: " ++ show a)
+
+         Symbol "<=" -> evalBinOp expr ctx args $ \case
+               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x <= y)
+               a -> error ("Do not know how to compare this: " ++ show a)
+
+         Symbol "List.head" | length args == 1 -> 
+               reduceNode ctx (head args) >>= \case
+                  List [] -> error ("List.head applied to an empty list")
+                  List (x:_) -> reduceNode ctx x
+                  a -> error ("List.head can only be applied to a list (found " ++ show a ++")")
+
+         Symbol "List.tail" | length args == 1 ->
+               reduceNode ctx (head args) >>= \case
+                  List (_:xs) -> reduceNode ctx =<< newNodeIO (List xs)
+                  a -> error ("List.tail can only be applied to a list (found " ++ show a ++")")
+
+         Symbol "List.null" | length args == 1 ->
+               reduceNode ctx (head args) >>= \case
+                  List xs -> return $ ConstBool (Prelude.null xs)
+                  a -> error ("List.null can only be applied to a list (found " ++ show a ++")")
+
+         Symbol "List.cons" | length args == 2 ->
+               reduceNode ctx (head $ tail args) >>= \case
+                  List xs -> reduceNode ctx =<< newNodeIO (List (head args : xs))
+                  a -> error ("List.cons can only be applied to a list (found " ++ show a ++")")
+
+         -- Conditions
+
+         Symbol "if" | length args == 3 -> do
+               let [cond,thn,els] = args
+               reduceNode ctx cond >>= \case
+                  ConstBool True -> reduceNode ctx thn
+                  ConstBool False -> reduceNode ctx els
+                  a -> error ("If condition does not evaluate to a boolean: " ++ show a)
+
+         -- Kernel execution
+         Kernel name arity | length args == arity -> do
+               -- TODO: kernel launching
+               args' <- reduceNodes ctx args
+               putStrLn (printf "Submit task %s with args %s then wait" name (show args'))
+               threadDelay =<< ((`mod` 100000) <$> randomIO)
+               return (Data 999)
+
+         _ -> return expr
+
+   _ -> return expr
+
+
+
+evalBinOp :: Expr -> Map String Node -> [Node] -> ([Expr] -> IO Expr) -> IO Expr
 evalBinOp ea ctx args f = if length args /= 2 
    then return ea
-   else f =<< (fmap getNodeExpr <$> reduceNodes ctx args)
+   else f =<< (reduceNodes ctx args)
 
 -- | Reduce a list of nodes in parallel (blocking)
-reduceNodes :: Map String Node -> [Node] -> IO [Node]
+reduceNodes :: Map String Node -> [Node] -> IO [Expr]
 reduceNodes ctx nodes = do
    nodes' <- forM nodes (forkPromise . reduceNode ctx)
    forM nodes' get
 
--- | Replace Var with given Expr and shift all other Vars
-shiftReplace :: Int -> Node -> Node -> IO Node
-shiftReplace i n e = case getNodeExpr e of
+-- | Replace with sharing (TODO)
+shiftReplace :: Int -> Expr -> Expr -> STM Expr
+shiftReplace i n e = case e of
    (Var j) | i == j  -> return n
-   (Var j) | j > i   -> newNodeIO (Var (j-1))
-   (Var j) | j < i   -> newNodeIO (Var j)
-   (Abs body)        -> newNodeIO =<< Abs <$> shiftReplace (i+1) n body
-   (App op args)     -> do
-                           op' <- shiftReplace i n op
-                           args' <- forM args (shiftReplace i n)
-                           newNodeIO (App op' args')
+   (Var j) | j > i   -> return (Var (j-1))
+   (Var j) | j < i   -> return (Var j)
+   (Abs body)        -> Abs <$> (newNode =<< shiftReplace (i+1) n =<< getNodeExpr body)
+   (App op args)     -> App <$> (newNode =<< shiftReplace i n =<< getNodeExpr op) <*> forM args (newNode <=< shiftReplace i n <=< getNodeExpr)
+   (Alias j)         -> Alias <$> (newNode =<< shiftReplace i n =<< getNodeExpr j)
    _                 -> return e
 
 
+
 -- | Common sub-expression elimination
-cse :: Node -> Node
-cse = snd . cse' Map.empty
-   where
-      cse' :: Map Node Node -> Node -> (Map Node Node, Node)
-      cse' nodes node = case Map.lookup n ns of
-                            Just a -> (ns,a)
-                            Nothing -> (insert n n ns, n)
-         where
-            (ns,n) = case getNodeExpr node of
-                   Abs e -> let (_,n') = cse' nodes e in (nodes, Node (Abs n') (getNodeVar node)) -- we do not return ns as it could contain Var
-                   App op args -> (ns2, Node (App op' args') (getNodeVar node))
-                        where
-                           (ns1,op') = cse' nodes op
-                           (ns2,args') = f ns1 args []
-                           f ns3 [] as = (ns3,as)
-                           f ns3 (x:xs) as = let (ns4,a) = cse' ns3 x in f ns4 xs (a:as)
-                   _ -> (nodes,node)
+cse :: Node -> IO Node
+cse node = snd <$> cseNode Map.empty node
+
+-- | Common sub-expression elimination with a given dictionary of cse
+cseNode :: Map Expr Node -> Node -> IO (Map Expr Node, Node)
+cseNode exprs node = do
+
+   e <- atomically $ getNodeExpr node
+
+   case Map.lookup e exprs of
+       Just a -> return (exprs, a)
+       Nothing -> do
+         (m,exs) <- cseExpr exprs e
+         n <- newNodeIO exs
+         let m' = insert e n m
+         return (m',n)
+
+cseExpr :: Map Expr Node -> Expr -> IO (Map Expr Node, Expr)
+cseExpr exprs expr = do
+
+       case expr of
+
+          Abs e -> do
+               (_,e') <- cseNode exprs e -- we do not return the map as it could contain some Var
+               return (exprs, Abs e')
+
+          App op args -> do
+               (ns1,op') <- cseNode exprs op
+
+               let f (ns,as) a = do
+                     (ns',a') <- cseNode ns a
+                     return (ns', a':as)
+
+               (ns2,args') <- foldM f (ns1,[]) args
+
+               return (ns2, App op' args')
+
+          _ -> return (exprs,expr)
+
+
+
+
+
 
