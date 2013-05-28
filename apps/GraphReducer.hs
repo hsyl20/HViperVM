@@ -1,6 +1,8 @@
 import ViperVM.Reducer.Graph
 
 import Data.Map as Map
+import Control.Monad (foldM)
+import Control.Applicative ( (<$>) )
 
 
 main :: IO ()
@@ -11,32 +13,34 @@ main = do
    d <- newNodeIO (Data 3)
    plus <- newNodeIO (Symbol "+")
    mul <- newNodeIO (Symbol "*")
-   apb <- newNodeIO (App plus [a,b])
-   apb' <- newNodeIO (App plus [a,b]) -- For CSE test
-   apc <- newNodeIO (App plus [a,c])
-   apbmapc <- newNodeIO (App mul [apb,apc])
-   apbmapcmapb <- newNodeIO (App mul [apbmapc,apb'])
+   apb <- appN plus [a,b]
+   apb' <- appN plus [a,b] -- For CSE test
+   apc <- appN plus [a,c]
+   apbmapc <- appN mul [apb,apc]
+   apbmapcmapb <- appN mul [apbmapc,apb']
 
-   e <- reduceNode Map.empty =<< cse apbmapcmapb
-   case e of
-      Data x -> putStrLn $ "Data " ++ show x
-      _ -> putStrLn "Reduced to something else than a data"
+   check Map.empty [apbmapcmapb]
 
-   v0 <- newNodeIO (Var 0)
-   v1 <- newNodeIO (Var 1)
-   pv0 <- newNodeIO (App plus [v0])
-   pv0v1 <- newNodeIO (App pv0 [v1])
-   apv0v1 <- newNodeIO (Abs pv0v1)
-   add <- newNodeIO (Abs apv0v1)
-   addab <- newNodeIO (App add [a,b])
-   addcd <- newNodeIO (App add [c,d])
-   addabcd <- newNodeIO (App add [addab,addcd])
+   x <- newNodeIO (Symbol "x")
+   y <- newNodeIO (Symbol "y")
+   add <- newNodeIO =<< (Lambda ["x","y"] <$> appN plus [x,y])
+   addab <- appN add [a,b]
+   addcd <- appN add [c,d]
+   addabcd <- appN add [addab,addcd]
 
    putStrLn (show addabcd)
 
-   f <- reduceNode Map.empty (addabcd)
-   case f of
-      Data x -> putStrLn $ "Data " ++ show x
-      res -> putStrLn ("Reduced to something else than a data: " ++ show res)
+   check Map.empty [addabcd]
 
 
+check :: Map String Node -> [Node] -> IO ()
+check ctx r = do
+      putStrLn ("Evaluating: " ++ show r)
+      f <- run ctx r
+      putStrLn ("Reduction result: " ++ show f)
+
+app :: Node -> Node -> IO Node
+app x y = newNodeIO (App x y)
+
+appN :: Node -> [Node] -> IO Node
+appN x ys = foldM app x ys

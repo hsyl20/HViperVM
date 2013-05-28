@@ -85,15 +85,10 @@ makeLambda (List [Atom "defun", Atom name, List args, String _, List body]) =
    -- Drop comment string
    makeLambda (List [Atom "defun", Atom name, List args, List body])
 
-makeLambda (List [Atom "defun", Atom name, List args, body]) = do
-   argNodes <- forM [0.. (length args)-1] (newNodeIO . G.Var)
-
-   let argNames = fmap (\(Atom x) -> x) args
-       ctx = Map.fromList $ argNames `zip` (reverse argNodes)
-   
-   bodyNode <- makeExpr ctx body
-   node <- foldM (\n _ -> newNodeIO (G.Abs n)) bodyNode argNodes
-   return (name, node)
+makeLambda (List [Atom "defun", Atom name, List args, body]) = 
+   (name,) <$> (newNodeIO =<< (G.Lambda args' <$> makeExpr Map.empty body))
+   where
+      args' = fmap (\(Atom n) -> n) args
 
 makeLambda _ = error "Module should only contain function declarations"
 
@@ -120,8 +115,11 @@ makeExpr ctx (List [Atom "let*",bdgs,body]) = do
    ctx3 <- foldM (\ctx2 (List [Atom name, e]) -> insertCtx name e ctx2) ctx assocs2
    makeExpr ctx3 body
 
-makeExpr ctx (List (x:xs)) = 
-   newNodeIO =<< (G.App <$> makeExpr ctx x <*> forM xs (makeExpr ctx))
+makeExpr ctx (List [x]) = makeExpr ctx x
+
+makeExpr ctx (List (x:xs)) = do
+   int <- makeExpr ctx x
+   foldM (\a1 a2 -> newNodeIO =<< (G.App a1 <$> makeExpr ctx a2)) int xs
 
 makeExpr _ (List []) = error "Empty lists are not supported"
 makeExpr _ (String _) = error "Strings are not supported"

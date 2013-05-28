@@ -17,11 +17,11 @@ main = do
 
    let ch = check s1
 
-   ch "(+ 5 9)"
-   ch "(* 5 9)"
-   ch "(- 5 9)"
-   ch "(- (+ 10 5) 9)"
-   ch "(+ (f 5 1 4 3) (f 2 1 3 1))"
+   --ch "(+ 5 9)"
+   --ch "(* 5 9)"
+   --ch "(- 5 9)"
+   --ch "(- (+ 10 5) 9)"
+   --ch "(+ (f 5 1 4 3) (f 2 1 3 1))"
    ch "(letsgo 10 5)"
    ch "(letsgo* 10 5)"
    ch "(rec 5 10)"
@@ -44,5 +44,5 @@ check ctx expr = do
       r <- readExpr expr
 
       putStrLn ("Evaluating: " ++ show r)
-      f <- reduceNode ctx r
+      f <- run ctx [r]
       putStrLn ("Reduction result: " ++ show f)
