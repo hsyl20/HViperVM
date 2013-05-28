@@ -120,27 +120,99 @@ step ctx (a:as) = do
    case res of
       Left e -> return e
 
-      -- Built-ins
-      Right "+" -> do
-         [a1,a2] <- atomically $ getArgs 2 as
-         a1' <- run ctx [a1]
-         a2' <- run ctx [a2]
-         atomically $ do
-            a1'' <- getNodeExpr a1'
-            a2'' <- getNodeExpr a2'
-            let p = head (drop 1 as)
-                r = case (a1'',a2'') of
-                        (ConstInteger x, ConstInteger y) -> ConstInteger (x+y)
-            setNodeExpr p r
-            return [p]
+      -- Binary operations
+
+      Right "+" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstInteger (x+y)
+            e -> error ("Do not know how to add this: " ++ show e)
+
+      Right "-" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstInteger (x-y)
+            a -> error ("Do not know how to subtract this: " ++ show a)
+
+      Right "*" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstInteger (x*y)
+            a -> error ("Do not know how to multiply this: " ++ show a)
+
+      Right "==" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstBool (x == y)
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Right "/=" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstBool (x /= y)
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Right ">" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstBool (x > y)
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Right "<" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstBool (x < y)
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Right ">=" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstBool (x >= y)
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Right "<=" -> evalOp ctx as 2 $ \case
+            [ConstInteger x, ConstInteger y] -> ConstBool (x <= y)
+            a -> error ("Do not know how to compare this: " ++ show a)
+
+      Right "List.head" -> evalOp ctx as 1 $ \case
+            [List []] -> error ("List.head applied to an empty list")
+            [List (x:_)] -> Alias x
+            a -> error ("List.head can only be applied to a list (found " ++ show a ++")")
+
+      Right "List.tail" -> evalOp ctx as 1 $ \case
+            [List (_:xs)] -> (List xs)
+            a -> error ("List.tail can only be applied to a list (found " ++ show a ++")")
+
+      Right "List.null" -> evalOp ctx as 1 $ \case
+            [List xs] -> ConstBool (Prelude.null xs)
+            a -> error ("List.null can only be applied to a list (found " ++ show a ++")")
+
+      Right "List.cons" -> do
+            args <- atomically $ getArgs 2 as
+            evalOp ctx (tail as) 1 $ \case
+               [List xs] -> List (head args : xs)
+               a -> error ("List.cons can only be applied to a list (found " ++ show a ++")")
+
+      -- Conditions
+
+      Right "if" -> do
+            [cond,thn,els] <- atomically $ getArgs 3 as
+            cond' <- run ctx [cond] 
+            atomically $ do
+               r <- getNodeExpr cond' >>= \case
+                  ConstBool True -> return (Alias thn)
+                  ConstBool False -> return (Alias els)
+                  a -> error ("If condition does not evaluate to a boolean: " ++ show a)
+               let p = head (drop 2 as)
+               setNodeExpr p r
+               return [p]
 
       Right name -> error ("Not in scope: `" ++ show name)
                
 
 getArgs :: Int -> [Node] -> STM [Node]
 getArgs 0 _ = return []
-getArgs n (x:xs) = (:) <$> ((\(App _ a2) -> a2) <$> getNodeExpr x) <*> getArgs (n-1) xs
+getArgs n (x:xs) = (:) <$> (followAlias =<< (\(App _ a2) -> a2) <$> getNodeExpr x) <*> getArgs (n-1) xs
 
+followAlias :: Node -> STM Node
+followAlias node = getNodeExpr node >>= \case
+   Alias e -> followAlias e
+   _       -> return node
+
+evalOp :: Map String Node -> [Node] -> Int -> ([Expr] -> Expr) -> IO [Node]
+evalOp ctx as arity f = do
+   args <- atomically $ getArgs arity as
+   args' <- forM args (run ctx . pure)
+   atomically $ do
+      args'' <- mapM getNodeExpr args'
+      let p = head (drop (arity - 1) as)
+          r = f args''
+      setNodeExpr p r
+      return [p]
 
 instantiate :: Map Name Node -> Node -> STM Node
 instantiate ctx node = getNodeExpr node >>= \case
@@ -225,76 +297,6 @@ instantiate ctx node = getNodeExpr node >>= \case
 --         -- Application composition
 --      
 --         App op2 args2 -> reduceNode ctx =<< newNodeIO (App op2 (args2 ++ args))
---
---         -- Binary operations
---
---         Symbol "+" -> do
---            putStrLn "+"
---            evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstInteger (x+y)
---               a -> error ("Do not know how to add this: " ++ show a)
---
---         Symbol "-" -> evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstInteger (x-y)
---               a -> error ("Do not know how to subtract this: " ++ show a)
---
---         Symbol "*" -> evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstInteger (x*y)
---               a -> error ("Do not know how to multiply this: " ++ show a)
---
---         Symbol "==" -> evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x == y)
---               a -> error ("Do not know how to compare this: " ++ show a)
---
---         Symbol "/=" -> evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x /= y)
---               a -> error ("Do not know how to compare this: " ++ show a)
---
---         Symbol ">" -> evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x > y)
---               a -> error ("Do not know how to compare this: " ++ show a)
---
---         Symbol "<" -> evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x < y)
---               a -> error ("Do not know how to compare this: " ++ show a)
---
---         Symbol ">=" -> evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x >= y)
---               a -> error ("Do not know how to compare this: " ++ show a)
---
---         Symbol "<=" -> evalBinOp expr ctx args $ \case
---               [ConstInteger x, ConstInteger y] -> return $ ConstBool (x <= y)
---               a -> error ("Do not know how to compare this: " ++ show a)
---
---         Symbol "List.head" | length args == 1 -> 
---               reduceNode ctx (head args) >>= \case
---                  List [] -> error ("List.head applied to an empty list")
---                  List (x:_) -> reduceNode ctx x
---                  a -> error ("List.head can only be applied to a list (found " ++ show a ++")")
---
---         Symbol "List.tail" | length args == 1 ->
---               reduceNode ctx (head args) >>= \case
---                  List (_:xs) -> reduceNode ctx =<< newNodeIO (List xs)
---                  a -> error ("List.tail can only be applied to a list (found " ++ show a ++")")
---
---         Symbol "List.null" | length args == 1 ->
---               reduceNode ctx (head args) >>= \case
---                  List xs -> return $ ConstBool (Prelude.null xs)
---                  a -> error ("List.null can only be applied to a list (found " ++ show a ++")")
---
---         Symbol "List.cons" | length args == 2 ->
---               reduceNode ctx (head $ tail args) >>= \case
---                  List xs -> reduceNode ctx =<< newNodeIO (List (head args : xs))
---                  a -> error ("List.cons can only be applied to a list (found " ++ show a ++")")
---
---         -- Conditions
---
---         Symbol "if" | length args == 3 -> do
---               let [cond,thn,els] = args
---               reduceNode ctx cond >>= \case
---                  ConstBool True -> reduceNode ctx thn
---                  ConstBool False -> reduceNode ctx els
---                  a -> error ("If condition does not evaluate to a boolean: " ++ show a)
 --
 --         -- Kernel execution
 --         Kernel name arity | length args == arity -> do
