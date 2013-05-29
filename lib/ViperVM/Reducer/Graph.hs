@@ -8,7 +8,6 @@ import Control.Monad ((<=<),void)
 import Control.Concurrent.Future
 import Control.Applicative
 import Control.Concurrent
-import Control.Monad.Loops (allM)
 import Data.Traversable (forM, traverse)
 import Data.List (intersperse)
 import System.Random
@@ -25,7 +24,9 @@ iterateUntilM'' p f v = do
 
 type DataId = Int
 
-data Node = Node (TVar Expr)
+data Lock = Locked | Unlocked
+
+data Node = Node (TVar Expr) (TVar Lock)
             
 instance Show Node where
    show node = show $ unsafePerformIO (atomically (getNodeExpr node))
@@ -61,27 +62,41 @@ isDataNode node = getNodeExpr node >>= \case
    Data _         -> return True
    ConstInteger _ -> return True
    ConstBool _    -> return True
-   List xs        -> allM isDataNode xs
+   List _        -> return True
    _              -> return False
 
 newNode :: Expr -> STM Node
-newNode e = Node <$> newTVar e
+newNode e = Node <$> newTVar e <*> newTVar Unlocked
 
 newNodeIO :: Expr -> IO Node
 newNodeIO = atomically . newNode
 
 getNodeExpr :: Node -> STM Expr
-getNodeExpr (Node e) = readTVar e
+getNodeExpr (Node e _) = readTVar e
 
 getNodeExprIO :: Node -> IO Expr
 getNodeExprIO node = atomically $ getNodeExpr node
 
 setNodeExpr :: Node -> Expr -> STM ()
-setNodeExpr (Node e) ex = writeTVar e ex
+setNodeExpr (Node e _) ex = writeTVar e ex
 
-run :: Map Name Node -> [Node] -> IO Node
+lock :: Node -> IO ()
+lock (Node _ lck) = atomically $ do
+   readTVar lck >>= \case
+      Locked -> retry
+      Unlocked -> writeTVar lck Locked
+
+unlock :: Node -> IO ()
+unlock (Node _ lck) = atomically $ do
+   readTVar lck >>= \case
+      Locked -> writeTVar lck Unlocked
+      Unlocked -> error "Unlocking a non locked node"
+
+run :: Map Name Node -> Node -> IO Node
 run ctx spine = do
-   [res] <- iterateUntilM'' (atomically . isFinal) (step ctx) spine
+   lock spine
+   [res] <- iterateUntilM'' (atomically . isFinal) (step ctx) [spine]
+   unlock spine
    return res
          
 isFinal :: [Node] -> STM Bool
@@ -190,11 +205,21 @@ step ctx spine@(a:as) = do
                   [List xs] -> List (head args : xs)
                   e -> error ("List.cons can only be applied to a list (found " ++ show e ++")")
 
+         Symbol "List.deepSeq" -> do
+               arg <- run ctx =<< head <$> atomically (getArgs 1 as)
+               atomically (getNodeExpr arg) >>= \case
+                  -- Apply List.deepSeq recursively
+                  List xs -> do
+                     xs' <- runParallel ctx =<< traverse (newNodeIO . App a) xs
+                     e <- newNodeIO (List xs')
+                     return (e : tail as)
+                  _ -> return [arg]
+
          -- Conditions
 
          Symbol "if" -> do
                [cond,thn,els] <- atomically $ getArgs 3 as
-               cond' <- run ctx [cond] 
+               cond' <- run ctx cond 
                atomically $ do
                   r <- getNodeExpr cond' >>= \case
                      ConstBool True -> return (Alias thn)
@@ -207,10 +232,10 @@ step ctx spine@(a:as) = do
          Symbol name -> error ("Not in scope: `" ++ show name)
 
          -- Evaluate list values
-         List xs -> do
-            xs' <- runParallel ctx xs
-            a' <- newNodeIO (List xs') 
-            return (a':as)
+         --List xs -> do
+         --   xs' <- runParallel ctx xs
+         --   a' <- newNodeIO (List xs') 
+         --   return (a':as)
 
          -- Kernel execution
          Kernel name arity -> do
@@ -221,7 +246,7 @@ step ctx spine@(a:as) = do
                      return (Data 999)
                      
                args <- atomically $ getArgs arity as
-               args' <- forM args (run ctx . pure)
+               args' <- forM args (run ctx)
                r <- f args'
                atomically $ do
                   let p = drop (arity - 1) as
@@ -231,7 +256,7 @@ step ctx spine@(a:as) = do
          e -> error ("Cannot apply " ++ show e)
                
 runParallel :: Map String Node -> [Node] -> IO [Node]
-runParallel ctx = traverse get <=< traverse (forkPromise . run ctx . pure)
+runParallel ctx = traverse get <=< traverse (forkPromise . run ctx)
 
 getArgs :: Int -> [Node] -> STM [Node]
 getArgs 0 _ = return []

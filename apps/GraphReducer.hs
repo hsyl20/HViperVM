@@ -19,7 +19,7 @@ main = do
    apbmapc <- appN mul [apb,apc]
    apbmapcmapb <- appN mul [apbmapc,apb']
 
-   check Map.empty [apbmapcmapb]
+   check Map.empty apbmapcmapb
 
    x <- newNodeIO (Symbol "x")
    y <- newNodeIO (Symbol "y")
@@ -30,10 +30,10 @@ main = do
 
    putStrLn (show addabcd)
 
-   check Map.empty [addabcd]
+   check Map.empty addabcd
 
 
-check :: Map String Node -> [Node] -> IO ()
+check :: Map String Node -> Node -> IO ()
 check ctx r = do
       putStrLn ("Evaluating: " ++ show r)
       f <- run ctx r

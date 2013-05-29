@@ -28,6 +28,7 @@ main = do
    ch "(sum '(1 2 3 4 5))"
    ch "(sum '((+ 1 2) 3 4 5))"
    ch "(map (+ 1) '(1 2 3 4))"
+   ch "(List.deepSeq (map (+ 1) '(1 2 3 4)))"
    ch "(constant)"
    ch "(matrix1)"
 
@@ -35,7 +36,7 @@ main = do
 
    let ctx2 = Map.union s1 (Map.fromList kernels)
 
-   check ctx2 "(cholesky matrix1)"
+   check ctx2 "(List.deepSeq (cholesky matrix1))"
 
 
 check :: Map String Node -> String -> IO ()
@@ -43,5 +44,5 @@ check ctx expr = do
       r <- readExpr expr
 
       putStrLn ("Evaluating: " ++ show r)
-      f <- run ctx [r]
+      f <- run ctx r
       putStrLn ("Reduction result: " ++ show f)
