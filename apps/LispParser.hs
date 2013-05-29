@@ -13,7 +13,6 @@ main = do
    let f = "apps/samples/lisp/Sample.lisp"
    
    s1 <- readModule =<< readFile =<< getDataFileName f
-   putStrLn ("Parsed module: " ++ show s1)
 
    let ch = check s1
 

@@ -54,7 +54,7 @@
       (c (+ a b)) 
       (d (- a b))
       (e (+ c d)))
-         (- e e)))
+         (+ e e)))
 
 (defun cholesky (m)
    (let* (

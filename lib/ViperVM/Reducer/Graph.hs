@@ -104,7 +104,9 @@ step ctx (a:as) = do
    res <- atomically $ do
       getNodeExpr a >>= \case
 
-         Alias a1  -> return (Just (a1:as))
+         Alias a1  -> do
+            a1' <- followAlias a1
+            return (Just (a1':as))
 
          App a1 _ -> return (Just (a1:a:as))
 
@@ -223,12 +225,24 @@ step ctx (a:as) = do
          e -> error ("Cannot apply " ++ show e)
                
 runParallel :: Map String Node -> [Node] -> IO [Node]
-runParallel ctx nodes = traverse get =<< traverse (forkPromise . run ctx . pure) nodes
+runParallel ctx = traverse (run ctx . pure)
+   -- FIXME: correctly handle concurrent updates
+   --traverse get <=< traverse (forkPromise . run ctx . pure)
 
 getArgs :: Int -> [Node] -> STM [Node]
 getArgs 0 _ = return []
-getArgs n (x:xs) = (:) <$> (followAlias =<< (\(App _ a2) -> a2) <$> getNodeExpr x) <*> getArgs (n-1) xs
 getArgs n [] = error (printf "Trying to get %d args, but the spine is empty" n)
+getArgs n (x:xs) = do
+   x' <- followAlias x
+
+   getNodeExpr x' >>= \case
+      (App _ a2) -> do
+         arg <- followAlias a2
+         (arg:) <$> getArgs (n-1) xs
+
+      -- The node has been updated and is no longer an App
+      _ -> retry -- FIXME: correctly handle concurrent updates
+
 
 followAlias :: Node -> STM Node
 followAlias node = getNodeExpr node >>= \case
@@ -238,11 +252,11 @@ followAlias node = getNodeExpr node >>= \case
 evalOp :: Map String Node -> [Node] -> Int -> ([Expr] -> Expr) -> IO [Node]
 evalOp ctx as arity f = do
    args <- atomically $ getArgs arity as
+   let p = drop (arity - 1) as
    args' <- runParallel ctx args
    atomically $ do
       args'' <- mapM getNodeExpr args'
-      let p = drop (arity - 1) as
-          r = f args''
+      let r = f args''
       setNodeExpr (head p) r
       return p
 
