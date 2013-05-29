@@ -102,18 +102,16 @@ makeExpr ctx (Atom s) = case Map.lookup s ctx of
                            Nothing -> newNodeIO (G.Symbol s)
 
 makeExpr ctx (List [Atom "let",bdgs,body]) = do
-   let (List assocs2) = bdgs
-   bindings <- forM assocs2 (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
-   let ctx2 = Map.union ctx (Map.fromList bindings)
-   makeExpr ctx2 body
+   let (List bindings) = bdgs
+   bindings' <- forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
+   body' <- makeExpr ctx body
+   newNodeIO (G.Let False bindings' body')
 
 makeExpr ctx (List [Atom "let*",bdgs,body]) = do
-   let (List assocs2) = bdgs
-   let insertCtx name lspval contxt = do
-         e <- makeExpr contxt lspval
-         return (Map.insert name e contxt)
-   ctx3 <- foldM (\ctx2 (List [Atom name, e]) -> insertCtx name e ctx2) ctx assocs2
-   makeExpr ctx3 body
+   let (List bindings) = bdgs
+   bindings' <- forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
+   body' <- makeExpr ctx body
+   newNodeIO (G.Let True bindings' body')
 
 makeExpr ctx (List [x]) = makeExpr ctx x
 
