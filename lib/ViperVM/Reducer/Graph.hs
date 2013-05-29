@@ -1,4 +1,6 @@
 {-# LANGUAGE LambdaCase, TupleSections #-}
+
+-- | Graph reduction module
 module ViperVM.Reducer.Graph (
    run, Node, Expr(..), newNodeIO
 ) where
@@ -13,6 +15,7 @@ import Text.Printf
 import Data.Map as Map
 import System.IO.Unsafe
 
+-- | Helper function that iterates until a given monadic condition is met
 iterateUntilM'' :: (Monad m) => (a -> m Bool) -> (a -> m a) -> a -> m a
 iterateUntilM'' p f v = do
    prd <- p v
@@ -20,27 +23,26 @@ iterateUntilM'' p f v = do
       then return v
       else f v >>= iterateUntilM'' p f
 
-type DataId = Int
-
-data Lock = Locked | Unlocked
-
+-- | A node in the graph that is to be reduced.
+-- Nodes are mutable by using shared transactional memory
 data Node = Node (TVar Expr) (TVar Lock)
             
-instance Show Node where
-   show node = show $ unsafePerformIO (atomically (getNodeExpr node))
+-- | A functional expression that may involve other nodes
+data Expr = Symbol Name                               -- ^ A symbol (function name, variable name...)
+          | App Node Node                             -- ^ An application
+          | Lambda [Name] Node                        -- ^ A lambda abstraction
+          | ConstInteger Integer                      -- ^ An integer constant
+          | ConstBool Bool                            -- ^ A boolean constant
+          | List [Node]                               -- ^ A list instance
+          | Data DataId                               -- ^ An opaque reference to a data
+          | Kernel String Int ([Node] -> IO Node)     -- ^ A refernce to a kernel
+          | Alias Node                                -- ^ An indirection to another node
+          | Let Bool (Map Name Node) Node             -- ^ A let-expression (first arg is true if recursive let)
 
-type Name = String
+type DataId = Int             -- ^ Data identifier
+type Name = String            -- ^ Name for symbols
+data Lock = Locked | Unlocked -- ^ Indicate if a node is locked (being reduced) or not
 
-data Expr = Symbol Name
-          | App Node Node
-          | Lambda [Name] Node
-          | ConstInteger Integer
-          | ConstBool Bool
-          | List [Node]
-          | Data DataId
-          | Kernel String Int ([Node] -> IO Node)
-          | Alias Node
-          | Let Bool (Map Name Node) Node
 
 instance Show Expr where
    show (Symbol s) = s
@@ -55,6 +57,10 @@ instance Show Expr where
    show (Let False bindings body) = "(let " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
    show (Let True bindings body) = "(let* " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
 
+instance Show Node where
+   show node = show $ unsafePerformIO (atomically (getNodeExpr node))
+
+-- | Indicate if the node is a data (cannot be reduced anymore)
 isDataNode :: Node -> STM Bool
 isDataNode node = getNodeExpr node >>= \case
    Data _         -> return True
@@ -63,45 +69,55 @@ isDataNode node = getNodeExpr node >>= \case
    List _        -> return True
    _              -> return False
 
+-- | Indicate if a spine is reduced to a final value
+isFinal :: [Node] -> STM Bool
+isFinal [] = error "Evaluation spine is empty"
+isFinal [x] = isDataNode x
+isFinal _ = return False
+
+-- | Create a new node
 newNode :: Expr -> STM Node
 newNode e = Node <$> newTVar e <*> newTVar Unlocked
 
+-- | IO version of newNode
 newNodeIO :: Expr -> IO Node
 newNodeIO = atomically . newNode
 
+-- | Return the functional expression associated with a node
 getNodeExpr :: Node -> STM Expr
 getNodeExpr (Node e _) = readTVar e
 
+-- | IO version of getNodeExpr
 getNodeExprIO :: Node -> IO Expr
 getNodeExprIO node = atomically $ getNodeExpr node
 
+-- | Set the expression associated with a node
 setNodeExpr :: Node -> Expr -> STM ()
 setNodeExpr (Node e _) ex = writeTVar e ex
 
+-- | Lock a node or block until it is unlocked
 lock :: Node -> IO ()
 lock (Node _ lck) = atomically $ do
    readTVar lck >>= \case
       Locked -> retry
       Unlocked -> writeTVar lck Locked
 
+-- | Unlock a node
 unlock :: Node -> IO ()
 unlock (Node _ lck) = atomically $ do
    readTVar lck >>= \case
       Locked -> writeTVar lck Unlocked
       Unlocked -> error "Unlocking a non locked node"
 
+-- | Reduce a node
 run :: Map Name Node -> Node -> IO Node
-run ctx spine = do
-   lock spine
-   [res] <- iterateUntilM'' (atomically . isFinal) (step ctx) [spine]
-   unlock spine
+run ctx node = do
+   lock node
+   [res] <- iterateUntilM'' (atomically . isFinal) (step ctx) [node]
+   unlock node
    return res
          
-isFinal :: [Node] -> STM Bool
-isFinal [] = error "Evaluation spine is empty"
-isFinal [x] = isDataNode x
-isFinal _ = return False
-
+-- | Perform a step on the spine (unwind or reduction)
 step :: Map Name Node -> [Node] -> IO [Node]
 step _ [] = error "Evaluation spine is empty"
 step ctx spine@(a:as) = do
@@ -241,9 +257,11 @@ step ctx spine@(a:as) = do
 
          e -> error ("Cannot apply " ++ show e)
                
+-- | Perform several node reductions in parallel
 runParallel :: Map String Node -> [Node] -> IO [Node]
 runParallel ctx = traverse get <=< traverse (forkPromise . run ctx)
 
+-- | Return the given number of arguments from the spine
 getArgs :: Int -> [Node] -> STM [Node]
 getArgs 0 _ = return []
 getArgs n [] = error (printf "Trying to get %d args, but the spine is empty" n)
@@ -258,12 +276,13 @@ getArgs n (x:xs) = do
       -- The node has been updated and is no longer an App
       _ -> retry 
 
-
+-- | Follow node aliases until another kind of node is found and returned
 followAlias :: Node -> STM Node
 followAlias node = getNodeExpr node >>= \case
    Alias e -> followAlias e
    _       -> return node
 
+-- | Evaluate a built-in operator
 evalOp :: Map String Node -> [Node] -> Int -> ([Expr] -> Expr) -> IO [Node]
 evalOp ctx as arity f = do
    let p = drop (arity - 1) as
@@ -276,6 +295,7 @@ evalOp ctx as arity f = do
       setNodeExpr parent r
       return p
 
+-- | Create a new instance of a node where some symbols have been replaced by associated nodes
 instantiate :: Map Name Node -> Node -> STM Node
 instantiate ctx node = getNodeExpr node >>= \case
    ConstInteger _ -> return node

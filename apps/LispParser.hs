@@ -7,7 +7,6 @@ import Control.Applicative ( (<$>) )
 import Data.Map as Map
 import System.Random
 import Text.Printf
-import Control.Concurrent
 
 import Paths_ViperVM
 
@@ -36,9 +35,9 @@ main = do
    ch "(matrix1)"
 
    let f name ags = do
-         putStrLn (printf "Submit task %s with args %s then wait" name (show ags))
-         threadDelay =<< ((`mod` 100000) <$> randomIO)
-         newNodeIO (Data 999)
+         dataId <- (`mod` 1000) <$> randomIO
+         putStrLn (printf "Execute kernel %s with args %s, result in #%d" name (show ags) dataId)
+         newNodeIO (Data dataId)
       
        makeKernel name arity = Kernel name arity (f name)
                      
