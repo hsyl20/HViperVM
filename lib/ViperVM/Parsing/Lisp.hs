@@ -1,5 +1,7 @@
 {-# LANGUAGE TupleSections #-}
-module ViperVM.Parsing.Lisp where
+module ViperVM.Parsing.Lisp (
+   readModule, readExpr
+) where
 
 import ViperVM.Reducer.Graph (newNodeIO, Node)
 import qualified ViperVM.Reducer.Graph as G
@@ -66,11 +68,13 @@ parseExpr = parseAtom
 parseModule :: Parser [LispVal]
 parseModule = many (parseExpr <* skipMany space) <* eof
 
+-- | Parse a Lisp expression
 readExpr :: String -> IO Node
 readExpr input = case parse parseExpr "lisp" input of
    Left err -> error ("Error while parsing Lisp expression: " ++ show err)
    Right a -> makeExpr Map.empty a
 
+-- | Parse a Lisp module
 readModule :: String -> IO (Map String Node)
 readModule input = do
    case parse parseModule "lisp" input of
