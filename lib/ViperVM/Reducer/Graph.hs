@@ -7,10 +7,8 @@ import Control.Concurrent.STM
 import Control.Monad ((<=<),void)
 import Control.Concurrent.Future
 import Control.Applicative
-import Control.Concurrent
 import Data.Traversable (forM, traverse)
 import Data.List (intersperse)
-import System.Random
 import Text.Printf
 import Data.Map as Map
 import System.IO.Unsafe
@@ -40,7 +38,7 @@ data Expr = Symbol Name
           | ConstBool Bool
           | List [Node]
           | Data DataId
-          | Kernel String Int
+          | Kernel String Int ([Node] -> IO Node)
           | Alias Node
           | Let Bool (Map Name Node) Node
 
@@ -52,7 +50,7 @@ instance Show Expr where
    show (ConstInteger i) = show i
    show (ConstBool i) = show i
    show (List i) = show i
-   show (Kernel n _) = show ("Kernel " ++ n)
+   show (Kernel n _ _) = show ("Kernel " ++ n)
    show (Alias n) = show n
    show (Let False bindings body) = "(let " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
    show (Let True bindings body) = "(let* " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
@@ -232,19 +230,13 @@ step ctx spine@(a:as) = do
          Symbol name -> error ("Not in scope: `" ++ show name)
 
          -- Kernel execution
-         Kernel name arity -> do
-               let f ags = do
-                     -- TODO: kernel launching
-                     putStrLn (printf "Submit task %s with args %s then wait" name (show ags))
-                     threadDelay =<< ((`mod` 100000) <$> randomIO)
-                     return (Data 999)
-                     
+         Kernel _ arity f -> do
                args <- atomically $ getArgs arity as
                args' <- forM args (run ctx)
                r <- f args'
                atomically $ do
                   let p = drop (arity - 1) as
-                  setNodeExpr (head p) r
+                  setNodeExpr (head p) (Alias r)
                   return p
 
          e -> error ("Cannot apply " ++ show e)
@@ -289,7 +281,7 @@ instantiate ctx node = getNodeExpr node >>= \case
    ConstInteger _ -> return node
    ConstBool _    -> return node
    Data _         -> return node
-   Kernel _ _     -> return node
+   Kernel {}      -> return node
    Alias e        -> instantiate ctx e
    List xs        -> newNode =<< (List <$> forM xs (instantiate ctx))
    Lambda names body -> newNode =<< (Lambda names <$> instantiate ctx2 body)

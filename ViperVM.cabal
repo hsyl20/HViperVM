@@ -93,7 +93,6 @@ library
     haskell-src-exts ==1.13.*,
     stm ==2.4.*,
     monad-loops,
-    random,
     parsec,
     future
 
@@ -189,6 +188,7 @@ executable LispParser
   build-depends: 
     base,
     containers,
+    random,
     ViperVM
 
 executable ParseTest

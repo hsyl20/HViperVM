@@ -5,14 +5,17 @@ import ViperVM.Reducer.Graph
 import Control.Monad (forM)
 import Control.Applicative ( (<$>) )
 import Data.Map as Map
+import System.Random
+import Text.Printf
+import Control.Concurrent
 
 import Paths_ViperVM
 
 main :: IO ()
 main = do
-   let f = "apps/samples/lisp/Sample.lisp"
+   let file = "apps/samples/lisp/Sample.lisp"
    
-   s1 <- readModule =<< readFile =<< getDataFileName f
+   s1 <- readModule =<< readFile =<< getDataFileName file
 
    let ch = check s1
 
@@ -32,9 +35,23 @@ main = do
    ch "(constant)"
    ch "(matrix1)"
 
-   kernels <- forM [Kernel "potrf" 1, Kernel "trsm" 2, Kernel "syrk" 2, Kernel "sgemm" 3] $ (\k@(Kernel name _) -> (name,) <$> newNodeIO k)
+   let f name ags = do
+         putStrLn (printf "Submit task %s with args %s then wait" name (show ags))
+         threadDelay =<< ((`mod` 100000) <$> randomIO)
+         newNodeIO (Data 999)
+      
+       makeKernel name arity = Kernel name arity (f name)
+                     
+   let kernels = [
+         makeKernel "potrf" 1,
+         makeKernel "trsm" 2,
+         makeKernel "syrk" 2,
+         makeKernel "sgemm" 3
+         ] 
+   
+   kerCtx <- Map.fromList <$> forM kernels (\k@(Kernel name _ _) -> (name,) <$> newNodeIO k)
 
-   let ctx2 = Map.union s1 (Map.fromList kernels)
+   let ctx2 = Map.union s1 kerCtx
 
    check ctx2 "(List.deepSeq (cholesky matrix1))"
 
