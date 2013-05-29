@@ -103,13 +103,13 @@ makeExpr ctx (Atom s) = case Map.lookup s ctx of
 
 makeExpr ctx (List [Atom "let",bdgs,body]) = do
    let (List bindings) = bdgs
-   bindings' <- forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
+   bindings' <- Map.fromList <$> forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
    body' <- makeExpr ctx body
    newNodeIO (G.Let False bindings' body')
 
 makeExpr ctx (List [Atom "let*",bdgs,body]) = do
    let (List bindings) = bdgs
-   bindings' <- forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
+   bindings' <- Map.fromList <$> forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
    body' <- makeExpr ctx body
    newNodeIO (G.Let True bindings' body')
 

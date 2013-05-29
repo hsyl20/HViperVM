@@ -4,7 +4,7 @@ module ViperVM.Reducer.Graph (
 ) where
 
 import Control.Concurrent.STM
-import Control.Monad (forM_,(<=<))
+import Control.Monad ((<=<),void)
 import Control.Concurrent.Future
 import Control.Applicative
 import Control.Concurrent
@@ -41,7 +41,7 @@ data Expr = Symbol Name
           | Data DataId
           | Kernel String Int
           | Alias Node
-          | Let Bool [(Name,Node)] Node
+          | Let Bool (Map Name Node) Node
 
 instance Show Expr where
    show (Symbol s) = s
@@ -53,8 +53,8 @@ instance Show Expr where
    show (List i) = show i
    show (Kernel n _) = show ("Kernel " ++ n)
    show (Alias n) = show n
-   show (Let False bindings body) = "(let " ++ show bindings ++ " " ++ show body ++ ")"
-   show (Let True bindings body) = "(let* " ++ show bindings ++ " " ++ show body ++ ")"
+   show (Let False bindings body) = "(let " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
+   show (Let True bindings body) = "(let* " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
 
 isDataNode :: Node -> STM Bool
 isDataNode node = getNodeExpr node >>= \case
@@ -91,7 +91,7 @@ isFinal _ = return False
 
 step :: Map Name Node -> [Node] -> IO [Node]
 step _ [] = error "Evaluation spine is empty"
-step ctx (a:as) = do
+step ctx spine@(a:as) = do
 
    -- Perform STM operation if possible
    res <- atomically $ do
@@ -101,7 +101,7 @@ step ctx (a:as) = do
             a1' <- followAlias a1
             return (Just (a1':as))
 
-         App a1 _ -> return (Just (a1:a:as))
+         App a1 _ -> return (Just (a1:spine))
 
          Symbol name 
             | Map.member name ctx -> return (Just (ctx Map.! name : as))
@@ -109,9 +109,22 @@ step ctx (a:as) = do
 
          Lambda names body -> do
             args <- getArgs (length names) as
-            let ctx2 = (Map.fromList (names `zip` args))
+            let ctx2 = Map.fromList (names `zip` args)
             inst <- instantiate ctx2 body
             return (Just (inst : drop (length names) as))
+
+         Let False bindings body -> do
+            let ctx2 = Map.union ctx bindings
+            inst <- instantiate ctx2 body
+            return (Just (inst : as))
+
+         Let True bindings body -> do
+            -- Placeholder nodes
+            bindings' <- traverse (\ _ -> newNode (ConstInteger 666)) bindings
+            void $ traverseWithKey (\ name expr -> setNodeExpr (bindings' Map.! name) =<< Alias <$> instantiate bindings' expr) bindings
+            let ctx2 = Map.union ctx bindings'
+            inst <- instantiate ctx2 body
+            return (Just (inst : as))
 
          _ -> return Nothing
 
@@ -271,17 +284,17 @@ instantiate ctx node = getNodeExpr node >>= \case
          a2 <- instantiate ctx e2
          newNode (App a1 a2)
    Let False bindings body -> do
-         bindings' <- (fmap fst bindings `zip`) <$> forM (fmap snd bindings) (instantiate ctx)
-         let ctx2 = Map.union ctx (Map.fromList bindings')
-         instantiate ctx2 body
+         -- Remove overloaded names from ctx
+         let ctx2 = Map.difference ctx bindings
+         bindings' <- traverse (instantiate ctx) bindings
+         body' <- instantiate ctx2 body
+         newNode (Let False bindings' body')
    Let True bindings body -> do
-         -- Create placeholder nodes
-         nodes <- forM bindings (\_ -> newNode (ConstInteger 666))
-         let bindings' = fmap fst bindings `zip` nodes
-             ctx2 = Map.union ctx (Map.fromList bindings')
-         forM_ ((fmap snd bindings) `zip` nodes) $ \(expr,nod) -> do
-            setNodeExpr nod =<< (Alias <$> instantiate ctx2 expr)
-         instantiate ctx2 body
+         -- Remove overloaded names from ctx
+         let ctx2 = Map.difference ctx bindings
+         bindings' <- traverse (instantiate ctx2) bindings
+         body' <- instantiate ctx2 body
+         newNode (Let True bindings' body')
 
 
 ---- | Perform graph reduction starting on the given node
