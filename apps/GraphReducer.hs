@@ -7,14 +7,14 @@ import Control.Applicative ( (<$>) )
 
 main :: IO ()
 main = do
-   a <- newNodeIO (Data 0)
-   b <- newNodeIO (Data 1)
-   c <- newNodeIO (Data 2)
-   d <- newNodeIO (Data 3)
+   a <- newNodeIO (ConstInteger 0)
+   b <- newNodeIO (ConstInteger 1)
+   c <- newNodeIO (ConstInteger 2)
+   d <- newNodeIO (ConstInteger 3)
    plus <- newNodeIO (Symbol "+")
    mul <- newNodeIO (Symbol "*")
    apb <- appN plus [a,b]
-   apb' <- appN plus [a,b] -- For CSE test
+   apb' <- appN plus [a,b]
    apc <- appN plus [a,c]
    apbmapc <- appN mul [apb,apc]
    apbmapcmapb <- appN mul [apbmapc,apb']
@@ -27,8 +27,6 @@ main = do
    addab <- appN add [a,b]
    addcd <- appN add [c,d]
    addabcd <- appN add [addab,addcd]
-
-   putStrLn (show addabcd)
 
    check Map.empty addabcd
 
