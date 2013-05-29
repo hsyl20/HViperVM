@@ -1,4 +1,5 @@
-import ViperVM.Reducer.Graph
+import ViperVM.Graph.Graph
+import ViperVM.Graph.ParallelReducer
 
 import Data.Map as Map
 import Control.Monad (foldM)

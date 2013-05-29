@@ -3,8 +3,8 @@ module ViperVM.Parsing.Lisp (
    readModule, readExpr
 ) where
 
-import ViperVM.Reducer.Graph (newNodeIO, Node)
-import qualified ViperVM.Reducer.Graph as G
+import ViperVM.Graph.Graph (newNodeIO, Node)
+import qualified ViperVM.Graph.Graph as G
 
 import Control.Monad (void, forM, foldM)
 import Control.Applicative ( (<$>), (<*))

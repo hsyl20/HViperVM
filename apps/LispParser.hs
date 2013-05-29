@@ -1,6 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 import ViperVM.Parsing.Lisp
-import ViperVM.Reducer.Graph
+import ViperVM.Graph.Graph
+import ViperVM.Graph.ParallelReducer
 
 import Control.Monad (forM)
 import Control.Applicative ( (<$>) )

@@ -51,7 +51,8 @@ library
     ViperVM.Platform.Platform
 
     ViperVM.Event
-    ViperVM.Reducer.Graph
+    ViperVM.Graph.Graph
+    ViperVM.Graph.ParallelReducer
 
     ViperVM.Runtime
     ViperVM.Runtime.Data
