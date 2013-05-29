@@ -5,7 +5,7 @@ import ViperVM.Reducer.Graph (newNodeIO, Node)
 import qualified ViperVM.Reducer.Graph as G
 
 import Control.Monad (void, forM, foldM)
-import Control.Applicative ( (<$>), (<*>) , (<*))
+import Control.Applicative ( (<$>), (<*))
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Map as Map
 

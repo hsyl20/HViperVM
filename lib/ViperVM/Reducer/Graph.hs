@@ -1,8 +1,10 @@
 {-# LANGUAGE LambdaCase, TupleSections #-}
-module ViperVM.Reducer.Graph where
+module ViperVM.Reducer.Graph (
+   run, Node, Expr(..), newNodeIO
+) where
 
 import Control.Concurrent.STM
-import Control.Monad (forM_,void,foldM, (<=<))
+import Control.Monad (forM_)
 import Control.Concurrent.Future
 import Control.Applicative
 import Control.Concurrent
@@ -12,17 +14,15 @@ import Data.List (intersperse)
 import System.Random
 import Text.Printf
 import Data.Map as Map
-import Data.Maybe (fromMaybe,isJust)
 import System.IO.Unsafe
 
 iterateUntilM'' :: (Monad m) => (a -> m Bool) -> (a -> m a) -> a -> m a
 iterateUntilM'' p f v = do
-   pred <- p v
-   if pred
+   prd <- p v
+   if prd
       then return v
       else f v >>= iterateUntilM'' p f
 
-type NodeId = Int
 type DataId = Int
 
 data Node = Node (TVar Expr)
@@ -60,6 +60,8 @@ instance Show Expr where
    show (List i) = show i
    show (Kernel n _) = show ("Kernel " ++ n)
    show (Alias n) = show n
+   show (Let False bindings body) = "(let " ++ show bindings ++ " " ++ show body ++ ")"
+   show (Let True bindings body) = "(let* " ++ show bindings ++ " " ++ show body ++ ")"
 
 isDataNode :: Node -> STM Bool
 isDataNode node = getNodeExpr node >>= \case
@@ -98,105 +100,135 @@ step :: Map Name Node -> [Node] -> IO [Node]
 step _ [] = error "Evaluation spine is empty"
 step ctx (a:as) = do
 
-   putStrLn (show (a:as))
-
+   -- Perform STM operation if possible
    res <- atomically $ do
       getNodeExpr a >>= \case
 
-         App a1 a2 -> return (Left (a1:a:as))
+         Alias a1  -> return (Just (a1:as))
+
+         App a1 _ -> return (Just (a1:a:as))
 
          Symbol name 
-            | Map.member name ctx -> return (Left (ctx Map.! name : as))
-            | otherwise           -> return (Right name)
+            | Map.member name ctx -> return (Just (ctx Map.! name : as))
+            | otherwise           -> return Nothing
 
          Lambda names body -> do
             args <- getArgs (length names) as
-            let ctx2 = Map.union ctx (Map.fromList (names `zip` args))
+            let ctx2 = (Map.fromList (names `zip` args))
             inst <- instantiate ctx2 body
-            return (Left (inst : drop (length names) as))
+            return (Just (inst : drop (length names) as))
+
+         _ -> return Nothing
+
+
+   -- Perform IO operation if no STM action took place and if possible
+   case res of
+      Just e -> return e
+      Nothing -> getNodeExprIO a >>= \case
+         -- Binary operations
+
+         Symbol "+" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstInteger (x+y)
+               e -> error ("Do not know how to add this: " ++ show e)
+
+         Symbol "-" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstInteger (x-y)
+               e -> error ("Do not know how to subtract this: " ++ show e)
+
+         Symbol "*" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstInteger (x*y)
+               e -> error ("Do not know how to multiply this: " ++ show e)
+
+         Symbol "==" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstBool (x == y)
+               e -> error ("Do not know how to compare this: " ++ show e)
+
+         Symbol "/=" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstBool (x /= y)
+               e -> error ("Do not know how to compare this: " ++ show e)
+
+         Symbol ">" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstBool (x > y)
+               e -> error ("Do not know how to compare this: " ++ show e)
+
+         Symbol "<" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstBool (x < y)
+               e -> error ("Do not know how to compare this: " ++ show e)
+
+         Symbol ">=" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstBool (x >= y)
+               e -> error ("Do not know how to compare this: " ++ show e)
+
+         Symbol "<=" -> evalOp ctx as 2 $ \case
+               [ConstInteger x, ConstInteger y] -> ConstBool (x <= y)
+               e -> error ("Do not know how to compare this: " ++ show e)
+
+         Symbol "List.head" -> evalOp ctx as 1 $ \case
+               [List []] -> error ("List.head applied to an empty list")
+               [List (x:_)] -> Alias x
+               e -> error ("List.head can only be applied to a list (found " ++ show e ++")")
+
+         Symbol "List.tail" -> evalOp ctx as 1 $ \case
+               [List (_:xs)] -> (List xs)
+               e -> error ("List.tail can only be applied to a list (found " ++ show e ++")")
+
+         Symbol "List.null" -> evalOp ctx as 1 $ \case
+               [List xs] -> ConstBool (Prelude.null xs)
+               e -> error ("List.null can only be applied to a list (found " ++ show e ++")")
+
+         Symbol "List.cons" -> do
+               args <- atomically $ getArgs 2 as
+               evalOp ctx (tail as) 1 $ \case
+                  [List xs] -> List (head args : xs)
+                  e -> error ("List.cons can only be applied to a list (found " ++ show e ++")")
+
+         -- Conditions
+
+         Symbol "if" -> do
+               [cond,thn,els] <- atomically $ getArgs 3 as
+               cond' <- run ctx [cond] 
+               atomically $ do
+                  r <- getNodeExpr cond' >>= \case
+                     ConstBool True -> return (Alias thn)
+                     ConstBool False -> return (Alias els)
+                     e -> error ("If condition does not evaluate to a boolean: " ++ show e)
+                  let p = drop 2 as
+                  setNodeExpr (head p) r
+                  return p
+
+         Symbol name -> error ("Not in scope: `" ++ show name)
+
+         -- Evaluate list values
+         List xs -> do
+            xs' <- runParallel ctx xs
+            a' <- newNodeIO (List xs') 
+            return (a':as)
+
+         -- Kernel execution
+         Kernel name arity -> do
+               let f ags = do
+                     -- TODO: kernel launching
+                     putStrLn (printf "Submit task %s with args %s then wait" name (show ags))
+                     threadDelay =<< ((`mod` 100000) <$> randomIO)
+                     return (Data 999)
+                     
+               args <- atomically $ getArgs arity as
+               args' <- forM args (run ctx . pure)
+               r <- f args'
+               atomically $ do
+                  let p = drop (arity - 1) as
+                  setNodeExpr (head p) r
+                  return p
 
          e -> error ("Cannot apply " ++ show e)
-
-   case res of
-      Left e -> return e
-
-      -- Binary operations
-
-      Right "+" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstInteger (x+y)
-            e -> error ("Do not know how to add this: " ++ show e)
-
-      Right "-" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstInteger (x-y)
-            a -> error ("Do not know how to subtract this: " ++ show a)
-
-      Right "*" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstInteger (x*y)
-            a -> error ("Do not know how to multiply this: " ++ show a)
-
-      Right "==" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstBool (x == y)
-            a -> error ("Do not know how to compare this: " ++ show a)
-
-      Right "/=" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstBool (x /= y)
-            a -> error ("Do not know how to compare this: " ++ show a)
-
-      Right ">" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstBool (x > y)
-            a -> error ("Do not know how to compare this: " ++ show a)
-
-      Right "<" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstBool (x < y)
-            a -> error ("Do not know how to compare this: " ++ show a)
-
-      Right ">=" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstBool (x >= y)
-            a -> error ("Do not know how to compare this: " ++ show a)
-
-      Right "<=" -> evalOp ctx as 2 $ \case
-            [ConstInteger x, ConstInteger y] -> ConstBool (x <= y)
-            a -> error ("Do not know how to compare this: " ++ show a)
-
-      Right "List.head" -> evalOp ctx as 1 $ \case
-            [List []] -> error ("List.head applied to an empty list")
-            [List (x:_)] -> Alias x
-            a -> error ("List.head can only be applied to a list (found " ++ show a ++")")
-
-      Right "List.tail" -> evalOp ctx as 1 $ \case
-            [List (_:xs)] -> (List xs)
-            a -> error ("List.tail can only be applied to a list (found " ++ show a ++")")
-
-      Right "List.null" -> evalOp ctx as 1 $ \case
-            [List xs] -> ConstBool (Prelude.null xs)
-            a -> error ("List.null can only be applied to a list (found " ++ show a ++")")
-
-      Right "List.cons" -> do
-            args <- atomically $ getArgs 2 as
-            evalOp ctx (tail as) 1 $ \case
-               [List xs] -> List (head args : xs)
-               a -> error ("List.cons can only be applied to a list (found " ++ show a ++")")
-
-      -- Conditions
-
-      Right "if" -> do
-            [cond,thn,els] <- atomically $ getArgs 3 as
-            cond' <- run ctx [cond] 
-            atomically $ do
-               r <- getNodeExpr cond' >>= \case
-                  ConstBool True -> return (Alias thn)
-                  ConstBool False -> return (Alias els)
-                  a -> error ("If condition does not evaluate to a boolean: " ++ show a)
-               let p = head (drop 2 as)
-               setNodeExpr p r
-               return [p]
-
-      Right name -> error ("Not in scope: `" ++ show name)
                
+runParallel :: Map String Node -> [Node] -> IO [Node]
+runParallel ctx nodes = traverse get =<< traverse (forkPromise . run ctx . pure) nodes
 
 getArgs :: Int -> [Node] -> STM [Node]
 getArgs 0 _ = return []
 getArgs n (x:xs) = (:) <$> (followAlias =<< (\(App _ a2) -> a2) <$> getNodeExpr x) <*> getArgs (n-1) xs
+getArgs n [] = error (printf "Trying to get %d args, but the spine is empty" n)
 
 followAlias :: Node -> STM Node
 followAlias node = getNodeExpr node >>= \case
@@ -206,26 +238,45 @@ followAlias node = getNodeExpr node >>= \case
 evalOp :: Map String Node -> [Node] -> Int -> ([Expr] -> Expr) -> IO [Node]
 evalOp ctx as arity f = do
    args <- atomically $ getArgs arity as
-   args' <- forM args (run ctx . pure)
+   args' <- runParallel ctx args
    atomically $ do
       args'' <- mapM getNodeExpr args'
-      let p = head (drop (arity - 1) as)
+      let p = drop (arity - 1) as
           r = f args''
-      setNodeExpr p r
-      return [p]
+      setNodeExpr (head p) r
+      return p
 
 instantiate :: Map Name Node -> Node -> STM Node
 instantiate ctx node = getNodeExpr node >>= \case
    ConstInteger _ -> return node
    ConstBool _    -> return node
    Data _         -> return node
+   Kernel _ _     -> return node
+   Alias e        -> instantiate ctx e
+   List xs        -> newNode =<< (List <$> forM xs (instantiate ctx))
+   Lambda names body -> newNode =<< (Lambda names <$> instantiate ctx2 body)
+      where
+         ctx2 = Prelude.foldl (flip Map.delete) ctx names
    Symbol name 
       | Map.member name ctx -> return (ctx Map.! name)
       | otherwise           -> return node
    App e1 e2      -> do
-                        a1 <- instantiate ctx e1
-                        a2 <- instantiate ctx e2
-                        newNode (App a1 a2)
+         a1 <- instantiate ctx e1
+         a2 <- instantiate ctx e2
+         newNode (App a1 a2)
+   Let False bindings body -> do
+         bindings' <- (fmap fst bindings `zip`) <$> forM (fmap snd bindings) (instantiate ctx)
+         let ctx2 = Map.union ctx (Map.fromList bindings')
+         instantiate ctx2 body
+   Let True bindings body -> do
+         -- Create placeholder nodes
+         nodes <- forM bindings (\_ -> newNode (ConstInteger 666))
+         let bindings' = fmap fst bindings `zip` nodes
+             ctx2 = Map.union ctx (Map.fromList bindings')
+         forM_ ((fmap snd bindings) `zip` nodes) $ \(expr,nod) -> do
+            setNodeExpr nod =<< (Alias <$> instantiate ctx2 expr)
+         instantiate ctx2 body
+
 
 ---- | Perform graph reduction starting on the given node
 --reduceNode :: Map String Node -> Node -> IO Expr
@@ -251,89 +302,6 @@ instantiate ctx node = getNodeExpr node >>= \case
 --            setNodeExpr node expr'
 --            setNodeStatus node Computed
 --          return expr'
---
---reduceExpr :: Map String Node -> Expr -> IO Expr
---reduceExpr ctx expr = case expr of
---
---   Alias e -> reduceNode ctx e
---
---   Symbol s | Map.member s ctx -> 
---         -- Perform node substitution
---         --reduceNode ctx (ctx Map.! s)
---         atomically (getNodeExpr (ctx Map.! s))
---
---   List xs -> do
---         -- Deep list evaluation
---         void $ reduceNodes ctx xs
---         return expr
---
---   App op [] ->
---         reduceNode ctx op
---
---   App op args -> do
---
---      opFuture <- forkPromise (reduceNode ctx op)
---
---      op' <- get opFuture
---
---      -- Compute args greedily
---      --case op' of
---      --   Symbol "if" -> return ()
---      --   _ -> void $ reduceNodes ctx args
---
---      case op' of
---
---         -- Beta reduction
---         Abs e -> case args of
---                     [] -> return expr
---                     [x] -> do
---                        x' <- reduceNode ctx x
---                        reduceNode ctx =<< atomically (newNode =<< shiftReplace 0 x' =<< getNodeExpr e)
---                     x:xs -> do
---                        x' <- reduceNode ctx x
---                        op'' <- atomically (newNode =<< shiftReplace 0 x' =<< getNodeExpr e)
---                        reduceNode ctx =<< newNodeIO (App op'' xs)
---
---         -- Application composition
---      
---         App op2 args2 -> reduceNode ctx =<< newNodeIO (App op2 (args2 ++ args))
---
---         -- Kernel execution
---         Kernel name arity | length args == arity -> do
---               -- TODO: kernel launching
---               args' <- reduceNodes ctx args
---               putStrLn (printf "Submit task %s with args %s then wait" name (show args'))
---               threadDelay =<< ((`mod` 100000) <$> randomIO)
---               return (Data 999)
---
---         _ -> return expr
---
---   _ -> return expr
---
---
---
---evalBinOp :: Expr -> Map String Node -> [Node] -> ([Expr] -> IO Expr) -> IO Expr
---evalBinOp ea ctx args f = if length args /= 2 
---   then return ea
---   else f =<< (reduceNodes ctx args)
---
----- | Reduce a list of nodes in parallel (blocking)
---reduceNodes :: Map String Node -> [Node] -> IO [Expr]
---reduceNodes ctx nodes = do
---   nodes' <- forM nodes (forkPromise . reduceNode ctx)
---   forM nodes' get
---
----- | Replace with sharing (TODO)
---shiftReplace :: Int -> Expr -> Expr -> STM Expr
---shiftReplace i n e = case e of
---   (Var j) | i == j  -> return n
---   (Var j) | j > i   -> return (Var (j-1))
---   (Var j) | j < i   -> return (Var j)
---   (Abs body)        -> Abs <$> (newNode =<< shiftReplace (i+1) n =<< getNodeExpr body)
---   (App op args)     -> App <$> (newNode =<< shiftReplace i n =<< getNodeExpr op) <*> forM args (newNode <=< shiftReplace i n <=< getNodeExpr)
---   (Alias j)         -> Alias <$> (newNode =<< shiftReplace i n =<< getNodeExpr j)
---   _                 -> return e
---
 --
 --
 ---- | Common sub-expression elimination
