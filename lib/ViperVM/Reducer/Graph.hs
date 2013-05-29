@@ -231,12 +231,6 @@ step ctx spine@(a:as) = do
 
          Symbol name -> error ("Not in scope: `" ++ show name)
 
-         -- Evaluate list values
-         --List xs -> do
-         --   xs' <- runParallel ctx xs
-         --   a' <- newNodeIO (List xs') 
-         --   return (a':as)
-
          -- Kernel execution
          Kernel name arity -> do
                let f ags = do
@@ -270,7 +264,7 @@ getArgs n (x:xs) = do
          (arg:) <$> getArgs (n-1) xs
 
       -- The node has been updated and is no longer an App
-      _ -> retry -- FIXME: correctly handle concurrent updates
+      _ -> retry 
 
 
 followAlias :: Node -> STM Node
@@ -320,76 +314,4 @@ instantiate ctx node = getNodeExpr node >>= \case
          bindings' <- traverse (instantiate ctx2) bindings
          body' <- instantiate ctx2 body
          newNode (Let True bindings' body')
-
-
----- | Perform graph reduction starting on the given node
---reduceNode :: Map String Node -> Node -> IO Expr
---reduceNode ctx node = do
---
---   -- Check that the node is not being reduced (block in this case)
---   -- Set status to Computing if this thread will handle the reduction
---   -- Return the computed result
---   (stat,expr) <- atomically $ do
---                     getNodeStatus node >>= \case
---                        Computing -> retry  -- Block if already computing
---                        Inactive -> setNodeStatus node Computing >> ((Computing,) <$> getNodeExpr node)
---                        Computed -> (Computed,) <$> getNodeExpr node
---  
---   -- Perform the reduction if appropriate
---   case stat of
---      Inactive -> error "Should not be inactive"
---      Computed -> return expr
---      Computing -> do
---          --putStrLn (show expr)
---          expr' <- reduceExpr ctx expr
---          atomically $ do
---            setNodeExpr node expr'
---            setNodeStatus node Computed
---          return expr'
---
---
----- | Common sub-expression elimination
---cse :: Node -> IO Node
---cse node = snd <$> cseNode Map.empty node
---
----- | Common sub-expression elimination with a given dictionary of cse
---cseNode :: Map Expr Node -> Node -> IO (Map Expr Node, Node)
---cseNode exprs node = do
---
---   e <- atomically $ getNodeExpr node
---
---   case Map.lookup e exprs of
---       Just a -> return (exprs, a)
---       Nothing -> do
---         (m,exs) <- cseExpr exprs e
---         n <- newNodeIO exs
---         let m' = insert e n m
---         return (m',n)
---
---cseExpr :: Map Expr Node -> Expr -> IO (Map Expr Node, Expr)
---cseExpr exprs expr = do
---
---       case expr of
---
---          Abs e -> do
---               (_,e') <- cseNode exprs e -- we do not return the map as it could contain some Var
---               return (exprs, Abs e')
---
---          App op args -> do
---               (ns1,op') <- cseNode exprs op
---
---               let f (ns,as) a = do
---                     (ns',a') <- cseNode ns a
---                     return (ns', a':as)
---
---               (ns2,args') <- foldM f (ns1,[]) args
---
---               return (ns2, App op' args')
---
---          _ -> return (exprs,expr)
-
-
-
-
-
 
