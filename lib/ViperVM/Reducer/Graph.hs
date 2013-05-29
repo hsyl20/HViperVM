@@ -4,7 +4,7 @@ module ViperVM.Reducer.Graph (
 ) where
 
 import Control.Concurrent.STM
-import Control.Monad (forM_)
+import Control.Monad (forM_,(<=<))
 import Control.Concurrent.Future
 import Control.Applicative
 import Control.Concurrent
@@ -27,12 +27,6 @@ type DataId = Int
 
 data Node = Node (TVar Expr)
             
-instance Eq Node where
-   (==) a b = unsafePerformIO $ atomically ((==) <$> getNodeExpr a <*> getNodeExpr b)
-
-instance Ord Node where
-   compare a b = unsafePerformIO $ atomically (compare <$> getNodeExpr a <*> getNodeExpr b)
-
 instance Show Node where
    show node = show $ unsafePerformIO (atomically (getNodeExpr node))
 
@@ -48,7 +42,6 @@ data Expr = Symbol Name
           | Kernel String Int
           | Alias Node
           | Let Bool [(Name,Node)] Node
-          deriving (Eq,Ord)
 
 instance Show Expr where
    show (Symbol s) = s
@@ -225,9 +218,7 @@ step ctx (a:as) = do
          e -> error ("Cannot apply " ++ show e)
                
 runParallel :: Map String Node -> [Node] -> IO [Node]
-runParallel ctx = traverse (run ctx . pure)
-   -- FIXME: correctly handle concurrent updates
-   --traverse get <=< traverse (forkPromise . run ctx . pure)
+runParallel ctx = traverse get <=< traverse (forkPromise . run ctx . pure)
 
 getArgs :: Int -> [Node] -> STM [Node]
 getArgs 0 _ = return []
@@ -251,13 +242,14 @@ followAlias node = getNodeExpr node >>= \case
 
 evalOp :: Map String Node -> [Node] -> Int -> ([Expr] -> Expr) -> IO [Node]
 evalOp ctx as arity f = do
-   args <- atomically $ getArgs arity as
    let p = drop (arity - 1) as
+       parent = head p
+   args <- atomically (getArgs arity as)
    args' <- runParallel ctx args
    atomically $ do
       args'' <- mapM getNodeExpr args'
       let r = f args''
-      setNodeExpr (head p) r
+      setNodeExpr parent r
       return p
 
 instantiate :: Map Name Node -> Node -> STM Node
