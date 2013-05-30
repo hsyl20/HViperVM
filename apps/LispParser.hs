@@ -33,16 +33,17 @@ main = do
    ch "(map (+ 1) '(1 2 3 4))"
    ch "(List.deepSeq (map (+ 1) '(1 2 3 4)))"
    ch "(constant)"
-   ch "(trimatrix)"
-   ch "(List.deepSeq (triangularize matrix))"
+   ch "(trimatrix2)"
+   ch "(List.deepSeq (triangularize matrix2))"
    ch "(List.deepSeq (zipWith + '(1 2 3 4) '(7 7 7 7)))"
-   ch "(List.deepSeq (zipWith2D + matrix matrix))"
+   ch "(List.deepSeq (zipWith2D + matrix2 matrix2))"
    ch "(List.deepSeq (crossWith * '(1 2 3 4) '(1 2 3)))"
+   ch "(reclet 10 0)"
 
    let f name ags = do
          dataId <- (`mod` 1000) <$> randomIO
          putStrLn (printf "Execute kernel %s with args %s, result in #%d" name (show ags) dataId)
-         newNodeIO (Data dataId)
+         return (Data dataId)
       
        makeKernel name arity = Kernel name arity (f name)
                      
@@ -57,7 +58,7 @@ main = do
 
    let ctx2 = Map.union s1 kerCtx
 
-   check ctx2 "(List.deepSeq (cholesky trimatrix))"
+   check ctx2 "(List.deepSeq (cholesky trimatrix2))"
 
 
 check :: Map String Node -> String -> IO ()

@@ -32,28 +32,36 @@
 (defun constant () 10)
 
 (defun matrix () '(
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(10 9 8 7 6 5 4 3 2 1)))
+   '(11 12 13 14 15 16 17 18 19)
+   '(21 22 23 24 25 26 27 28 29)
+   '(31 32 33 34 35 36 37 38 39)
+   '(41 42 43 44 45 46 47 48 49)
+   '(51 52 53 54 55 56 57 58 59)
+   '(61 62 63 64 65 66 67 68 69)
+   '(71 72 73 74 75 76 77 78 79)
+   '(81 82 83 84 85 86 87 88 89)
+   '(91 92 93 94 95 96 97 98 99)))
+
+(defun matrix2 () '(
+   '(11 12 13)
+   '(21 22 23)
+   '(31 32 33)))
 
 (defun trimatrix () '(
-   '(10 9 8 7 6 5 4 3 2 1)
-   '(9 8 7 6 5 4 3 2 1)
-   '(8 7 6 5 4 3 2 1)
-   '(7 6 5 4 3 2 1)
-   '(6 5 4 3 2 1)
-   '(5 4 3 2 1)
-   '(4 3 2 1)
-   '(3 2 1)
-   '(2 1)
-   '(1)))
+   '(11 12 13 14 15 16 17 18 19)
+   '(22 23 24 25 26 27 28 29)
+   '(33 34 35 36 37 38 39)
+   '(44 45 46 47 48 49)
+   '(55 56 57 58 59)
+   '(66 67 68 69)
+   '(77 78 79)
+   '(88 89)
+   '(99)))
+
+(defun trimatrix2 () '(
+   '(11 12 13)
+   '(22 23)
+   '(33)))
 
 (defun letsgo (a b)
    "Test for let"
@@ -81,6 +89,14 @@
 (defun triangularize (m)
    (tri 0 m))
 
+(defun reclet (m n)
+   (let* (
+      (a (+ m b))
+      (b n))
+         (if (== n 0)
+            (+ (reclet m 1000) (reclet m 500))
+            a)))
+
 (defun zipWith (f xs ys)
    (if (List.null xs)
       '()
@@ -93,11 +109,20 @@
 (defun zipWith2D (f xs ys)
    (zipWith (zipWith f) xs ys))
 
+;(defun crossWith (f xs ys)
+;   (map (lambda (y)
+;      (map (lambda (x) (f x y))
+;         xs))
+;         ys))
+
 (defun crossWith (f xs ys)
-   (map (lambda (y)
-      (map (lambda (x) (f x y))
-         xs))
-         ys))
+   (map (crossWith' f xs) ys))
+
+(defun flip (f x y)
+   (f y x))
+
+(defun crossWith' (f xs y)
+   (map (flip f y) xs))
 
 (defun ap (a b)
    (a b))
@@ -110,11 +135,11 @@
       (a' (potrf a))
       (b' (map (trsm a') b))
       (diag (zipWith syrk b' (map List.head c)))
-      (b'' (List.tail b'))
-      (cOps (triangularize (crossWith sgemm b'' b'')))
-      (c' (zipWith2D ap cOps (map List.tail c)))
-      (c'' ((zipWith List.cons diag (List.snoc '() c'))))
+      (cOps (triangularize (crossWith sgemm b' b')))
+      (cOps' (map List.tail cOps))
+      (c' (zipWith2D ap cOps' (map List.tail c)))
+      (c'' ((zipWith List.cons diag (List.snoc c' '()))))
       )
          (if (List.null m)
-            '()
-            (List.cons (List.cons a' b') c''))))
+            m
+            (List.cons (List.cons a' b') (cholesky c'')))))
