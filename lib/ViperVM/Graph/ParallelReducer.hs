@@ -23,91 +23,88 @@ parallel :: Bool
 parallel = True
 
 -- | Perform several node reductions in parallel
-runParallel :: Map String Node -> [Node] -> IO [Node]
-runParallel ctx = do
+runParallel :: Map Name Builtin -> Map String Node -> [Node] -> IO [Node]
+runParallel builtins ctx = do
    if parallel
-      then traverse (run ctx)
-      else traverse get <=< traverse (forkPromise . run ctx)
+      then traverse (run builtins ctx)
+      else traverse get <=< traverse (forkPromise . run builtins ctx)
 
 -- | Reduce a node
-run :: Map Name Node -> Node -> IO Node
-run ctx node = do
+run :: Map Name Builtin -> Map Name Node -> Node -> IO Node
+run builtins initCtx node = do
    when debug (putStrLn ("Red: " ++ showSpine [node]))
 
    -- Reduce the node
-   [res] <- iterateUntilM'' (atomically . isFinal) (step ctx) [node]
+   [res] <- iterateUntilM'' (atomically . isFinal) (step initCtx) [node]
 
    when debug (putStrLn (" |=> " ++ showSpine [res]))
 
    return res
+
+   where
          
--- | Perform a step on the spine (unwind or reduction)
-step :: Map Name Node -> [Node] -> IO [Node]
-step _ [] = error "Evaluation spine is empty"
-step ctx spine@(a:as) = do
+      -- | Perform a step on the spine (unwind or reduction)
+      step :: Map Name Node -> [Node] -> IO [Node]
+      step _ [] = error "Evaluation spine is empty"
+      step ctx spine@(a:as) = do
 
-   res <- getNodeExprIO a >>= \case
+         res <- getNodeExprIO a >>= \case
 
-         Alias a1 -> atomically $ do
-               a1' <- followAlias a1
-               setNodeExpr a =<< getNodeExpr a1'
-               return (a1:as)
+               Alias a1 -> atomically $ do
+                     a1' <- followAlias a1
+                     setNodeExpr a =<< getNodeExpr a1'
+                     return (a1:as)
 
-         App a1 _ -> return (a1:spine)
+               App a1 _ -> return (a1:spine)
 
-         -- Force deep evaluation
-         Symbol "deepSeq" -> reduceSpine ctx spine [True] $ \case
-               -- Apply deepSeq recursively
-               ([List xs],_) -> List <$> (runParallel ctx =<< traverse (newNodeIO . App a) xs)
-               (_,[node]) -> return (Alias node)
-               _ -> error "deepSeq error that should never be triggered"
+               -- Force deep evaluation
+               Symbol "deepSeq" -> reduceSpine ctx spine [True] $ \case
+                     -- Apply deepSeq recursively
+                     ([List xs],_) -> List <$> (runParallel builtins ctx =<< traverse (newNodeIO . App a) xs)
+                     (_,[n]) -> return (Alias n)
+                     _ -> error "deepSeq error that should never be triggered"
 
-         Symbol name 
-            | Map.member name ctx -> do
-                  a1 <- instantiateIO ctx (ctx Map.! name)
-                  return (a1:as)
+               Symbol name 
+                  | Map.member name ctx -> do
+                        a1 <- instantiateIO ctx (ctx Map.! name)
+                        return (a1:as)
 
-            | Map.member name builtins -> do
-                  let builtin = builtins Map.! name
-                  reduceSpine ctx spine (evals builtin) (action builtin)
+                  | Map.member name builtins -> do
+                        let builtin = builtins Map.! name
+                        reduceSpine ctx spine (evals builtin) (action builtin)
 
-            | otherwise -> error ("Not in scope: `" ++ show name)
-
-
-         Lambda [] body -> reduceSpine ctx spine [] $ \case
-               (_,_) -> return (Alias body)
-
-         Lambda names body -> reduceSpine ctx spine (replicate (length names) False) $ \case
-               (_,args) -> do
-                  let ctx2 = Map.fromList (names `zip` args)
-                  Alias <$> instantiateIO ctx2 body
+                  | otherwise -> error ("Not in scope: `" ++ show name)
 
 
-         -- Kernel execution
-         Kernel _ arity f -> reduceSpine ctx spine (replicate arity True) $ \case
-               (args,_) -> f args
+               Lambda [] body -> reduceSpine ctx spine [] $ \case
+                     (_,_) -> return (Alias body)
 
-         e -> error ("Cannot apply " ++ show e)
+               Lambda names body -> reduceSpine ctx spine (replicate (length names) False) $ \case
+                     (_,args) -> do
+                        let ctx2 = Map.fromList (names `zip` args)
+                        Alias <$> instantiateIO ctx2 body
+
+               e -> error ("Cannot apply " ++ show e)
 
 
-   when debug (putStrLn (" |-> " ++ showSpine res))
+         when debug (putStrLn (" |-> " ++ showSpine res))
 
-   return res
+         return res
 
 
--- | Perform a reduction on the spine and update the parent node
--- Return the new spine
-reduceSpine :: Map String Node -> [Node] -> [Bool] -> (([Expr],[Node]) -> IO Expr) -> IO [Node]
-reduceSpine ctx spine evalMasks f = do
-   let arity = length evalMasks
-       spine' = drop arity spine
-       parent = head spine'
-   args <- atomically (getArgs arity (tail spine))
-   args' <- runParallel ctx (mask evalMasks args)
-   evalArgs <- atomically (mapM getNodeExpr args')
-   result <- f (evalArgs,args)
-   setNodeExprIO parent result
-   return spine'
+      -- | Perform a reduction on the spine and update the parent node
+      -- Return the new spine
+      reduceSpine :: Map String Node -> [Node] -> [Bool] -> (([Expr],[Node]) -> IO Expr) -> IO [Node]
+      reduceSpine ctx spine evalMasks f = do
+         let arity = length evalMasks
+             spine' = drop arity spine
+             parent = head spine'
+         args <- atomically (getArgs arity (tail spine))
+         args' <- runParallel builtins ctx (mask evalMasks args)
+         evalArgs <- atomically (mapM getNodeExpr args')
+         result <- f (evalArgs,args)
+         setNodeExprIO parent result
+         return spine'
 
                
 -- | Return the given number of arguments from the spine

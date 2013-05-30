@@ -28,7 +28,6 @@ data Expr = Symbol Name                               -- ^ A symbol (function na
           | ConstBool Bool                            -- ^ A boolean constant
           | List [Node]                               -- ^ A list instance
           | Data DataId                               -- ^ An opaque reference to a data
-          | Kernel String Int ([Expr] -> IO Expr)     -- ^ A reference to a kernel
           | Alias Node                                -- ^ An indirection to another node
           | Let Bool (Map Name Node) Node             -- ^ A let-expression (first arg is true if recursive let)
 
@@ -45,7 +44,6 @@ instance Show Expr where
    show (ConstInteger i) = show i
    show (ConstBool i) = show i
    show (List xs) = "[" ++ concat (intersperse ", " (fmap show xs)) ++ "]"
-   show (Kernel n _ _) = show ("Kernel " ++ n)
    show (Alias n) = show n
    show (Let False bindings body) = "(let " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
    show (Let True bindings body) = "(let* " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
@@ -112,7 +110,6 @@ instantiate' ctx node = getNodeExpr node >>= \case
    ConstInteger _ -> return (False,node)
    ConstBool _    -> return (False,node)
    Data _         -> return (False,node)
-   Kernel {}      -> return (False,node)
    Alias e        -> instantiate' ctx e
    List xs        -> do
          xs' <- forM xs (instantiate' ctx)

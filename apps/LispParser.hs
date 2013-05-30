@@ -2,8 +2,8 @@
 import ViperVM.Parsing.Lisp
 import ViperVM.Graph.Graph
 import ViperVM.Graph.ParallelReducer
+import ViperVM.Graph.Builtins
 
-import Control.Monad (forM)
 import Control.Applicative ( (<$>) )
 import Data.Map as Map
 import System.Random
@@ -16,26 +16,31 @@ main :: IO ()
 main = do
    let file = "apps/samples/lisp/Sample.lisp"
    
-       kernels = [
-         makeKernel "potrf" 1,
-         makeKernel "trsm" 2,
-         makeKernel "syrk" 2,
-         makeKernel "sgemm" 3
+       kernels = Map.fromList [
+         ("potrf", Builtin [True] $ \case
+            (args,_) -> f "potrf" args),
+
+         ("trsm", Builtin [True,True] $ \case
+            (args,_) -> f "trsm" args),
+
+         ("syrk", Builtin [True,True] $ \case
+            (args,_) -> f "syrk" args),
+
+         ("sgemm", Builtin [True,True,True] $ \case
+            (args,_) -> f "sgemm" args)
+
          ] 
 
        f name ags = do
           dataId <- (`mod` 1000) <$> randomIO
           putStrLn (printf "Execute kernel %s with args %s, result in #%d" name (show ags) dataId)
           return (Data dataId)
-         
-       makeKernel name arity = Kernel name arity (f name)
                               
    
-   kerCtx <- Map.fromList <$> forM kernels (\k@(Kernel name _ _) -> (name,) <$> newNodeIO k)
-   ctx1 <- readModule =<< readFile =<< getDataFileName file
+   ctx <- readModule =<< readFile =<< getDataFileName file
 
-   let ctx = Map.union ctx1 kerCtx
-       ch  = check ctx
+   let ch  = check builtins ctx
+       builtins = Map.union defaultBuiltins kernels
 
    getArgs >>= \case
       ["-e",s] -> ch s
@@ -68,10 +73,10 @@ main = do
       _ -> error "Invalid parameters"
 
 
-check :: Map String Node -> String -> IO ()
-check ctx expr = do
+check :: Map String Builtin -> Map String Node -> String -> IO ()
+check builtins ctx expr = do
       r <- readExpr expr
 
       putStrLn ("Evaluating: " ++ show expr)
-      f <- run ctx r
+      f <- run builtins ctx r
       putStrLn ("Reduction result: " ++ show f)

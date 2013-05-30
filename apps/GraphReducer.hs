@@ -1,5 +1,6 @@
 import ViperVM.Graph.Graph
 import ViperVM.Graph.ParallelReducer
+import ViperVM.Graph.Builtins
 
 import Data.Map as Map
 import Control.Monad (foldM)
@@ -35,7 +36,7 @@ main = do
 check :: Map String Node -> Node -> IO ()
 check ctx r = do
       putStrLn ("Evaluating: " ++ show r)
-      f <- run ctx r
+      f <- run defaultBuiltins ctx r
       putStrLn ("Reduction result: " ++ show f)
 
 app :: Node -> Node -> IO Node

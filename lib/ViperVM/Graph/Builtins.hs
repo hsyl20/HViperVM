@@ -9,12 +9,12 @@ data Builtin = Builtin {
    action :: ([Expr],[Node]) -> IO Expr
 }
 
-builtins :: Map String Builtin
-builtins = Map.unions [
-               conditionBuiltins,
-               arithmeticBuiltins,
-               listBuiltins
-            ]
+defaultBuiltins :: Map Name Builtin
+defaultBuiltins = Map.unions [
+      conditionBuiltins,
+      arithmeticBuiltins,
+      listBuiltins
+   ]
 
 
 conditionBuiltins :: Map String Builtin
