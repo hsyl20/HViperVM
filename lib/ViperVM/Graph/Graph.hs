@@ -4,7 +4,7 @@
 module ViperVM.Graph.Graph (
    Node, Expr(..), Name,
    newNodeIO, newNode, followAlias,
-   getNodeExpr, getNodeExprIO, setNodeExpr, lock, unlock,
+   getNodeExpr, getNodeExprIO, setNodeExpr, setNodeExprIO, lock, unlock,
    instantiate
 ) where
 
@@ -27,7 +27,7 @@ data Expr = Symbol Name                               -- ^ A symbol (function na
           | ConstBool Bool                            -- ^ A boolean constant
           | List [Node]                               -- ^ A list instance
           | Data DataId                               -- ^ An opaque reference to a data
-          | Kernel String Int ([Node] -> IO Node)     -- ^ A refernce to a kernel
+          | Kernel String Int ([Expr] -> IO Expr)     -- ^ A reference to a kernel
           | Alias Node                                -- ^ An indirection to another node
           | Let Bool (Map Name Node) Node             -- ^ A let-expression (first arg is true if recursive let)
 
@@ -40,12 +40,12 @@ instance Show Expr where
    show (Symbol s) = s
    show (App op arg) = "(" ++ show op ++ " " ++ show arg ++ ")"
    show (Data i) = "#" ++ show i
-   show (Lambda names body) = if Prelude.null names then show body else "λ. " ++ concat (intersperse " " names) ++ " -> " ++ show body
+   show (Lambda names body) = if Prelude.null names then show body else "(λ. " ++ concat (intersperse " " names) ++ " -> " ++ show body ++ ")"
    show (ConstInteger i) = show i
    show (ConstBool i) = show i
-   show (List i) = show i
+   show (List xs) = "[" ++ concat (intersperse ", " (fmap show xs)) ++ "]"
    show (Kernel n _ _) = show ("Kernel " ++ n)
-   show (Alias n) = "Alias"--show n
+   show (Alias n) = show n
    show (Let False bindings body) = "(let " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
    show (Let True bindings body) = "(let* " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
 
@@ -66,22 +66,26 @@ getNodeExpr (Node e _) = readTVar e
 
 -- | IO version of getNodeExpr
 getNodeExprIO :: Node -> IO Expr
-getNodeExprIO node = atomically $ getNodeExpr node
+getNodeExprIO node = atomically (getNodeExpr node)
 
 -- | Set the expression associated with a node
 setNodeExpr :: Node -> Expr -> STM ()
 setNodeExpr (Node e _) ex = writeTVar e ex
 
+-- | IO version of setNodeExpr
+setNodeExprIO :: Node -> Expr -> IO ()
+setNodeExprIO node ex = atomically (setNodeExpr node ex)
+
 -- | Lock a node or block until it is unlocked
-lock :: Node -> IO ()
-lock (Node _ lck) = atomically $ do
+lock :: Node -> STM ()
+lock (Node _ lck) = do
    readTVar lck >>= \case
       Locked -> retry
       Unlocked -> writeTVar lck Locked
 
 -- | Unlock a node
-unlock :: Node -> IO ()
-unlock (Node _ lck) = atomically $ do
+unlock :: Node -> STM ()
+unlock (Node _ lck) = do
    readTVar lck >>= \case
       Locked -> writeTVar lck Unlocked
       Unlocked -> error "Unlocking a non locked node"
