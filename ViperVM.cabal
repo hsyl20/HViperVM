@@ -53,6 +53,7 @@ library
     ViperVM.Event
     ViperVM.Graph.Graph
     ViperVM.Graph.ParallelReducer
+    ViperVM.Graph.Builtins
 
     ViperVM.Runtime
     ViperVM.Runtime.Data

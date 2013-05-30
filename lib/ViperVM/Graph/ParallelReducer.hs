@@ -4,6 +4,8 @@ module ViperVM.Graph.ParallelReducer (
 ) where
 
 import ViperVM.Graph.Graph
+import ViperVM.Graph.Builtins
+
 import Data.Map as Map
 import Control.Concurrent.STM
 import Control.Monad ((<=<),void,when,liftM)
@@ -113,82 +115,20 @@ step ctx spine@(a:as) = do
    res2 <- case res of
       Just e -> return e
       Nothing -> getNodeExprIO a >>= \case
-         -- Binary operations
 
-         Symbol "+" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y], _) -> return (ConstInteger (x+y))
-               (e,_) -> error ("Do not know how to add this: " ++ show e)
-
-         Symbol "-" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y],_) -> return (ConstInteger (x-y))
-               (e,_) -> error ("Do not know how to subtract this: " ++ show e)
-
-         Symbol "*" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y],_) -> return (ConstInteger (x*y))
-               (e,_) -> error ("Do not know how to multiply this: " ++ show e)
-
-         Symbol "==" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y],_) -> return (ConstBool (x == y))
-               (e,_) -> error ("Do not know how to compare this: " ++ show e)
-
-         Symbol "/=" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y],_) -> return (ConstBool (x /= y))
-               (e,_) -> error ("Do not know how to compare this: " ++ show e)
-
-         Symbol ">" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y],_) -> return (ConstBool (x > y))
-               (e,_) -> error ("Do not know how to compare this: " ++ show e)
-
-         Symbol "<" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y],_) -> return (ConstBool (x < y))
-               (e,_) -> error ("Do not know how to compare this: " ++ show e)
-
-         Symbol ">=" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y],_) -> return (ConstBool (x >= y))
-               (e,_) -> error ("Do not know how to compare this: " ++ show e)
-
-         Symbol "<=" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger x, ConstInteger y],_) -> return (ConstBool (x <= y))
-               (e,_) -> error ("Do not know how to compare this: " ++ show e)
-
-         Symbol "List.head" -> reduceSpine ctx as [True] $ \case
-               ([List []],_) -> error ("List.head applied to an empty list")
-               ([List (x:_)],_) -> return (Alias x)
-               (e,_) -> error ("List.head can only be applied to a list (found " ++ show e ++")")
-
-         Symbol "List.tail" -> reduceSpine ctx as [True] $ \case
-               ([List (_:xs)],_) -> return (List xs)
-               (e,_) -> error ("List.tail can only be applied to a list (found " ++ show e ++")")
-
-         Symbol "List.drop" -> reduceSpine ctx as [True,True] $ \case
-               ([ConstInteger n, List xs],_) -> return (List (drop (fromIntegral n) xs))
-               (e,_) -> error ("List.drop cannot be applied (found " ++ show e ++")")
-
-         Symbol "List.null" -> reduceSpine ctx as [True] $ \case
-               ([List xs],_) -> return (ConstBool (Prelude.null xs))
-               (e,_) -> error ("List.null can only be applied to a list (found " ++ show e ++")")
-
-         Symbol "List.cons" -> reduceSpine ctx as [False,True] $ \case
-               ([List xs],[x,_]) -> return (List (x:xs))
-               (e,_) -> error ("List.cons can only be applied to a list (found " ++ show e ++")")
-
-         Symbol "List.snoc" -> reduceSpine ctx as [True,False] $ \case
-               ([List xs],[_,x]) -> return (List (xs ++ [x]))
-               (e,_) -> error ("List.snoc cannot be applied (found " ++ show e ++")")
-
-         Symbol "List.deepSeq" -> reduceSpine ctx as [True] $ \case
+         -- Force deep evaluation
+         Symbol "deepSeq" -> reduceSpine ctx as [True] $ \case
                -- Apply List.deepSeq recursively
                ([List xs],_) -> List <$> (runParallel ctx =<< traverse (newNodeIO . App a) xs)
                (_,[node]) -> return (Alias node)
                _ -> error "deepSeq error that should never be triggered"
 
-         -- Conditions
-         Symbol "if" -> reduceSpine ctx as [True,False,False] $ \case
-               ([ConstBool True],[_,thn,_]) -> return (Alias thn)
-               ([ConstBool False],[_,_,els]) -> return (Alias els)
-               (e,_) -> error ("If condition does not evaluate to a boolean: " ++ show e)
-
-         Symbol name -> error ("Not in scope: `" ++ show name)
+         -- Built-ins
+         Symbol name 
+            | Map.member name builtins -> do
+                  let builtin = builtins Map.! name
+                  reduceSpine ctx as (evals builtin) (action builtin)
+            | otherwise -> error ("Not in scope: `" ++ show name)
 
          -- Kernel execution
          Kernel _ arity f -> reduceSpine ctx as (replicate arity True) $ \case

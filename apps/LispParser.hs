@@ -32,13 +32,13 @@ main = do
    ch "(sum '(1 2 3 4 5))"
    ch "(sum '((+ 1 2) 3 4 5))"
    ch "(map (+ 1) '(1 2 3 4))"
-   ch "(List.deepSeq (map (+ 1) '(1 2 3 4)))"
+   ch "(deepSeq (map (+ 1) '(1 2 3 4)))"
    ch "(constant)"
    ch "(trimatrix3)"
-   ch "(List.deepSeq (triangularize matrix2))"
-   ch "(List.deepSeq (zipWith + '(1 2 3 4) '(7 7 7 7)))"
-   ch "(List.deepSeq (zipWith2D + matrix2 matrix2))"
-   ch "(List.deepSeq (crossWith * '(1 2 3 4) '(1 2 3)))"
+   ch "(deepSeq (triangularize matrix2))"
+   ch "(deepSeq (zipWith + '(1 2 3 4) '(7 7 7 7)))"
+   ch "(deepSeq (zipWith2D + matrix2 matrix2))"
+   ch "(deepSeq (crossWith * '(1 2 3 4) '(1 2 3)))"
    ch "(reclet 10 0)"
 
    let f name ags = do
@@ -59,9 +59,9 @@ main = do
 
    let ctx2 = Map.union s1 kerCtx
 
-   check ctx2 "(List.deepSeq (cholesky trimatrix3))"
-   check ctx2 "(List.deepSeq (cholRec trimatrix3))"
-   check ctx2 "(List.deepSeq (cholRec trimatrix5))"
+   check ctx2 "(deepSeq (cholesky trimatrix3))"
+   check ctx2 "(deepSeq (cholRec trimatrix3))"
+   check ctx2 "(deepSeq (cholRec trimatrix4))"
 
 
 check :: Map String Node -> String -> IO ()
