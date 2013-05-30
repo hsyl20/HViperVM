@@ -27,6 +27,7 @@ main = do
    ch "(letsgo 10 5)"
    ch "(letsgo* 10 5)"
    ch "(rec 5 10)"
+   ch "(recter 5 10 0)"
    ch "(recf - 1000 5 10)"
    ch "(sum '(1 2 3 4 5))"
    ch "(sum '((+ 1 2) 3 4 5))"

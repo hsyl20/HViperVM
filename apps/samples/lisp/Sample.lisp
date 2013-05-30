@@ -8,6 +8,12 @@
            (+ a (rec a (- n 1)))
            0))
 
+(defun recter (a n s)
+      "Terminal recursive function"
+      (if (/= n 0)
+         (recter a (- n 1) (+ s a))
+         0))
+
 (defun recf (f init a n)
      "Recursive higher-order function"
      (if (/= n 0)
