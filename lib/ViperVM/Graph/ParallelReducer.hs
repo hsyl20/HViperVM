@@ -79,19 +79,6 @@ step ctx spine@(a:as) = do
             a' <- instantiate ctx2 body
             return (Just (a':as'))
 
-         Let False bindings body -> do
-            a' <- instantiate bindings body
-            setNodeExpr a =<< getNodeExpr a'
-            return (Just spine)
-
-         Let True bindings body -> do
-            -- Placeholder nodes
-            bindings' <- traverse (\ _ -> newNode (ConstInteger 666)) bindings
-            void $ traverseWithKey (\ name expr -> setNodeExpr (bindings' Map.! name) =<< Alias <$> instantiate bindings' expr) bindings
-            a' <- instantiate bindings' body
-            setNodeExpr a =<< getNodeExpr a'
-            return (Just spine)
-
          _ -> return Nothing
       return r
 

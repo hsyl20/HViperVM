@@ -5,12 +5,13 @@ module ViperVM.Graph.Graph (
    Node, Expr(..), Name,
    newNodeIO, newNode, followAlias,
    getNodeExpr, getNodeExprIO, setNodeExpr, setNodeExprIO, lock, unlock,
-   instantiate
+   instantiate, instantiateIO
 ) where
 
 import Control.Concurrent.STM
 import Control.Applicative
 import Data.Traversable (forM, traverse)
+import Data.Foldable (traverse_)
 import Data.List (intersperse)
 import Data.Map as Map
 import System.IO.Unsafe
@@ -97,6 +98,11 @@ followAlias node = getNodeExpr node >>= \case
    Alias e -> followAlias e
    _       -> return node
 
+
+-- | IO version of instantiate
+instantiateIO :: Map Name Node -> Node -> IO Node
+instantiateIO ctx node = atomically (instantiate ctx node)
+
 -- | Create a new instance of a node where some symbols have been replaced by associated nodes
 instantiate :: Map Name Node -> Node -> STM Node
 instantiate ctx node = snd <$> instantiate' ctx node
@@ -133,24 +139,34 @@ instantiate' ctx node = getNodeExpr node >>= \case
             else return (False,node)
 
    Let False bindings body -> do
-         -- Remove overloaded names from ctx
-         let ctx2 = Map.difference ctx bindings
          bindings'' <- traverse (instantiate' ctx) bindings
-         let cs = any id (fmap fst (elems bindings''))
+         let cs = fmap fst (elems bindings'')
              bindings' = fmap snd bindings''
+             ctx2 = Map.union ctx bindings'
          (c,body') <- instantiate' ctx2 body
-         if c || cs
-            then (True,) <$> newNode (Let False bindings' body')
+         if or (c:cs)
+            then return (True, body')
             else return (False,node)
 
    Let True bindings body -> do
-         -- Remove overloaded names from ctx
-         let ctx2 = Map.difference ctx bindings
+         -- Placeholder nodes
+         nodes <- traverse (\ _ -> newNode (ConstInteger 666)) bindings
+
+         -- Instantiate each let body
+         let ctx2 = Map.union ctx nodes
          bindings'' <- traverse (instantiate' ctx2) bindings
-         let cs = any id (fmap fst (elems bindings''))
+
+         -- cs indicates bodies that have been instantiated
+         let cs = fmap fst (elems bindings'')
              bindings' = fmap snd bindings''
+             nodeExprs = Map.intersectionWith (\n1 n2 -> (n1, Alias n2)) nodes bindings'
+
+         -- Set real expressions to placeholder nodes
+         traverse_ (uncurry setNodeExpr) nodeExprs
+
+         -- Instantiate body
          (c,body') <- instantiate' ctx2 body
-         if c || cs
-            then (True,) <$> newNode (Let True bindings' body')
+         if or (c:cs)
+            then return (True, body')
             else return (False,node)
 
