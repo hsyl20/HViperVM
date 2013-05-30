@@ -27,7 +27,10 @@ symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~."
 
 spaces :: Parser ()
-spaces = skipMany1 (space <|> newline)
+spaces = skipMany1 (void space <|> void newline <|> comment)
+
+comment :: Parser ()
+comment = char ';' >> many (noneOf "\n") >> void newline
 
 parseString :: Parser LispVal
 parseString = do void $ char '"'
