@@ -1,5 +1,5 @@
 module ViperVM.Platform.Link (
-   Link(..), linkInfo, linkEndpoints
+   Link(..), linkInfo, linkEndpoints, linksBetween
 ) where
 
 import ViperVM.Backends.OpenCL
@@ -23,3 +23,7 @@ linkInfo (CLLink _ _ e1 e2) = do
 -- | Get memories at each end of a link
 linkEndpoints :: Link -> (Memory,Memory)
 linkEndpoints (CLLink _ _ m1 m2) = (m1,m2)
+
+-- | Get links between a source and a destination from a list of links
+linksBetween :: Memory -> Memory -> [Link] -> [Link]
+linksBetween m1 m2 = filter ((==) (m1,m2) . linkEndpoints)
