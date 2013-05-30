@@ -89,7 +89,7 @@ main = do
    let kernels = Map.fromList [
 
          ("add", Builtin [True,True] $ \case
-            (args@[Data x', Data y'],_) -> do
+            (args@[x', y'],_) -> do
                let (x,y) = (readData x', readData y')
                putStrLn (printf "Executing kernel with args %s" (show args))
                Just c <- allocateBuffer rm mem bufferSize
@@ -108,8 +108,7 @@ main = do
    let builtins = Map.unions [defaultBuiltins, kernels, datas]
        expr = "(add a (add b b))"
 
-   Data c' <- check builtins Map.empty expr
-   let c = readData c'
+   c <- readData <$> check builtins Map.empty expr
 
    myTransfer tm linkRead reg c hc
    result <- chunks (fromIntegral w) <$> peekArray (fromIntegral $ w*h) (castPtr pc) :: IO [[Float]]
@@ -125,8 +124,9 @@ main = do
 
    putStrLn "Done."
 
-readData :: Dynamic -> Buffer
-readData u = fromDyn u (error "Invalid data")
+readData :: Expr -> Buffer
+readData (Data u) = fromDyn u (error "Invalid data")
+readData _ = error "Invalid data parameter"
 
 registerData :: Typeable a => [(String,a)] -> Map String Builtin
 registerData ds = fmap f (Map.fromList ds)
