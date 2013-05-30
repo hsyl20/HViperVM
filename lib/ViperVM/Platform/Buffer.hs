@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 -- | This module defines Buffer entities
 --
 -- Buffers are memory spaces that have been allocated in a memory
@@ -15,6 +17,7 @@ import ViperVM.Backends.OpenCL.Types
 import ViperVM.Backends.OpenCL
 
 import Data.Word
+import Data.Typeable
 import Foreign.Ptr
 import Foreign.Marshal.Alloc
 
@@ -24,7 +27,7 @@ import Control.Monad
 data Buffer = 
    CLBuffer OpenCLLibrary Memory CLMem Word64 |
    HostBuffer Word64 (Ptr ())
-   deriving (Ord,Eq)
+   deriving (Ord,Eq,Typeable)
 
 instance Show Buffer where
   show (CLBuffer {}) = "OpenCL Buffer"

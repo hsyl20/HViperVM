@@ -193,6 +193,15 @@ executable LispParser
     random,
     ViperVM
 
+executable LispCL
+  main-is: LispCL.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    containers,
+    ViperVM
+
 executable ParseTest
   main-is: ParseTest.hs
   hs-source-dirs: apps

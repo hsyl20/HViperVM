@@ -9,6 +9,7 @@ import Data.Map as Map
 import System.Random
 import Text.Printf
 import System.Environment
+import Data.Dynamic
 
 import Paths_ViperVM
 
@@ -32,9 +33,9 @@ main = do
          ] 
 
        f name ags = do
-          dataId <- (`mod` 1000) <$> randomIO
+          dataId <- (`mod` 1000) <$> randomIO :: IO Int
           putStrLn (printf "Execute kernel %s with args %s, result in #%d" name (show ags) dataId)
-          return (Data dataId)
+          return (Data $ toDyn dataId)
                               
    
    ctx <- readModule =<< readFile =<< getDataFileName file

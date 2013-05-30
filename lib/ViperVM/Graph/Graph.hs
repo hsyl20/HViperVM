@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, TupleSections #-}
+{-# LANGUAGE LambdaCase, TupleSections, ExistentialQuantification #-}
 
 -- | Graph reduction module
 module ViperVM.Graph.Graph (
@@ -14,6 +14,7 @@ import Data.Traversable (forM, traverse)
 import Data.Foldable (traverse_)
 import Data.List (intersperse)
 import Data.Map as Map
+import Data.Dynamic
 import System.IO.Unsafe
 
 -- | A node in the graph that is to be reduced.
@@ -27,11 +28,10 @@ data Expr = Symbol Name                               -- ^ A symbol (function na
           | ConstInteger Integer                      -- ^ An integer constant
           | ConstBool Bool                            -- ^ A boolean constant
           | List [Node]                               -- ^ A list instance
-          | Data DataId                               -- ^ An opaque reference to a data
+          | Data Dynamic                              -- ^ An opaque reference to a data
           | Alias Node                                -- ^ An indirection to another node
           | Let Bool (Map Name Node) Node             -- ^ A let-expression (first arg is true if recursive let)
 
-type DataId = Int             -- ^ Data identifier
 type Name = String            -- ^ Name for symbols
 data Lock = Locked | Unlocked -- ^ Indicate if a node is locked (being reduced) or not
 
