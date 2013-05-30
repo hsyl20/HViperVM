@@ -18,6 +18,7 @@ import Data.List (intersperse)
 debug :: Bool
 debug = False
 
+-- | Indicate if a node is an Alias
 isAlias :: Node -> STM Bool
 isAlias node = getNodeExpr node >>= \case
    Alias _  -> return True
