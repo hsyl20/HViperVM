@@ -79,7 +79,7 @@ parseModule = many (parseExpr <* skipMany spaces) <* eof
 readExpr :: String -> IO Node
 readExpr input = case parse parseExpr "lisp" input of
    Left err -> error ("Error while parsing Lisp expression: " ++ show err)
-   Right a -> makeExpr Map.empty a
+   Right a -> G.instantiateIO Map.empty =<< makeExpr Map.empty a
 
 -- | Parse a Lisp module
 readModule :: String -> IO (Map String Node)
