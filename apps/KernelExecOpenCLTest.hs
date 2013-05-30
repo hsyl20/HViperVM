@@ -23,10 +23,11 @@ main = do
 
    let (w,h) = (1024, 512)
        padding = 11
-       bufferSize = (w + padding) * h * (Prim.sizeOf Prim.Float) 
+       primSize = Prim.sizeOf Prim.Float
+       bufferSize = (w + padding) * h * primSize
        openclProcs = filter isOpenCLProcessor (processors platform)
        ker = floatMatrixAddKernelCL
-       reg = Region2D 0 h w padding
+       reg = Region2D 0 h (w*primSize) padding
 
    putStrLn "Registering kernel..." 
    registerKernel km ker
