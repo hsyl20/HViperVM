@@ -18,31 +18,25 @@ import Data.List (intersperse)
 debug :: Bool
 debug = False
 
+parallel :: Bool
+parallel = True
+
 -- | Perform several node reductions in parallel
 runParallel :: Map String Node -> [Node] -> IO [Node]
 runParallel ctx = do
-   if debug
+   if parallel
       then traverse (run ctx)
       else traverse get <=< traverse (forkPromise . run ctx)
 
 -- | Reduce a node
 run :: Map Name Node -> Node -> IO Node
 run ctx node = do
-   -- Lock alias nodes and node to reduce
-   void . atomically $ do
-      node' <- iterateUntilM'' (liftM not . isAlias) (\x -> lock x >> return x) node
-      lock node'
-
    when debug (putStrLn ("Red: " ++ showSpine [node]))
 
    -- Reduce the node
    [res] <- iterateUntilM'' (atomically . isFinal) (step ctx) [node]
-   when debug (putStrLn (" |=> " ++ showSpine [res]))
 
-   -- Unlock alias nodes and reduced node
-   void . atomically $ do
-      node' <- iterateUntilM'' (liftM not . isAlias) (\x -> unlock x >> return x) node
-      unlock node'
+   when debug (putStrLn (" |=> " ++ showSpine [res]))
 
    return res
          
@@ -50,7 +44,6 @@ run ctx node = do
 step :: Map Name Node -> [Node] -> IO [Node]
 step _ [] = error "Evaluation spine is empty"
 step ctx spine@(a:as) = do
-
 
    res <- getNodeExprIO a >>= \case
 
@@ -95,6 +88,7 @@ step ctx spine@(a:as) = do
 
          e -> error ("Cannot apply " ++ show e)
 
+
    when debug (putStrLn (" |-> " ++ showSpine res))
 
    return res
@@ -108,7 +102,8 @@ reduceSpine ctx spine evalMasks f = do
        spine' = drop arity spine
        parent = head spine'
    args <- atomically (getArgs arity (tail spine))
-   evalArgs <- atomically . mapM getNodeExpr =<< runParallel ctx (mask evalMasks args)
+   args' <- runParallel ctx (mask evalMasks args)
+   evalArgs <- atomically (mapM getNodeExpr args')
    result <- f (evalArgs,args)
    setNodeExprIO parent result
    return spine'
@@ -116,7 +111,18 @@ reduceSpine ctx spine evalMasks f = do
                
 -- | Return the given number of arguments from the spine
 getArgs :: Int -> [Node] -> STM [Node]
-getArgs count spine = getArgs' count spine
+getArgs count spine = do
+
+   -- Lock the spine 
+   traverse lock spine
+
+   r <- getArgs' count spine
+
+   -- Unlock the spine
+   traverse unlock spine
+
+   return r
+
    where
       getArgs' 0 _ = return []
       getArgs' _ [] = error (printf "Cannot retrieve %d args from the given spine" count)
