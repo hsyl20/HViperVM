@@ -60,8 +60,9 @@ step ctx spine@(a:as) = do
          Lambda names body -> do
             args <- getArgs (length names) as
             let ctx2 = Map.fromList (names `zip` args)
+                as' = drop (length names) as
             inst <- instantiate ctx2 body
-            return (Just (inst : drop (length names) as))
+            return (Just (inst : as'))
 
          Let False bindings body -> do
             let ctx2 = Map.union ctx bindings

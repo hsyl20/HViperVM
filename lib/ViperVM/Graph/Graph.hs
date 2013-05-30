@@ -95,33 +95,58 @@ followAlias node = getNodeExpr node >>= \case
 
 -- | Create a new instance of a node where some symbols have been replaced by associated nodes
 instantiate :: Map Name Node -> Node -> STM Node
-instantiate ctx node = getNodeExpr node >>= \case
-   ConstInteger _ -> return node
-   ConstBool _    -> return node
-   Data _         -> return node
-   Kernel {}      -> return node
-   Alias e        -> instantiate ctx e
-   List xs        -> newNode =<< (List <$> forM xs (instantiate ctx))
-   Lambda names body -> newNode =<< (Lambda names <$> instantiate ctx2 body)
-      where
-         ctx2 = Prelude.foldl (flip Map.delete) ctx names
+instantiate ctx node = snd <$> instantiate' ctx node
+
+instantiate' :: Map Name Node -> Node -> STM (Bool,Node)
+instantiate' ctx node = getNodeExpr node >>= \case
+   ConstInteger _ -> return (False,node)
+   ConstBool _    -> return (False,node)
+   Data _         -> return (False,node)
+   Kernel {}      -> return (False,node)
+   Alias e        -> instantiate' ctx e
+   List xs        -> do
+         xs' <- forM xs (instantiate' ctx)
+         if any id (fmap fst xs')
+            then (True,) <$> newNode (List (fmap snd xs'))
+            else return (False,node)
+
+   Lambda names body -> do
+         let ctx2 = Prelude.foldl (flip Map.delete) ctx names
+         (cond,body') <- instantiate' ctx2 body
+         if cond
+            then (True,) <$> newNode (Lambda names body')
+            else return (False,node)
+     
    Symbol name 
-      | Map.member name ctx -> return (ctx Map.! name)
-      | otherwise           -> return node
-   App e1 e2      -> do
-         a1 <- instantiate ctx e1
-         a2 <- instantiate ctx e2
-         newNode (App a1 a2)
+      | Map.member name ctx -> return (True, ctx Map.! name)
+      | otherwise           -> return (False,node)
+
+   App e1 e2 -> do
+         (c1,a1) <- instantiate' ctx e1
+         (c2,a2) <- instantiate' ctx e2
+         if c1 || c2
+            then (True,) <$> newNode (App a1 a2)
+            else return (False,node)
+
    Let False bindings body -> do
          -- Remove overloaded names from ctx
          let ctx2 = Map.difference ctx bindings
-         bindings' <- traverse (instantiate ctx) bindings
-         body' <- instantiate ctx2 body
-         newNode (Let False bindings' body')
+         bindings'' <- traverse (instantiate' ctx) bindings
+         let cs = any id (fmap fst (elems bindings''))
+             bindings' = fmap snd bindings''
+         (c,body') <- instantiate' ctx2 body
+         if c || cs
+            then (True,) <$> newNode (Let False bindings' body')
+            else return (False,node)
+
    Let True bindings body -> do
          -- Remove overloaded names from ctx
          let ctx2 = Map.difference ctx bindings
-         bindings' <- traverse (instantiate ctx2) bindings
-         body' <- instantiate ctx2 body
-         newNode (Let True bindings' body')
+         bindings'' <- traverse (instantiate' ctx2) bindings
+         let cs = any id (fmap fst (elems bindings''))
+             bindings' = fmap snd bindings''
+         (c,body') <- instantiate' ctx2 body
+         if c || cs
+            then (True,) <$> newNode (Let True bindings' body')
+            else return (False,node)
 
