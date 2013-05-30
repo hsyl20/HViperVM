@@ -72,6 +72,6 @@ check :: Map String Node -> String -> IO ()
 check ctx expr = do
       r <- readExpr expr
 
-      putStrLn ("Evaluating: " ++ show r)
+      putStrLn ("Evaluating: " ++ show expr)
       f <- run ctx r
       putStrLn ("Reduction result: " ++ show f)
