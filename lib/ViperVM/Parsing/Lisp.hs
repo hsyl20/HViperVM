@@ -73,7 +73,7 @@ parseExpr = parseAtom
                return x
 
 parseModule :: Parser [LispVal]
-parseModule = many (parseExpr <* skipMany space) <* eof
+parseModule = many (parseExpr <* skipMany spaces) <* eof
 
 -- | Parse a Lisp expression
 readExpr :: String -> IO Node
