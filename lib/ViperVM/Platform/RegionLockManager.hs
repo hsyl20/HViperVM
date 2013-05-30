@@ -20,10 +20,10 @@ import Control.Monad (forM)
 import Data.Foldable (forM_)
 
 data RegionLockResult = LockSuccess | RegionAlreadyLocked
-                        deriving (Eq,Ord)
+                        deriving (Eq,Ord,Show)
 
 data BufferReleaseResult = BufferReleaseSuccess | RemainingRegion
-                           deriving (Eq,Ord)
+                           deriving (Eq,Ord,Show)
 
 data LockedRegion = LockedRegion Region LockMode deriving (Eq,Ord)
 

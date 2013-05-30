@@ -11,7 +11,7 @@ import Control.Monad (void)
 import Foreign.Ptr
 
 data RegionTransferResult = RegionTransferSuccess | RegionTransferError
-                      deriving (Eq,Ord)
+                      deriving (Eq,Ord,Show)
 
 data RegionTransferStep = RegionTransferStep Link Buffer Region
                     deriving (Eq,Ord)

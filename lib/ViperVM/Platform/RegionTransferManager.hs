@@ -30,7 +30,7 @@ data RegionTransferManager = RegionTransferManager {
 data PrepareRegionTransferResult = PrepareSuccess | 
                                    LockError [(Buffer,Region,RegionLockResult)] |
                                    InvalidRegionTransfer
-                                   deriving (Eq,Ord)
+                                   deriving (Eq,Ord,Show)
 
 -- | Initialize a new transfer manager
 createRegionTransferManager :: RegionLockManager -> IO RegionTransferManager
