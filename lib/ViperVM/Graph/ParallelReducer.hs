@@ -41,6 +41,8 @@ step :: Map Name Node -> [Node] -> IO [Node]
 step _ [] = error "Evaluation spine is empty"
 step ctx spine@(a:as) = do
 
+--   putStrLn ("Step: " ++ show spine)
+
    -- Perform STM operation if possible
    res <- atomically $ do
       getNodeExpr a >>= \case
@@ -128,6 +130,10 @@ step ctx spine@(a:as) = do
                [List (_:xs)] -> (List xs)
                e -> error ("List.tail can only be applied to a list (found " ++ show e ++")")
 
+         Symbol "List.drop" -> evalOp ctx as 2 $ \case
+               [ConstInteger n, List xs] -> (List (drop (fromIntegral n) xs))
+               e -> error ("List.drop cannot be applied (found " ++ show e ++")")
+
          Symbol "List.null" -> evalOp ctx as 1 $ \case
                [List xs] -> ConstBool (Prelude.null xs)
                e -> error ("List.null can only be applied to a list (found " ++ show e ++")")
@@ -137,6 +143,12 @@ step ctx spine@(a:as) = do
                evalOp ctx (tail as) 1 $ \case
                   [List xs] -> List (head args : xs)
                   e -> error ("List.cons can only be applied to a list (found " ++ show e ++")")
+
+         Symbol "List.snoc" -> do
+               args <- atomically $ getArgs 2 as
+               evalOp ctx (tail as) 1 $ \case
+                  [List xs] -> List (xs ++ [head args])
+                  e -> error ("List.snoc cannot be applied (found " ++ show e ++")")
 
          Symbol "List.deepSeq" -> do
                arg <- run ctx =<< head <$> atomically (getArgs 1 as)

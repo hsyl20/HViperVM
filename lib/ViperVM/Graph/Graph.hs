@@ -45,7 +45,7 @@ instance Show Expr where
    show (ConstBool i) = show i
    show (List i) = show i
    show (Kernel n _ _) = show ("Kernel " ++ n)
-   show (Alias n) = show n
+   show (Alias n) = "Alias"--show n
    show (Let False bindings body) = "(let " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
    show (Let True bindings body) = "(let* " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
 

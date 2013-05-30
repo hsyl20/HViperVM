@@ -33,7 +33,11 @@ main = do
    ch "(map (+ 1) '(1 2 3 4))"
    ch "(List.deepSeq (map (+ 1) '(1 2 3 4)))"
    ch "(constant)"
-   ch "(matrix1)"
+   ch "(trimatrix)"
+   ch "(List.deepSeq (triangularize matrix))"
+   ch "(List.deepSeq (zipWith + '(1 2 3 4) '(7 7 7 7)))"
+   ch "(List.deepSeq (zipWith2D + matrix matrix))"
+   ch "(List.deepSeq (crossWith * '(1 2 3 4) '(1 2 3)))"
 
    let f name ags = do
          dataId <- (`mod` 1000) <$> randomIO
@@ -53,7 +57,7 @@ main = do
 
    let ctx2 = Map.union s1 kerCtx
 
-   check ctx2 "(List.deepSeq (cholesky matrix1))"
+   check ctx2 "(List.deepSeq (cholesky trimatrix))"
 
 
 check :: Map String Node -> String -> IO ()

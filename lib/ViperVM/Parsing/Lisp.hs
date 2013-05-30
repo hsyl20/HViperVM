@@ -19,6 +19,10 @@ data LispVal = Atom String
               | Quote LispVal
               deriving (Show)
 
+atomValue :: LispVal -> String
+atomValue (Atom s) = s
+atomValue _ = error "Not an atom"
+
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~."
 
@@ -92,7 +96,7 @@ makeLambda (List [Atom "defun", Atom name, List args, String _, List body]) =
 makeLambda (List [Atom "defun", Atom name, List args, body]) = 
    (name,) <$> (newNodeIO =<< (G.Lambda args' <$> makeExpr Map.empty body))
    where
-      args' = fmap (\(Atom n) -> n) args
+      args' = fmap atomValue args
 
 makeLambda _ = error "Module should only contain function declarations"
 
@@ -105,17 +109,20 @@ makeExpr ctx (Atom s) = case Map.lookup s ctx of
                            Just n -> return n
                            Nothing -> newNodeIO (G.Symbol s)
 
-makeExpr ctx (List [Atom "let",bdgs,body]) = do
-   let (List bindings) = bdgs
+makeExpr ctx (List [Atom "let",List bindings,body]) = do
    bindings' <- Map.fromList <$> forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
    body' <- makeExpr ctx body
    newNodeIO (G.Let False bindings' body')
 
-makeExpr ctx (List [Atom "let*",bdgs,body]) = do
-   let (List bindings) = bdgs
+makeExpr ctx (List [Atom "let*",List bindings,body]) = do
    bindings' <- Map.fromList <$> forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
    body' <- makeExpr ctx body
    newNodeIO (G.Let True bindings' body')
+
+makeExpr ctx (List [Atom "lambda",List vars,body]) = do
+   let vars' = fmap atomValue vars
+   body' <- makeExpr ctx body
+   newNodeIO (G.Lambda vars' body')
 
 makeExpr ctx (List [x]) = makeExpr ctx x
 

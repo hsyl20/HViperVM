@@ -31,7 +31,19 @@
 
 (defun constant () 10)
 
-(defun matrix1 () '(
+(defun matrix () '(
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)
+   '(10 9 8 7 6 5 4 3 2 1)))
+
+(defun trimatrix () '(
    '(10 9 8 7 6 5 4 3 2 1)
    '(9 8 7 6 5 4 3 2 1)
    '(8 7 6 5 4 3 2 1)
@@ -56,6 +68,40 @@
       (e (+ c d)))
          (+ e e)))
 
+(defun tri (n m)
+   (if (List.null m) 
+      '()
+      (let (
+         (x (List.head m))
+         (xs (List.tail m)))
+            (List.cons
+               (List.drop n x)
+               (tri (+ n 1) xs)))))
+
+(defun triangularize (m)
+   (tri 0 m))
+
+(defun zipWith (f xs ys)
+   (if (List.null xs)
+      '()
+      (if (List.null ys)
+         '()
+         (List.cons
+            (f (List.head xs) (List.head ys))
+            (zipWith f (List.tail xs) (List.tail ys))))))
+
+(defun zipWith2D (f xs ys)
+   (zipWith (zipWith f) xs ys))
+
+(defun crossWith (f xs ys)
+   (map (lambda (y)
+      (map (lambda (x) (f x y))
+         xs))
+         ys))
+
+(defun ap (a b)
+   (a b))
+
 (defun cholesky (m)
    (let* (
       (a (List.head (List.head m)))
@@ -63,6 +109,12 @@
       (c (List.tail m))
       (a' (potrf a))
       (b' (map (trsm a') b))
-      (c' c)
+      (diag (zipWith syrk b' (map List.head c)))
+      (b'' (List.tail b'))
+      (cOps (triangularize (crossWith sgemm b'' b'')))
+      (c' (zipWith2D ap cOps (map List.tail c)))
+      (c'' ((zipWith List.cons diag (List.snoc '() c'))))
       )
-         (List.cons (List.cons a' b') c')))
+         (if (List.null m)
+            '()
+            (List.cons (List.cons a' b') c''))))
