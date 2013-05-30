@@ -8,11 +8,12 @@ import ViperVM.Graph.Builtins
 
 import Data.Map as Map
 import Control.Concurrent.STM
-import Control.Monad ((<=<),void,when,liftM)
+import Control.Monad ((<=<),when)
 import Control.Concurrent.Future
 import Control.Applicative
 import Text.Printf
 import Data.Traversable (traverse)
+import Data.Foldable (traverse_)
 import Data.List (intersperse)
 
 debug :: Bool
@@ -114,12 +115,12 @@ getArgs :: Int -> [Node] -> STM [Node]
 getArgs count spine = do
 
    -- Lock the spine 
-   traverse lock spine
+   traverse_ lock spine
 
    r <- getArgs' count spine
 
    -- Unlock the spine
-   traverse unlock spine
+   traverse_ unlock spine
 
    return r
 
@@ -149,13 +150,6 @@ iterateUntilM'' p f v = do
    if prd
       then return v
       else f v >>= iterateUntilM'' p f
-
--- | Indicate if a node is an Alias
-isAlias :: Node -> STM Bool
-isAlias node = getNodeExpr node >>= \case
-   Alias _  -> return True
-   _        -> return False
-
 
 -- | Indicate if the node is a data (cannot be reduced anymore)
 isDataNode :: Node -> STM Bool
