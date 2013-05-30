@@ -52,65 +52,52 @@ step _ [] = error "Evaluation spine is empty"
 step ctx spine@(a:as) = do
 
 
-   -- Perform STM operation if possible
-   res <- atomically $ do
-      r <- getNodeExpr a >>= \case
+   res <- getNodeExprIO a >>= \case
 
-         Alias a1 -> do
-            a1' <- followAlias a1
-            setNodeExpr a =<< getNodeExpr a1'
-            return (Just (a1:as))
+         Alias a1 -> atomically $ do
+               a1' <- followAlias a1
+               setNodeExpr a =<< getNodeExpr a1'
+               return (a1:as)
 
-         App a1 _ -> return (Just (a1:spine))
-
-         Symbol name 
-            | Map.member name ctx -> do
-                                       let a' = ctx Map.! name
-                                       return (Just (a':as))
-            | otherwise           -> return Nothing
-
-         Lambda [] body -> do
-            return (Just (body:as))
-
-         Lambda names body -> do
-            args <- getArgs (length names) as
-            let ctx2 = Map.fromList (names `zip` args)
-                as' = drop (length names) as
-            a' <- instantiate ctx2 body
-            return (Just (a':as'))
-
-         _ -> return Nothing
-      return r
-
-
-   -- Perform IO operation if no STM action took place and if possible
-   res2 <- case res of
-      Just e -> return e
-      Nothing -> getNodeExprIO a >>= \case
+         App a1 _ -> return (a1:spine)
 
          -- Force deep evaluation
-         Symbol "deepSeq" -> reduceSpine ctx as [True] $ \case
-               -- Apply List.deepSeq recursively
+         Symbol "deepSeq" -> reduceSpine ctx spine [True] $ \case
+               -- Apply deepSeq recursively
                ([List xs],_) -> List <$> (runParallel ctx =<< traverse (newNodeIO . App a) xs)
                (_,[node]) -> return (Alias node)
                _ -> error "deepSeq error that should never be triggered"
 
-         -- Built-ins
          Symbol name 
+            | Map.member name ctx -> do
+                  a1 <- instantiateIO ctx (ctx Map.! name)
+                  return (a1:as)
+
             | Map.member name builtins -> do
                   let builtin = builtins Map.! name
-                  reduceSpine ctx as (evals builtin) (action builtin)
+                  reduceSpine ctx spine (evals builtin) (action builtin)
+
             | otherwise -> error ("Not in scope: `" ++ show name)
 
+
+         Lambda [] body -> reduceSpine ctx spine [] $ \case
+               (_,_) -> return (Alias body)
+
+         Lambda names body -> reduceSpine ctx spine (replicate (length names) False) $ \case
+               (_,args) -> do
+                  let ctx2 = Map.fromList (names `zip` args)
+                  Alias <$> instantiateIO ctx2 body
+
+
          -- Kernel execution
-         Kernel _ arity f -> reduceSpine ctx as (replicate arity True) $ \case
+         Kernel _ arity f -> reduceSpine ctx spine (replicate arity True) $ \case
                (args,_) -> f args
 
          e -> error ("Cannot apply " ++ show e)
 
-   when debug (putStrLn (" |-> " ++ showSpine res2))
+   when debug (putStrLn (" |-> " ++ showSpine res))
 
-   return res2
+   return res
 
 
 -- | Perform a reduction on the spine and update the parent node
@@ -118,9 +105,9 @@ step ctx spine@(a:as) = do
 reduceSpine :: Map String Node -> [Node] -> [Bool] -> (([Expr],[Node]) -> IO Expr) -> IO [Node]
 reduceSpine ctx spine evalMasks f = do
    let arity = length evalMasks
-       spine' = drop (arity - 1) spine
+       spine' = drop arity spine
        parent = head spine'
-   args <- atomically (getArgs arity spine)
+   args <- atomically (getArgs arity (tail spine))
    evalArgs <- atomically . mapM getNodeExpr =<< runParallel ctx (mask evalMasks args)
    result <- f (evalArgs,args)
    setNodeExprIO parent result
@@ -129,18 +116,20 @@ reduceSpine ctx spine evalMasks f = do
                
 -- | Return the given number of arguments from the spine
 getArgs :: Int -> [Node] -> STM [Node]
-getArgs 0 _ = return []
-getArgs n [] = error (printf "Trying to get %d args, but the spine is empty" n)
-getArgs n (x:xs) = do
-   x' <- followAlias x
+getArgs count spine = getArgs' count spine
+   where
+      getArgs' 0 _ = return []
+      getArgs' _ [] = error (printf "Cannot retrieve %d args from the given spine" count)
+      getArgs' n (x:xs) = do
+         x' <- followAlias x
 
-   getNodeExpr x' >>= \case
-      (App _ a2) -> do
-         arg <- followAlias a2
-         (arg:) <$> getArgs (n-1) xs
+         getNodeExpr x' >>= \case
+            (App _ a2) -> do
+               arg <- followAlias a2
+               (arg:) <$> getArgs' (n-1) xs
 
-      -- The node has been updated and is no longer an App
-      _ -> retry 
+            -- The node has been updated and is no longer an App
+            _ -> retry 
 
 
 ----------------------------------------------------------------------
