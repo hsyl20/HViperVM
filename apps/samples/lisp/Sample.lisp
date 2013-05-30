@@ -64,10 +64,23 @@
    '(88 89)
    '(99)))
 
-(defun trimatrix2 () '(
+(defun trimatrix3 () '(
    '(11 12 13)
    '(22 23)
    '(33)))
+
+(defun trimatrix4 () '(
+   '(11 12 13 14)
+   '(22 23 24)
+   '(33 34)
+   '(44)))
+
+(defun trimatrix5 () '(
+   '(11 12 13 14 15)
+   '(22 23 24 25)
+   '(33 34 35)
+   '(44 45)
+   '(55)))
 
 (defun letsgo (a b)
    "Test for let"
@@ -149,3 +162,39 @@
          (if (List.null m)
             m
             (List.cons (List.cons a' b') (cholesky c'')))))
+
+
+(defun reverse (xs)
+   (reverse' xs '()))
+
+(defun reverse' (xs rs)
+   (if (List.null xs)
+      rs
+      (reverse' (List.tail xs) (List.cons (List.head xs) rs))))
+
+(defun cholRec (m)
+   (cholRec' m '()))
+
+(defun cholRec' (m rs)
+   (if (List.null m)
+      (reverse rs)
+      (let ((m' (cholStep m)))
+         (cholRec' (List.tail m') (List.cons (List.head m') rs)))))
+
+(defun cholStep (m)
+   (let* (
+      (a (List.head (List.head m)))
+      (b (List.tail (List.head m)))
+      (c (List.tail m))
+      (a' (potrf a))
+      (b' (map (trsm a') b))
+      (diag (zipWith syrk b' (map List.head c)))
+      (cOps (triangularize (crossWith sgemm b' b')))
+      (cOps' (map List.tail cOps))
+      (c' (zipWith2D ap cOps' (map List.tail c)))
+      (c'' ((zipWith List.cons diag (List.snoc c' '()))))
+      )
+         (if (List.null m)
+            m
+            (List.cons (List.cons a' b') c''))))
+
