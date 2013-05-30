@@ -163,8 +163,7 @@ execute :: Processor -> CompiledKernel -> [KernelParameter] -> IO ()
 
 execute (CLProcessor lib _ cq _) ck@(CLCompiledKernel {}) params = do
 
-   -- TODO: OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
-   putMVar (mutex ck) ()
+   putMVar (mutex ck) () -- OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
 
    let config = configure (kernel ck) params
 
@@ -172,10 +171,10 @@ execute (CLProcessor lib _ cq _) ck@(CLCompiledKernel {}) params = do
 
    let deps = []
    ev <- clEnqueueNDRangeKernel lib cq (peer ck) (globalDim config) (localDim config) deps
-   void $ clWaitForEvents lib [ev]
    
-   -- TODO: Do not forget to release the mutex
-   void $ takeMVar (mutex ck)
+   void $ takeMVar (mutex ck) -- Do not forget to release the mutex
+
+   void $ clWaitForEvents lib [ev]
 
 execute proc ker _ = do
    putStrLn $ "We do not know how to execute kernel " ++ show ker ++ " on " ++ show proc
