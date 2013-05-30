@@ -37,6 +37,14 @@ checkRegionTransfer (RegionTransfer b1 r1 ((RegionTransferStep l b2 r2):xs)) = w
 transfer :: DirectRegionTransfer -> IO RegionTransferResult
 transfer dt = case dt of
 
+   -- Region2D (padding = 0), Region*D
+   DirectRegionTransfer link src (Region2D soff rows sz 0) dst reg ->
+      transfer (DirectRegionTransfer link src (Region1D soff (rows*sz)) dst reg)
+
+   -- Region*D, Region2D (padding = 0)
+   DirectRegionTransfer link src reg dst (Region2D soff rows sz 0) ->
+      transfer (DirectRegionTransfer link src reg dst (Region1D soff (rows*sz)))
+
    -- Host --> CL, Region1D, Region1D
    DirectRegionTransfer (CLLink lib cq HostMemory (CLMemory {})) (HostBuffer _ ptr) (Region1D soff sz) (CLBuffer _ _ buf _) (Region1D doff _) -> do
       let srcptr = plusPtr ptr (fromIntegral soff)
