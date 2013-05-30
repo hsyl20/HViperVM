@@ -16,8 +16,12 @@ import ViperVM.Platform.Primitive as Prim
 
 import Text.Printf
 import Control.Monad
+import Control.Applicative
+import Data.Foldable (traverse_)
 import Data.Map as Map
 import Data.Dynamic
+import Foreign.Marshal.Array
+import Foreign.Ptr
 
 
 main :: IO ()
@@ -34,12 +38,15 @@ main = do
    km <- createKernelManager rm
    tm <- createRegionTransferManager rm
 
-   let (w,h) = (1024, 512)
-       padding = 0
-       bufferSize = (w + padding) * h * (Prim.sizeOf Prim.Float) 
-       openclProcs = Prelude.filter isOpenCLProcessor (processors platform)
-       ker = floatMatrixAddKernelCL
-       reg = Region2D 0 h w padding
+   let 
+      --(w,h) = (1024, 512)
+      (w,h) = (32, 32)
+      padding = 0
+      primSize = Prim.sizeOf Prim.Float
+      bufferSize = (w + padding) * h * primSize 
+      openclProcs = Prelude.filter isOpenCLProcessor (processors platform)
+      ker = floatMatrixAddKernelCL
+      reg = Region2D 0 h (w*primSize) padding
 
    putStrLn "Registering kernel..." 
    registerKernel km ker
@@ -68,7 +75,13 @@ main = do
    Just hb <- allocateBuffer rm HostMemory bufferSize
    Just hc <- allocateBuffer rm HostMemory bufferSize
 
-   putStrLn "Initializing input data (TODO)"
+   putStrLn "Initializing input data"
+   let pa = getHostBufferPtr ha
+       pb = getHostBufferPtr hb
+       pc = getHostBufferPtr hc
+
+   pokeArray (castPtr pa) (replicate (fromIntegral $ w*h) (5.0 :: Float))
+   pokeArray (castPtr pb) (replicate (fromIntegral $ w*h) (2.0 :: Float))
 
    myTransfer tm linkWrite reg ha a
    myTransfer tm linkWrite reg hb b
@@ -93,12 +106,16 @@ main = do
        datas = registerData [("a",a),("b",b)]
 
    let builtins = Map.unions [defaultBuiltins, kernels, datas]
-       expr = "(add a b)"
+       expr = "(add a (add b b))"
 
    Data c' <- check builtins Map.empty expr
    let c = readData c'
 
    myTransfer tm linkRead reg c hc
+   result <- chunks (fromIntegral w) <$> peekArray (fromIntegral $ w*h) (castPtr pc) :: IO [[Float]]
+
+   putStrLn "================\nResult:"
+   traverse_ (putStrLn . show) result
 
    void $ releaseBuffer rm a
    void $ releaseBuffer rm b
@@ -142,3 +159,7 @@ myTransfer tm link reg src dst = do
    if any (/= RegionTransferSuccess) res2
       then putStrLn ("ERROR: " ++ show res2)
       else putStrLn "SUCCEEDED"
+
+chunks :: Int -> [a] -> [[a]]
+chunks _ [] = []
+chunks n xs = (take n xs) : (chunks n (drop n xs))
