@@ -180,7 +180,7 @@ step ctx spine@(a:as) = do
          -- Kernel execution
          Kernel _ arity f -> do
                args <- atomically $ getArgs arity as
-               args' <- forM args (run ctx)
+               args' <- runParallel ctx args
                r <- f args'
                atomically $ do
                   let p = drop (arity - 1) as
