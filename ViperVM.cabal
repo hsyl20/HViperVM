@@ -1,5 +1,5 @@
 name:                ViperVM
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            Runtime system for heterogeneous architectures
 -- description:         
 license:             LGPL-3
@@ -200,6 +200,16 @@ executable LispCL
   build-depends: 
     base,
     containers,
+    ViperVM
+
+executable GranularityAdaptation
+  main-is: GranularityAdaptation.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    containers,
+    random,
     ViperVM
 
 executable ParseTest
