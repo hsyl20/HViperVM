@@ -22,6 +22,7 @@ import Data.Map as Map
 import Data.Dynamic
 import Foreign.Marshal.Array
 import Foreign.Ptr
+import System.Environment
 
 
 main :: IO ()
@@ -106,7 +107,11 @@ main = do
        datas = registerData [("a",a),("b",b)]
 
    let builtins = Map.unions [defaultBuiltins, kernels, datas]
-       expr = "(add a (add b b))"
+
+   expr <- getArgs >>= \case
+               ["-e",s] -> return s
+               [] -> return "(let* ((c (add b b))) (add a (add c c)))"
+               _ -> error "Invalid parameters"
 
    c <- readData <$> check builtins Map.empty expr
 
