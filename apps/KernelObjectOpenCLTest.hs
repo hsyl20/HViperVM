@@ -26,9 +26,9 @@ main = do
    let (w,h) = (1024, 512)
        padding = 11
        openclProcs = filter isOpenCLProcessor (processors platform)
-       ker = floatMatrixAddObjectKernelCL
 
    putStrLn "Registering kernel..." 
+   ker <- floatMatrixAddObjectKernelCL
    registerObjectKernel km ker
 
    putStrLn "OpenCL processors:"

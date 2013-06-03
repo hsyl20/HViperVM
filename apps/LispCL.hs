@@ -46,10 +46,10 @@ main = do
       primSize = Prim.sizeOf Prim.Float
       bufferSize = (w + padding) * h * primSize 
       openclProcs = Prelude.filter isOpenCLProcessor (processors platform)
-      ker = floatMatrixAddKernelCL
       reg = Region2D 0 h (w*primSize) padding
 
    putStrLn "Registering kernel..." 
+   ker <- floatMatrixAddKernelCL
    registerKernel km ker
 
    putStrLn "OpenCL processors:"

@@ -3,25 +3,18 @@ module ViperVM.Library.FloatMatrixAdd (
   ) where
 
 import ViperVM.Platform
+import Paths_ViperVM
 
-floatMatrixAddKernelCL :: Kernel
-floatMatrixAddKernelCL = CLKernel {
-   kernelName = "floatMatrixAdd",
-   constraints = [],
-   options = "",
-   configure = configFromParamsCL,
-   source = "\
-  \__kernel void floatMatrixAdd(const uint width, const uint height,\
-  \                        __global float* A, __global float* B, __global float* C) {\
-  \  int gx = get_global_id(0);\
-  \  int gy = get_global_id(1);\
-  \\
-  \  if (gx < width && gy < height) {\
-  \    C[gy*width+gx] = A[gy*width+gx] + B[gy*width+gx];\
-  \  }\
-  \\
-  \}"
-}
+floatMatrixAddKernelCL :: IO Kernel
+floatMatrixAddKernelCL = do
+   src <- readFile =<< getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixAdd.cl"
+   return $ CLKernel {
+         kernelName = "floatMatrixAdd",
+         constraints = [],
+         options = "",
+         configure = configFromParamsCL,
+         source = src
+      }
 
 configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
 configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
@@ -33,10 +26,11 @@ configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
                   clMemParam a, clMemParam b, clMemParam c]
 
 
-floatMatrixAddObjectKernelCL :: ObjectKernel
-floatMatrixAddObjectKernelCL = ObjectKernel floatMatrixAddKernelCL modes paramsFromObjects
-   where
-      modes = [ReadOnly,ReadOnly,ReadWrite]
+floatMatrixAddObjectKernelCL :: IO ObjectKernel
+floatMatrixAddObjectKernelCL = do
+   let modes = [ReadOnly,ReadOnly,ReadWrite]
+   ker <- floatMatrixAddKernelCL
+   return (ObjectKernel ker modes paramsFromObjects)
 
 paramsFromObjects :: [Object] -> KernelObjectConfig
 paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
@@ -49,13 +43,3 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
       c = matrixBuffer mc
       roRegions = [(a, matrixRegion ma), (b, matrixRegion mb)]
       rwRegions = [(c, matrixRegion mc)]
-
-
---floatMatrixAdd :: KernelInterface
---floatMatrixAdd = KernelInterface {
---  name = "Float Matrix Addition",
---  paramCount = (2,1),
---  makeParameters = \ [a,b] -> [KPReadOnly a, KPReadOnly b, KPReadOnly a],
---  makeResult = \[_,_,c] -> [c]
---}
-
