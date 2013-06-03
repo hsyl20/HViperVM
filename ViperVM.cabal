@@ -14,6 +14,8 @@ cabal-version:       >=1.8
 data-files: 
   data/Codelets/Blas/Lu.vvm
   apps/samples/lisp/Sample.lisp
+  lib/ViperVM/Library/OpenCL/FloatMatrixAdd.cl
+  lib/ViperVM/Library/OpenCL/FloatMatrixSub.cl
 
 library
   exposed-modules:     
@@ -77,6 +79,7 @@ library
     ViperVM.STM.TIntSet
 
     ViperVM.Library.FloatMatrixAdd
+    ViperVM.Library.FloatMatrixSub
 
     ViperVM.Parsing.Parser
     ViperVM.Parsing.Lisp

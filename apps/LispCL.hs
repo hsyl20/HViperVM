@@ -12,12 +12,14 @@ import ViperVM.Platform.BufferManager (createBufferManager)
 import ViperVM.Platform.RegionTransferManager
 
 import ViperVM.Library.FloatMatrixAdd
+import ViperVM.Library.FloatMatrixSub
 import ViperVM.Platform.Primitive as Prim
 
 import Text.Printf
 import Control.Monad
 import Control.Applicative
 import Data.Foldable (traverse_)
+import Data.Traversable (traverse)
 import Data.Map as Map
 import Data.Dynamic
 import Foreign.Marshal.Array
@@ -48,22 +50,21 @@ main = do
       openclProcs = Prelude.filter isOpenCLProcessor (processors platform)
       reg = Region2D 0 h (w*primSize) padding
 
-   putStrLn "Registering kernel..." 
-   ker <- floatMatrixAddKernelCL
-   registerKernel km ker
-
    putStrLn "OpenCL processors:"
    forM_ openclProcs (putStrLn . show)
 
-   putStrLn "\nCompiling kernel..." 
-   validProcs <- compileKernel km ker openclProcs
-
-   putStrLn "Compilation succeeded for processors:" 
-   forM_ validProcs (putStrLn . show)
-   putStrLn ""
-
-   let proc = head validProcs
+   let proc = head openclProcs
    putStrLn ("Using " ++ show proc)
+
+   putStrLn "Registering and compiling kernels..." 
+   kernelMap <- traverse id $ Map.fromList [
+         ("add", floatMatrixAddKernelCL),
+         ("sub", floatMatrixSubKernelCL)
+      ]
+
+   traverse_ (registerKernel km) kernelMap
+   traverse_ (flip (compileKernel km) [proc]) kernelMap
+
 
    let mem = head (processorMemories proc)
        lks = links platform
@@ -92,13 +93,27 @@ main = do
          ("add", Builtin [True,True] $ \case
             (args@[x', y'],_) -> do
                let (x,y) = (readData x', readData y')
-               putStrLn (printf "Executing kernel with args %s" (show args))
+               putStrLn (printf "Executing add kernel with args %s" (show args))
                Just c <- allocateBuffer rm mem bufferSize
                let roRegions = [(x,reg),(y,reg)] 
                    rwRegions = [(c,reg)] 
                    params = [WordParam $ fromIntegral w, WordParam $ fromIntegral h, BufferParam x, BufferParam y, BufferParam c]
 
-               executeKernel km proc ker roRegions rwRegions params
+               executeKernel km proc (kernelMap Map.! "add") roRegions rwRegions params
+
+               return (Data $ toDyn c)
+            _ -> error "Bad kernel arguments"),
+
+         ("sub", Builtin [True,True] $ \case
+            (args@[x', y'],_) -> do
+               let (x,y) = (readData x', readData y')
+               putStrLn (printf "Executing sub kernel with args %s" (show args))
+               Just c <- allocateBuffer rm mem bufferSize
+               let roRegions = [(x,reg),(y,reg)] 
+                   rwRegions = [(c,reg)] 
+                   params = [WordParam $ fromIntegral w, WordParam $ fromIntegral h, BufferParam x, BufferParam y, BufferParam c]
+
+               executeKernel km proc (kernelMap Map.! "sub") roRegions rwRegions params
 
                return (Data $ toDyn c)
             _ -> error "Bad kernel arguments")
