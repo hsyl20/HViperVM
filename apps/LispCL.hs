@@ -13,6 +13,8 @@ import ViperVM.Platform.RegionTransferManager
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub
+import ViperVM.Library.FloatMatrixPotrf
+
 import ViperVM.Platform.Primitive as Prim
 
 import Text.Printf
@@ -59,7 +61,8 @@ main = do
    putStrLn "Registering and compiling kernels..." 
    kernelMap <- traverse id $ Map.fromList [
          ("add", floatMatrixAddKernelCL),
-         ("sub", floatMatrixSubKernelCL)
+         ("sub", floatMatrixSubKernelCL),
+         ("potrf", floatMatrixPotrfKernelCL)
       ]
 
    traverse_ (registerKernel km) kernelMap
@@ -73,20 +76,30 @@ main = do
 
    Just a <- allocateBuffer rm mem bufferSize
    Just b <- allocateBuffer rm mem bufferSize
+   Just hibBuf <- allocateBuffer rm mem bufferSize
    Just ha <- allocateBuffer rm HostMemory bufferSize
    Just hb <- allocateBuffer rm HostMemory bufferSize
    Just hc <- allocateBuffer rm HostMemory bufferSize
+   Just hhibBuf <- allocateBuffer rm HostMemory bufferSize
 
    putStrLn "Initializing input data"
    let pa = getHostBufferPtr ha
        pb = getHostBufferPtr hb
        pc = getHostBufferPtr hc
+       phib = getHostBufferPtr hhibBuf
+
+       hib :: Int -> Int -> Float
+       hib x y = 1.0 / (fromIntegral (x + y) + 10.0)
+       hib' = [ [hib x y | x <- [0..]] | y <- [0..]]
+       hilbert n = fmap (take n) (take n hib')
 
    pokeArray (castPtr pa) (replicate (fromIntegral $ w*h) (5.0 :: Float))
    pokeArray (castPtr pb) (replicate (fromIntegral $ w*h) (2.0 :: Float))
+   pokeArray (castPtr phib) (concat $ hilbert 32)
 
    myTransfer tm linkWrite reg ha a
    myTransfer tm linkWrite reg hb b
+   myTransfer tm linkWrite reg hhibBuf hibBuf
 
    let kernels = Map.fromList [
 
@@ -97,7 +110,13 @@ main = do
                Just c <- allocateBuffer rm mem bufferSize
                let roRegions = [(x,reg),(y,reg)] 
                    rwRegions = [(c,reg)] 
-                   params = [WordParam $ fromIntegral w, WordParam $ fromIntegral h, BufferParam x, BufferParam y, BufferParam c]
+                   params = [
+                        WordParam (fromIntegral w), 
+                        WordParam (fromIntegral h),
+                        BufferParam x, 
+                        BufferParam y, 
+                        BufferParam c
+                     ]
 
                executeKernel km proc (kernelMap Map.! "add") roRegions rwRegions params
 
@@ -111,15 +130,43 @@ main = do
                Just c <- allocateBuffer rm mem bufferSize
                let roRegions = [(x,reg),(y,reg)] 
                    rwRegions = [(c,reg)] 
-                   params = [WordParam $ fromIntegral w, WordParam $ fromIntegral h, BufferParam x, BufferParam y, BufferParam c]
+                   params = [
+                        WordParam (fromIntegral w), 
+                        WordParam (fromIntegral h),
+                        BufferParam x, 
+                        BufferParam y, 
+                        BufferParam c
+                     ]
 
                executeKernel km proc (kernelMap Map.! "sub") roRegions rwRegions params
+
+               return (Data $ toDyn c)
+            _ -> error "Bad kernel arguments"),
+
+         ("potrf", Builtin [True] $ \case
+            (args@[x'],_) -> do
+               let x = readData x'
+               putStrLn (printf "Executing potrf kernel with args %s" (show args))
+               Just c <- allocateBuffer rm mem bufferSize
+               let roRegions = [(x,reg)] 
+                   rwRegions = [(c,reg)] 
+                   params = [
+                        WordParam (fromIntegral w), 
+                        WordParam 0, 
+                        WordParam (fromIntegral w), 
+                        BufferParam x, 
+                        WordParam 0, 
+                        WordParam (fromIntegral w), 
+                        BufferParam c
+                     ]
+
+               executeKernel km proc (kernelMap Map.! "potrf") roRegions rwRegions params
 
                return (Data $ toDyn c)
             _ -> error "Bad kernel arguments")
          ]
 
-       datas = registerData [("a",a),("b",b)]
+       datas = registerData [("a",a),("b",b),("h",hibBuf)]
 
    let builtins = Map.unions [defaultBuiltins, kernels, datas]
 
@@ -139,8 +186,10 @@ main = do
    void $ releaseBuffer rm a
    void $ releaseBuffer rm b
    void $ releaseBuffer rm c
+   void $ releaseBuffer rm hibBuf
    void $ releaseBuffer rm ha
    void $ releaseBuffer rm hb
+   void $ releaseBuffer rm hhibBuf
 
    putStrLn "Done."
 

@@ -12,22 +12,22 @@ __kernel void floatMatrixPotrf(const uint n, const uint srcOffset, const uint sr
    int y = get_global_id(1);
    int active = x < n && y < n;
 
-   __local float tmp[n][n];
+   __local float tmp[32][32];
 
-   if (x==i && y==i) {
+   if (x==0 && y==0) {
       tmp[x][y] = sqrt(src(x,y));
       dst(x,y) = tmp[x][y];
    }
    barrier(CLK_LOCAL_MEM_FENCE);
 
-   if(x==i && y>i && active) {
-      tmp[x][y] = src(x,y) / tmp[i][i];
+   if(x==0 && y>0 && active) {
+      tmp[x][y] = src(x,y) / tmp[0][0];
       dst(x,y) = tmp[x][y];
    }
    barrier(CLK_LOCAL_MEM_FENCE);
 
-   if(x>i && y>i && x<=y && active) {
-      tmp[x][y] = src(x,y) - tmp[i][y]*tmp[i][x];
+   if(x>0 && y>0 && x<=y && active) {
+      tmp[x][y] = src(x,y) - tmp[0][y]*tmp[0][x];
       dst(x,y) = tmp[x][y];
    }
    barrier(CLK_LOCAL_MEM_FENCE);
