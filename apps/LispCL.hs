@@ -23,6 +23,7 @@ import Control.Applicative
 import Data.Foldable (traverse_)
 import Data.Traversable (traverse)
 import Data.Map as Map
+import qualified Data.List as List
 import Data.Dynamic
 import Foreign.Marshal.Array
 import Foreign.Ptr
@@ -88,14 +89,15 @@ main = do
        pc = getHostBufferPtr hc
        phib = getHostBufferPtr hhibBuf
 
-       hib :: Int -> Int -> Float
-       hib x y = 1.0 / (fromIntegral (x + y) + 10.0)
-       hib' = [ [hib x y | x <- [0..]] | y <- [0..]]
-       hilbert n = fmap (take n) (take n hib')
+       triangular = [ replicate n (0.0 :: Float) ++ repeat (fromIntegral n + 1.0) | n <- [0..]]
+       triangular' n = fmap (take n) (take n triangular)
+       triMul n = let m = List.transpose (triangular' n) in crossWith (\xs ys -> foldl1 (+) $ zipWith (*) xs ys) m m
+
+       crossWith f ys xs = fmap (\x -> fmap (\y -> f x y) ys) xs
 
    pokeArray (castPtr pa) (replicate (fromIntegral $ w*h) (5.0 :: Float))
    pokeArray (castPtr pb) (replicate (fromIntegral $ w*h) (2.0 :: Float))
-   pokeArray (castPtr phib) (concat $ hilbert 32)
+   pokeArray (castPtr phib) (concat $ triMul 32)
 
    myTransfer tm linkWrite reg ha a
    myTransfer tm linkWrite reg hb b
