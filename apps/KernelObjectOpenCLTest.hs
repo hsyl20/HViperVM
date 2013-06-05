@@ -3,6 +3,7 @@ import ViperVM.Platform.KernelManager
 import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.ObjectManager
 import ViperVM.Platform.BufferManager (createBufferManager)
+import ViperVM.Platform.RegionTransferManager
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Platform.Primitive as Prim
@@ -21,7 +22,8 @@ main = do
    bm <- createBufferManager platform
    rm <- createRegionLockManager bm
    km <- createKernelManager rm
-   om <- createObjectManager rm km
+   tm <- createRegionTransferManager rm
+   om <- createObjectManager tm km
 
    let (w,h) = (1024, 512)
        padding = 11

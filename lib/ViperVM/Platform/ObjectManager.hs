@@ -1,19 +1,24 @@
 module ViperVM.Platform.ObjectManager (
       ObjectManager, kernelManager,
-      createObjectManager, releaseObject, lockObject, unlockObject, lockObjectRetry,
+      createObjectManager, releaseObject, lockObject, unlockObject, lockObjectRetry, transferObject,
       allocateVector, allocateVectorObject, releaseVector,
-      allocateMatrix, allocateMatrixObject, releaseMatrix
+      allocateMatrix, allocateMatrixObject, releaseMatrix,
+      transferMatrix, pokeHostFloatMatrix, peekHostFloatMatrix
    ) where
 
 import ViperVM.STM.TSet as TSet
 import ViperVM.STM.TMap as TMap
+import ViperVM.Platform.Buffer
 import ViperVM.Platform.Object
-import ViperVM.Platform.Primitive
+import ViperVM.Platform.Primitive as Prim
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.RegionLockManager (RegionLockManager, LockMode(..), getRegionManagerPlatform, allocateBuffer)
+import qualified ViperVM.Platform.RegionTransferManager as TM
 import ViperVM.Platform.Platform
+import ViperVM.Platform.Link
 import ViperVM.Platform.KernelManager
+import ViperVM.Platform.RegionTransfer
 
 import Control.Monad (when)
 import Control.Concurrent.STM
@@ -23,26 +28,35 @@ import Control.Monad (liftM)
 import Control.Applicative
 import Data.Word
 import Data.Map as Map
+import Foreign.Ptr
+import Foreign.Marshal.Array
 
 data ObjectLockResult = LockSuccess | LockError
                         deriving (Show,Eq,Ord)
 
 data ObjectManager = ObjectManager {
-      regionLockManager :: RegionLockManager,
+      regionTransferManager :: TM.RegionTransferManager,
       kernelManager :: KernelManager,
       objects :: Map Memory (TSet Object),
       locks :: TMap Object (LockMode,Int)
    }
 
-createObjectManager :: RegionLockManager -> KernelManager -> IO ObjectManager
-createObjectManager rm km = do
-   let mems = memories (getRegionManagerPlatform rm)
+regionLockManager :: ObjectManager -> RegionLockManager
+regionLockManager = TM.regionLockManager . regionTransferManager
+
+createObjectManager :: TM.RegionTransferManager -> KernelManager -> IO ObjectManager
+createObjectManager tm km = do
+   let
+      rm = TM.regionLockManager tm
+      mems = memories (getRegionManagerPlatform rm)
+
    (objs,lcks) <- atomically $ do
       os <- forM mems (const TSet.empty)
       ls <- TMap.empty
       return (os,ls)
+
    let memObjs = fromList $ zip mems objs
-   return (ObjectManager rm km memObjs lcks)
+   return (ObjectManager tm km memObjs lcks)
 
 
 registerObject :: ObjectManager -> Memory -> Object -> STM ()
@@ -95,6 +109,10 @@ unlockObject om o = do
          TMap.insert o (currentMode,n-1) lcks
 
 
+transferObject :: ObjectManager -> Object -> Object -> IO ()
+transferObject om (MatrixObject src) (MatrixObject dst) = transferMatrix om src dst
+transferObject _ _ _ = error "Cannot transfer these objects"
+
 ------------------------------------------
 -- Vector
 --
@@ -142,3 +160,67 @@ allocateMatrixObject om mem p width height padding = liftM MatrixObject <$> allo
 
 releaseMatrix :: ObjectManager -> Matrix -> IO ()
 releaseMatrix om v = releaseObject om (MatrixObject v)
+
+transferMatrix :: ObjectManager -> Matrix -> Matrix -> IO ()
+transferMatrix om src dst = do
+   let tm = regionTransferManager om 
+       rm = TM.regionLockManager tm
+       pf = getRegionManagerPlatform rm
+       lks = links pf
+       lk = head (linksBetween (getBufferMemory srcBuf) (getBufferMemory dstBuf) lks)
+       transfr = RegionTransfer srcBuf srcReg [RegionTransferStep lk dstBuf dstReg]
+       srcBuf = matrixBuffer src
+       dstBuf = matrixBuffer dst
+       srcReg = matrixRegion src
+       dstReg = matrixRegion dst
+
+   pres <- TM.prepareRegionTransferIO tm transfr
+   when (pres /= TM.PrepareSuccess)
+      (error "Error during matrix transfer preparation")
+      
+   
+   res <- TM.performRegionTransfer tm transfr
+   when (any (/= RegionTransferSuccess) res) 
+      (error "Error during matrix transfer")
+
+pokeHostFloatMatrix :: ObjectManager -> Object -> [[Float]] -> IO ()
+pokeHostFloatMatrix _ obj@(MatrixObject m) ds = do
+   when (objectMemory obj /= HostMemory) 
+      (error "Cannot initialize a matrix that is not stored in host memory")
+
+   when (matrixCellType m /= Prim.Float) 
+      (error "Cannot initialize the matrix: invalid cell type")
+
+   let rowSize = matrixWidth m * Prim.sizeOf (matrixCellType m) + matrixPadding m
+       startPtr = getHostBufferPtr (matrixBuffer m) `plusPtr` (fromIntegral $ matrixOffset m)
+
+   forM_ (ds `zip` [0..]) $ \(xs,i) -> do
+      let ptr = startPtr `plusPtr` (fromIntegral $ i*rowSize)
+      pokeArray (castPtr ptr) xs
+         
+pokeHostFloatMatrix _ _ _ = error "Cannot poke the given object"
+
+
+
+peekHostFloatMatrix :: ObjectManager -> Object -> IO [[Float]]
+peekHostFloatMatrix _ obj@(MatrixObject m) = do
+
+   when (objectMemory obj /= HostMemory) 
+      (error "Cannot initialize a matrix that is not stored in host memory")
+
+   when (matrixCellType m /= Prim.Float) 
+      (error "Cannot initialize the matrix: invalid cell type")
+
+   let rowSize = matrixWidth m * Prim.sizeOf (matrixCellType m) + matrixPadding m
+       startPtr = getHostBufferPtr (matrixBuffer m) `plusPtr` (fromIntegral $ matrixOffset m)
+       height = matrixHeight m
+       width = fromIntegral (matrixWidth m)
+
+   forM [0..height-1] $ \i -> do
+      let ptr = startPtr `plusPtr` (fromIntegral $ i*rowSize)
+      peekArray width (castPtr ptr)
+
+
+peekHostFloatMatrix _ _ = error "Cannot peek the given object"
+
+

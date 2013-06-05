@@ -209,6 +209,15 @@ executable LispCL
     containers,
     ViperVM
 
+executable LispOCL
+  main-is: LispOCL.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    containers,
+    ViperVM
+
 executable GranularityAdaptation
   main-is: GranularityAdaptation.hs
   hs-source-dirs: apps

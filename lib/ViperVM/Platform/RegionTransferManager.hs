@@ -1,7 +1,7 @@
 module ViperVM.Platform.RegionTransferManager (
    RegionTransferManager, PrepareRegionTransferResult(..),
    createRegionTransferManager, prepareRegionTransfer, performRegionTransfer, cancelRegionTransfer,
-   prepareRegionTransferIO
+   regionLockManager, prepareRegionTransferIO
 ) where
 
 import ViperVM.Platform.Platform
@@ -23,7 +23,7 @@ import Control.Monad (foldM)
 type RegionTransferEvent = Event RegionTransferResult
 
 data RegionTransferManager = RegionTransferManager {
-      regionManager :: RegionLockManager,
+      regionLockManager :: RegionLockManager,
       transferWorkers :: Map Link (TChan (DirectRegionTransfer, RegionTransferEvent))
    }
 
@@ -62,7 +62,7 @@ transferThread lnk ch = do
 -- Lock every region involved
 prepareRegionTransfer :: RegionTransferManager -> RegionTransfer -> STM PrepareRegionTransferResult
 prepareRegionTransfer tm t@(RegionTransfer srcBuf srcReg steps) = do
-   let rm = regionManager tm
+   let rm = regionLockManager tm
 
    if not (checkRegionTransfer t)
       then return InvalidRegionTransfer
@@ -85,7 +85,7 @@ prepareRegionTransferIO tm t = atomically $ prepareRegionTransfer tm t
 -- Unlock every region involved
 cancelRegionTransfer :: RegionTransferManager -> RegionTransfer -> STM ()
 cancelRegionTransfer tm (RegionTransfer srcBuf srcReg steps) = do
-   let rm = regionManager tm
+   let rm = regionLockManager tm
 
    -- Unlock all regions
    unlockRegion rm ReadOnly srcBuf srcReg
