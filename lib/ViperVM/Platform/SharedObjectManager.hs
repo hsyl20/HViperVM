@@ -1,10 +1,12 @@
+{-# LANGUAGE LambdaCase #-}
+
 module ViperVM.Platform.SharedObjectManager (
    SharedObjectManager,
-   createSharedObjectManager, 
-   attachObject, detachObject
+   createSharedObjectManager, allocateInstance
 ) where
 
 import ViperVM.Platform.Object
+import ViperVM.Platform.Memory
 import ViperVM.Platform.SharedObject
 import ViperVM.STM.TSet as TSet
 import ViperVM.Platform.ObjectManager
@@ -12,45 +14,29 @@ import ViperVM.Platform.ObjectManager
 import Control.Concurrent.STM
 import Control.Applicative
 
-data SharedObject = SharedObject Descriptor (TSet Object)
-
 data SharedObjectManager = SharedObjectManager {
-   objectManager :: ObjectManager,
-   sharedObjects :: TSet SharedObject
+   objectManager :: ObjectManager
 }
 
+-- | Create a shared object manager
 createSharedObjectManager :: ObjectManager -> IO SharedObjectManager
 createSharedObjectManager om = do
-   so <- atomically $ TSet.empty
-   return (SharedObjectManager om so)
+   return (SharedObjectManager om)
 
-allocateSharedObject :: SharedObjectManager -> Descriptor -> STM SharedObject
-allocateSharedObject som desc = do
-   so <- SharedObject desc <$> TSet.empty
-   --TSet.insert so (sharedObjects som)
-   --TODO
-   return so
+-- | Allocate a compatible instance of the shared object, DO NOT atach it
+allocateInstance :: SharedObjectManager -> SharedObject -> Memory -> IO Object
+allocateInstance som so mem = do
+   let om = objectManager som
 
-attachObject :: SharedObjectManager -> SharedObject -> Object -> STM ()
-attachObject _ so o = do
-   let SharedObject desc objs = so
+   case descriptor so of
+      MatrixDesc prim w h -> do
+         let padding = w `mod` 32
+         allocateMatrix om mem prim w h padding >>= \case
+            Nothing -> error "Unable to allocate matrix"
+            Just m -> return (MatrixObject m)
 
-       chk = case (desc,o) of
-      
-            (VectorDesc p sz, VectorObject v) 
-               | vectorCellType v == p && vectorSize v == sz -> True
-            
-            (MatrixDesc p w h, MatrixObject m)
-               | matrixCellType m == p && matrixWidth m == w && matrixHeight m == h -> True
-
-            _ -> False
-
-   if chk 
-      then TSet.insert o objs
-      else error "Fail"
-
-
-detachObject :: SharedObjectManager -> SharedObject -> Object -> STM ()
-detachObject _ so o = do
-   let SharedObject _ objs = so
-   TSet.delete o objs
+      VectorDesc prim sz -> do
+         allocateVector om mem prim sz >>= \case
+            Nothing -> error "Unable to allocate vector"
+            Just v -> return (VectorObject v)
+         

@@ -16,24 +16,29 @@ import ViperVM.Platform.Primitive
 import Data.Word
 import Data.Typeable
 
-data Object = VectorObject Vector |
-              MatrixObject Matrix
+-- | An object
+data Object = VectorObject Vector   -- ^ Vector object
+            | MatrixObject Matrix   -- ^ Matrix object
               deriving (Show,Eq,Ord,Typeable)
 
+-- | Return the memory into which the object is stored
 objectMemory :: Object -> Memory
 objectMemory (VectorObject o) = getBufferMemory (vectorBuffer o)
 objectMemory (MatrixObject o) = getBufferMemory (matrixBuffer o)
 
+-- | Vector object
 data Vector = Vector {
       vectorBuffer :: Buffer,
       vectorRegion :: Region,
       vectorCellType :: Primitive
    } deriving (Show,Eq,Ord)
 
+-- | Create a vector
 createVector :: Buffer -> Region -> Primitive -> Vector
 createVector b r@(Region1D {}) p = Vector b r p
 createVector _ _ _ = error "Invalid region (should be 1D)"
 
+-- | Return the size of the vector
 vectorSize :: Vector -> Word64
 vectorSize v = s `div` ps
    where
@@ -41,6 +46,7 @@ vectorSize v = s `div` ps
       ps = sizeOf (vectorCellType v)
       
 
+-- | Matrix object
 data Matrix = Matrix {
       matrixBuffer :: Buffer,
       matrixRegion :: Region,
