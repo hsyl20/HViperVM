@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module ViperVM.Platform.SharedObject (
-   Descriptor(..), SharedObject, descriptor,
+   Descriptor(..), SharedObject, descriptor, objects,
    createSharedObject, attachObject, detachObject,
    exchangeObject, objectMemories, memoryObjects
 ) where
@@ -18,13 +18,20 @@ import Control.Applicative
 
 -- | Shared object
 -- Set of identical objects stored in different memories
-data SharedObject = SharedObject {
-      descriptor :: Descriptor,
-      objects :: TSet Object
-   } deriving (Typeable)
+data SharedObject = SharedObject Descriptor (TSet Object)
+                    deriving (Typeable)
 
 instance Show SharedObject where
    show so = "ShObj(" ++ show (descriptor so) ++ ")"
+
+
+-- | Return shared-object descriptor
+descriptor :: SharedObject -> Descriptor
+descriptor (SharedObject desc _) = desc
+
+-- | Return objects associated to this shared-object
+objects :: SharedObject -> STM (Set Object)
+objects (SharedObject _ objs) = readTVar objs
 
 -- | Create a shared object
 createSharedObject :: Descriptor -> STM SharedObject
@@ -65,8 +72,10 @@ exchangeObject o src dst = do
 
 -- | Retrieve memories into which an instance of the object exists
 objectMemories :: SharedObject -> STM (Set Memory)
-objectMemories so = Set.map objectMemory <$> readTVar (objects so)
+objectMemories so = Set.map objectMemory <$> objects so
 
 -- | Retrieve object instances in the given memory
 memoryObjects :: Memory -> SharedObject -> STM (Set Object)
-memoryObjects mem so = Set.filter ((==) mem . objectMemory) <$> readTVar (objects so)
+memoryObjects mem so = Set.filter ((==) mem . objectMemory) <$> objects so
+
+

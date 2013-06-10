@@ -2,7 +2,7 @@ module ViperVM.Platform.ObjectKernel (
       KernelObjectConfig(..), ObjectKernel(..),
       executeObjectKernel,
       registerObjectKernel,
-      compileObjectKernel
+      compileObjectKernel, lockModes
    ) where
 
 import ViperVM.Platform.Kernel
@@ -27,6 +27,9 @@ instance Show ObjectKernel where
 
 peerKernel :: ObjectKernel -> Kernel
 peerKernel (ObjectKernel k _ _) = k
+
+lockModes :: ObjectKernel -> [LockMode]
+lockModes (ObjectKernel _ modes _) = modes
 
 executeObjectKernel :: ObjectManager -> Processor -> ObjectKernel -> [Object] -> IO ()
 executeObjectKernel om proc ok objs = do

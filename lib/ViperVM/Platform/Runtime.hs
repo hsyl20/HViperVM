@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Runtime (
       initRuntime, allocate, release, releaseMany,
       initFloatMatrix,
@@ -13,11 +14,10 @@ import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.BufferManager
 import ViperVM.Platform.RegionTransferManager
 import ViperVM.Platform.ObjectManager
-import ViperVM.Platform.SharedObjectManager
+import ViperVM.Platform.SharedObjectManager (SharedObjectManager,createSharedObjectManager)
 import ViperVM.Platform.SharedObject
 
 import Data.Foldable (traverse_)
-import Text.Printf
 import Control.Concurrent.STM
 import Control.Monad (when)
 
@@ -34,10 +34,8 @@ data Runtime = Runtime {
    }
 
 -- | Initialize a runtime system
-initRuntime :: Configuration -> Scheduler -> IO Runtime
-initRuntime config sch = do
-   pf <- initPlatform config
-
+initRuntime :: Platform -> Scheduler -> IO Runtime
+initRuntime pf sch = do
    bm <- createBufferManager pf
    rm <- createRegionLockManager bm
    km <- createKernelManager rm
@@ -98,9 +96,7 @@ sendSchedMsg rt msg = do
 -- | Execute the given kernel
 execute :: Runtime -> ObjectKernel -> [SharedObject] -> IO ()
 execute rt k args = do
-   putStrLn (printf "Execute %s with params %s" (show k) (show args))
-   res <- sendSchedMsg rt (SchedExec k args)
-
-   case res of
+   sendSchedMsg rt (SchedExec k args) >>= \case
       SchedSuccess -> return ()
       SchedError -> error "Error during scheduling"
+      SchedNoResult -> error "Scheduler returned no result"

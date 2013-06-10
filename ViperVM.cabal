@@ -56,6 +56,7 @@ library
     ViperVM.Platform.SharedObject
     ViperVM.Platform.SharedObjectManager
 
+    ViperVM.Scheduling.Single
     ViperVM.Scheduling.Eager
 
     ViperVM.Event

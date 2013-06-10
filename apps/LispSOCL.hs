@@ -5,6 +5,7 @@ import ViperVM.Graph.Graph
 import ViperVM.Graph.ParallelReducer
 import ViperVM.Graph.Builtins
 
+import ViperVM.Platform.Platform
 import ViperVM.Platform.Runtime
 import ViperVM.Platform.Descriptor
 import ViperVM.Platform.SharedObject
@@ -16,7 +17,7 @@ import ViperVM.Library.FloatMatrixPotrf
 
 import ViperVM.Platform.Primitive as Prim
 
-import ViperVM.Scheduling.Eager
+import ViperVM.Scheduling.Single
 
 import Control.Monad
 import Control.Applicative
@@ -34,7 +35,8 @@ main = do
    }
 
    putStrLn "Initializing platform..."
-   rt <- initRuntime config eagerScheduler
+   pf <- initPlatform config
+   rt <- initRuntime pf (singleScheduler (head (processors pf)))
 
    let 
       --(w,h) = (1024, 512)
@@ -70,7 +72,7 @@ main = do
 
    expr <- getArgs >>= \case
                ["-e",s] -> return s
-               [] -> return "(let* ((h (add b b))) (add a (add h h)))"
+               [] -> return "(let* ((h (add b b))) (sub a (add h h)))"
                _ -> error "Invalid parameters"
 
    d <- readData <$> check builtins Map.empty expr
