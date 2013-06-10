@@ -1,8 +1,13 @@
+{-# LANGUAGE LambdaCase #-}
 module ViperVM.Library.FloatMatrixSub (
-  floatMatrixSubKernelCL, floatMatrixSubObjectKernelCL
+  floatMatrixSubKernelCL, floatMatrixSubObjectKernelCL,
+  makeFloatMatrixSubBuiltin
   ) where
 
 import ViperVM.Platform
+import ViperVM.Platform.SharedObject
+import ViperVM.Graph.Graph
+import ViperVM.Graph.Builtins
 import Paths_ViperVM
 
 floatMatrixSubKernelCL :: IO Kernel
@@ -43,3 +48,17 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
       c = matrixBuffer mc
       roRegions = [(a, matrixRegion ma), (b, matrixRegion mb)]
       rwRegions = [(c, matrixRegion mc)]
+
+
+makeFloatMatrixSubBuiltin :: (Expr -> SharedObject) -> (SharedObject -> Expr) -> (ObjectKernel -> [SharedObject] -> IO ()) -> (Descriptor -> IO SharedObject) -> IO Builtin
+makeFloatMatrixSubBuiltin readData writeData exec alloc = do
+
+   ok <- floatMatrixSubObjectKernelCL
+
+   return $ Builtin [True,True] $ \case
+      ([x',y'],_) -> do
+         let (x,y) = (readData x', readData y')
+         e <- alloc (descriptor x)
+         exec ok [x,y,e]
+         return (writeData e)
+      _ -> error "Bad kernel arguments"

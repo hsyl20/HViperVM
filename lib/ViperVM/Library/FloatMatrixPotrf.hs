@@ -1,8 +1,13 @@
+{-# LANGUAGE LambdaCase #-}
 module ViperVM.Library.FloatMatrixPotrf (
-  floatMatrixPotrfKernelCL, floatMatrixPotrfObjectKernelCL
+  floatMatrixPotrfKernelCL, floatMatrixPotrfObjectKernelCL,
+  makeFloatMatrixPotrfBuiltin
   ) where
 
 import ViperVM.Platform
+import ViperVM.Platform.SharedObject
+import ViperVM.Graph.Graph
+import ViperVM.Graph.Builtins
 import Paths_ViperVM
 
 floatMatrixPotrfKernelCL :: IO Kernel
@@ -53,3 +58,16 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
          ]
       roRegions = [(srcBuf, matrixRegion msrc)]
       rwRegions = [(dstBuf, matrixRegion mdst)]
+
+makeFloatMatrixPotrfBuiltin :: (Expr -> SharedObject) -> (SharedObject -> Expr) -> (ObjectKernel -> [SharedObject] -> IO ()) -> (Descriptor -> IO SharedObject) -> IO Builtin
+makeFloatMatrixPotrfBuiltin readData writeData exec alloc = do
+
+   ok <- floatMatrixPotrfObjectKernelCL
+
+   return $ Builtin [True] $ \case
+      ([x'],_) -> do
+         let x = readData x'
+         e <- alloc (descriptor x)
+         exec ok [x,e]
+         return (writeData e)
+      _ -> error "Bad kernel arguments"

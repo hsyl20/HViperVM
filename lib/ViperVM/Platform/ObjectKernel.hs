@@ -21,6 +21,10 @@ data KernelObjectConfig = KernelObjectConfig [KernelParameter] [(Buffer,Region)]
 
 data ObjectKernel = ObjectKernel Kernel [LockMode] ([Object] -> KernelObjectConfig)
 
+
+instance Show ObjectKernel where
+   show (ObjectKernel k _ _) = show k
+
 peerKernel :: ObjectKernel -> Kernel
 peerKernel (ObjectKernel k _ _) = k
 

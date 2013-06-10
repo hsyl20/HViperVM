@@ -34,24 +34,26 @@ library
     ViperVM.Platform
     ViperVM.Platform.Buffer
     ViperVM.Platform.BufferManager
+    ViperVM.Platform.DataDesc
+    ViperVM.Platform.Descriptor
     ViperVM.Platform.Kernel
-    ViperVM.Platform.Object
-    ViperVM.Platform.ObjectManager
-    ViperVM.Platform.ObjectKernel
-    ViperVM.Platform.LockMode
-    ViperVM.Platform.SharedObject
-    ViperVM.Platform.SharedObjectManager
     ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
-    ViperVM.Platform.Primitive
+    ViperVM.Platform.LockMode
     ViperVM.Platform.Memory
+    ViperVM.Platform.Object
+    ViperVM.Platform.ObjectKernel
+    ViperVM.Platform.ObjectManager
+    ViperVM.Platform.Platform
+    ViperVM.Platform.Primitive
     ViperVM.Platform.Processor
     ViperVM.Platform.Region
     ViperVM.Platform.RegionLockManager
-    ViperVM.Platform.DataDesc
     ViperVM.Platform.RegionTransfer
     ViperVM.Platform.RegionTransferManager
-    ViperVM.Platform.Platform
+    ViperVM.Platform.Runtime
+    ViperVM.Platform.SharedObject
+    ViperVM.Platform.SharedObjectManager
 
     ViperVM.Event
     ViperVM.Graph.Graph
@@ -211,6 +213,15 @@ executable LispCL
 
 executable LispOCL
   main-is: LispOCL.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    containers,
+    ViperVM
+
+executable LispSOCL
+  main-is: LispSOCL.hs
   hs-source-dirs: apps
   ghc-options: -Wall -threaded
   build-depends: 

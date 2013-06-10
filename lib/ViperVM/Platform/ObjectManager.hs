@@ -1,9 +1,11 @@
+{-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.ObjectManager (
       ObjectManager, kernelManager,
       createObjectManager, releaseObject, lockObject, unlockObject, lockObjectRetry, transferObject,
       allocateVector, allocateVectorObject, releaseVector,
       allocateMatrix, allocateMatrixObject, releaseMatrix,
-      transferMatrix, pokeHostFloatMatrix, peekHostFloatMatrix
+      transferMatrix, pokeHostFloatMatrix, peekHostFloatMatrix,
+      allocateFromDescriptor
    ) where
 
 import ViperVM.STM.TSet as TSet
@@ -19,6 +21,7 @@ import ViperVM.Platform.Platform
 import ViperVM.Platform.Link
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.RegionTransfer
+import ViperVM.Platform.Descriptor
 
 import Control.Monad (when)
 import Control.Concurrent.STM
@@ -224,3 +227,17 @@ peekHostFloatMatrix _ obj@(MatrixObject m) = do
 peekHostFloatMatrix _ _ = error "Cannot peek the given object"
 
 
+
+
+-- | Allocate a compatible instance of the shared object, DO NOT atach it
+allocateFromDescriptor :: ObjectManager -> Memory -> Descriptor -> IO Object
+allocateFromDescriptor om mem (MatrixDesc prim w h) = do
+   let padding = w `mod` 32
+   allocateMatrix om mem prim w h padding >>= \case
+      Nothing -> error "Unable to allocate matrix"
+      Just m -> return (MatrixObject m)
+
+allocateFromDescriptor om mem (VectorDesc prim sz) = do
+   allocateVector om mem prim sz >>= \case
+      Nothing -> error "Unable to allocate vector"
+      Just v -> return (VectorObject v)
