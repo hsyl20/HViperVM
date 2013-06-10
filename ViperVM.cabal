@@ -36,6 +36,7 @@ library
     ViperVM.Platform.BufferManager
     ViperVM.Platform.DataDesc
     ViperVM.Platform.Descriptor
+    ViperVM.Platform.Scheduler
     ViperVM.Platform.Kernel
     ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
@@ -54,6 +55,8 @@ library
     ViperVM.Platform.Runtime
     ViperVM.Platform.SharedObject
     ViperVM.Platform.SharedObjectManager
+
+    ViperVM.Scheduling.Eager
 
     ViperVM.Event
     ViperVM.Graph.Graph

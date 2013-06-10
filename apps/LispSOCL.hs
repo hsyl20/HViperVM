@@ -16,6 +16,8 @@ import ViperVM.Library.FloatMatrixPotrf
 
 import ViperVM.Platform.Primitive as Prim
 
+import ViperVM.Scheduling.Eager
+
 import Control.Monad
 import Control.Applicative
 import Data.Traversable (traverse)
@@ -32,7 +34,7 @@ main = do
    }
 
    putStrLn "Initializing platform..."
-   rt <- initRuntime config
+   rt <- initRuntime config eagerScheduler
 
    let 
       --(w,h) = (1024, 512)
