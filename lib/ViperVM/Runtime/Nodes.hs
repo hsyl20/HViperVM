@@ -6,7 +6,6 @@ module ViperVM.Runtime.Nodes where
 
 import Control.Concurrent.STM
 import ViperVM.STM.TSet
-import ViperVM.STM.TMap
 import Data.Map
 
 import qualified ViperVM.Platform as Pf

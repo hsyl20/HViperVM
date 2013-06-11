@@ -10,8 +10,6 @@ import Control.Concurrent
 import Control.Concurrent.STM.TChan
 import Control.Concurrent.STM
 import Control.Monad
-import Data.Maybe
-import qualified ViperVM.Platform as Pf
 
 type CompilationRequest = (Kernel,[Processor])
 
@@ -31,4 +29,4 @@ sendRequest ch req@(k,ps) = do
    writeTChan ch req
 
 compilerThread :: TChan CompilationRequest -> IO ()
-compilerThread ch = undefined
+compilerThread = undefined

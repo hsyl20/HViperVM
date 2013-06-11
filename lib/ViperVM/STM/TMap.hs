@@ -20,6 +20,9 @@ member v = readTVar >=$> Map.member v
 notMember :: Ord a => a -> TMap a b -> STM Bool
 notMember v = readTVar >=$> Map.notMember v
 
+lookup :: Ord k => k -> TMap k a -> STM (Maybe a)
+lookup key m = Map.lookup key <$> readTVar m
+
 empty :: STM (TMap a b)
 empty = newTVar Map.empty
 

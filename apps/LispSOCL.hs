@@ -9,7 +9,6 @@ import ViperVM.Platform.Platform
 import ViperVM.Platform.Runtime
 import ViperVM.Platform.Descriptor
 import ViperVM.Platform.SharedObject
-import ViperVM.Platform.Platform (Configuration(..))
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub

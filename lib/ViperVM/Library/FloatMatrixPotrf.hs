@@ -8,24 +8,12 @@ import ViperVM.Platform
 import ViperVM.Platform.SharedObject
 import ViperVM.Graph.Graph
 import ViperVM.Graph.Builtins
-import ViperVM.STM.TMap as TMap
-
-import Control.Concurrent.STM
-
 import Paths_ViperVM
 
 floatMatrixPotrfKernelCL :: IO Kernel
 floatMatrixPotrfKernelCL = do
-   src <- readFile =<< getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixPotrf.cl"
-   compiled <- atomically TMap.empty
-   return $ CLKernel {
-         kernelName = "floatMatrixPotrf",
-         constraints = [],
-         options = "",
-         configure = configFromParamsCL,
-         source = src,
-         compilations = compiled
-      }
+   fileName <- getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixPotrf.cl"
+   initCLKernelFromFile fileName "floatMatrixPotrf" [] "" configFromParamsCL
 
 configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
 configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams

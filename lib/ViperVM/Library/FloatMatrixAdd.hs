@@ -8,10 +8,6 @@ import ViperVM.Platform
 import ViperVM.Platform.SharedObject
 import ViperVM.Graph.Graph
 import ViperVM.Graph.Builtins
-import ViperVM.STM.TMap as TMap
-
-import Control.Concurrent.STM
-
 import Paths_ViperVM
 
 floatMatrixAddKernelCL :: IO Kernel

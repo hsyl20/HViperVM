@@ -1,6 +1,6 @@
 module ViperVM.Platform.ObjectKernel (
       KernelObjectConfig(..), ObjectKernel(..),
-      executeObjectKernel,
+      executeObjectKernel, peerKernel,
       compileObjectKernel, lockModes
    ) where
 
