@@ -1,7 +1,5 @@
-{-# LANGUAGE TupleSections, LambdaCase #-}
+{-# LANGUAGE LambdaCase #-}
 
-import ViperVM.Parsing.Lisp
-import ViperVM.Graph.ParallelReducer
 import ViperVM.Graph.Builtins
 
 import ViperVM.Platform.Descriptor
@@ -13,10 +11,10 @@ import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub
 import ViperVM.Library.FloatMatrixPotrf
 
+import ViperVM.UserInterface
 
 import ViperVM.Scheduling.Single
 
-import Control.Applicative
 import Control.Monad
 import Data.Foldable (traverse_)
 import Data.Map as Map
@@ -67,7 +65,7 @@ main = do
    putStrLn ("Evaluating: " ++ show expr)
 
    let builtins = Map.union defaultBuiltins myBuiltins
-   r <- readData <$> (eval builtins =<< readExpr expr)
+   r <- evalLisp builtins expr
 
    result <- peekFloatMatrix rt r
 

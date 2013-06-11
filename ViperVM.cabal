@@ -59,7 +59,9 @@ library
     ViperVM.Scheduling.Single
     ViperVM.Scheduling.Eager
 
+    ViperVM.UserInterface
     ViperVM.Event
+
     ViperVM.Graph.Graph
     ViperVM.Graph.ParallelReducer
     ViperVM.Graph.Builtins

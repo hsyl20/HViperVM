@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Runtime (
+      Runtime,
       initRuntime, allocate, release, releaseMany,
       peekFloatMatrix, pokeFloatMatrix,
       execute, platform, scheduler,
