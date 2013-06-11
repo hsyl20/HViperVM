@@ -3,7 +3,7 @@ module ViperVM.Platform.Runtime (
       initRuntime, allocate, release, releaseMany,
       peekFloatMatrix, pokeFloatMatrix,
       execute, platform, scheduler,
-      loadBuiltin, MakeBuiltin, readData
+      loadBuiltin, loadBuiltins, MakeBuiltin, readData, dataBuiltin
    ) where
 
 import ViperVM.Platform (Platform)
@@ -24,6 +24,8 @@ import Data.Foldable (traverse_)
 import Control.Concurrent.STM
 import Control.Monad (when)
 import Data.Dynamic
+import Data.Map as Map
+import Data.Traversable (traverse)
 
 data Runtime = Runtime {
       platform :: Platform,
@@ -124,7 +126,13 @@ loadBuiltin rt make = make readData writeData exec alloc
       alloc = allocate rt
       writeData = Data . toDyn
 
+loadBuiltins :: Runtime -> [(String,MakeBuiltin)] -> IO (Map String Builtin)
+loadBuiltins rt ds = traverse (loadBuiltin rt) (Map.fromList ds)
+
 readData :: Expr -> SharedObject
 readData (Data u) = fromDyn u (error "Invalid data")
 readData _ = error "Invalid data parameter"
 
+
+dataBuiltin :: Typeable a => a -> MakeBuiltin
+dataBuiltin v _ _ _ _ = return (Builtin [] . const . return . Data $ toDyn v)

@@ -1,7 +1,6 @@
 {-# LANGUAGE TupleSections, LambdaCase #-}
 
 import ViperVM.Parsing.Lisp
-import ViperVM.Graph.Graph
 import ViperVM.Graph.ParallelReducer
 import ViperVM.Graph.Builtins
 
@@ -19,10 +18,8 @@ import ViperVM.Scheduling.Single
 
 import Control.Applicative
 import Control.Monad
-import Data.Dynamic
 import Data.Foldable (traverse_)
 import Data.Map as Map
-import Data.Traversable (traverse)
 import qualified Data.List as List
 import System.Environment
 
@@ -53,45 +50,30 @@ main = do
    b <- pokeFloatMatrix rt desc (replicate h' (replicate w' (2.0 :: Float)))
    c <- pokeFloatMatrix rt desc (triMul 32)
 
-   let
-      datas = registerData [("a",a),("b",b),("c",c)]
-
-   kernels <- traverse (loadBuiltin rt) $ Map.fromList [
+   myBuiltins <- loadBuiltins rt [
          ("add", floatMatrixAddBuiltin),
          ("sub", floatMatrixSubBuiltin),
-         ("potrf", floatMatrixPotrfBuiltin)
+         ("potrf", floatMatrixPotrfBuiltin),
+         ("a", dataBuiltin a),
+         ("b", dataBuiltin b),
+         ("c", dataBuiltin c)
       ]
-
-   let builtins = Map.unions [defaultBuiltins, kernels, datas]
 
    expr <- getArgs >>= \case
                ["-e",s] -> return s
                [] -> return "(let* ((h (add b b))) (sub a (add h h)))"
                _ -> error "Invalid parameters"
 
-   d <- readData <$> check builtins Map.empty expr
+   putStrLn ("Evaluating: " ++ show expr)
 
-   result <- peekFloatMatrix rt d
+   let builtins = Map.union defaultBuiltins myBuiltins
+   r <- readData <$> (eval builtins =<< readExpr expr)
+
+   result <- peekFloatMatrix rt r
 
    putStrLn "================\nResult:"
    traverse_ (putStrLn . show) result
 
-   void $ releaseMany rt [a,b,c,d]
+   void $ releaseMany rt [a,b,c,r]
 
    putStrLn "Done."
-
-
-registerData :: Typeable a => [(String,a)] -> Map String Builtin
-registerData ds = fmap f (Map.fromList ds)
-   where
-      f = Builtin [] . const . return . Data . toDyn
-
-check :: Map String Builtin -> Map String Node -> String -> IO Expr
-check builtins ctx expr = do
-      r <- readExpr expr
-
-      putStrLn ("Evaluating: " ++ show expr)
-      f <- run builtins ctx r
-      putStrLn ("Reduction result: " ++ show f)
-
-      getNodeExprIO f
