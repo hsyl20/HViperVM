@@ -219,8 +219,6 @@ peekHostFloatMatrix _ obj@(MatrixObject m) = do
        height = matrixHeight m
        width = fromIntegral (matrixWidth m)
 
-   putStrLn (show rowSize)
-
    forM [0..height-1] $ \i -> do
       let ptr = startPtr `plusPtr` (fromIntegral $ i*rowSize)
       peekArray width (castPtr ptr)

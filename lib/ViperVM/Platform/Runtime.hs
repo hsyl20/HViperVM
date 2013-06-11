@@ -66,6 +66,7 @@ release _ _ = return () -- TODO
 releaseMany :: Runtime -> [SharedObject] -> IO ()
 releaseMany rt = traverse_ (release rt)
 
+
 -- | Allocate and initialize a matrix of floats
 pokeFloatMatrix :: Runtime -> Descriptor -> [[Float]] -> IO SharedObject
 pokeFloatMatrix rt desc ds = do
