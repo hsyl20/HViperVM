@@ -41,13 +41,13 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
       (Region2D srcOffset _ srcSize srcPadding) = matrixRegion msrc
       (Region2D dstOffset _ dstSize dstPadding) = matrixRegion mdst
       width = matrixWidth msrc
-      pms = [
+      pms = [ -- FIXME: offsets and paddings must be divisible by 4
             WordParam (fromIntegral width), 
-            WordParam (fromIntegral srcOffset), 
-            WordParam (fromIntegral (srcSize + srcPadding)), 
+            WordParam (fromIntegral (srcOffset `div` 4)), 
+            WordParam (fromIntegral ((srcSize + srcPadding) `div` 4)), 
             BufferParam srcBuf, 
-            WordParam (fromIntegral dstOffset), 
-            WordParam (fromIntegral (dstSize + dstPadding)), 
+            WordParam (fromIntegral (dstOffset `div` 4)), 
+            WordParam (fromIntegral ((dstSize + dstPadding) `div` 4)), 
             BufferParam dstBuf
          ]
       roRegions = [(srcBuf, matrixRegion msrc)]

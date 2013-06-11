@@ -86,6 +86,7 @@ peekFloatMatrix rt so = do
       om = objectManager rt
 
    obj <- ensureInMemory som HostMemory so
+   putStrLn (show obj)
    peekHostFloatMatrix om obj
 
 
