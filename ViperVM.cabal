@@ -64,21 +64,6 @@ library
     ViperVM.Graph.ParallelReducer
     ViperVM.Graph.Builtins
 
-    ViperVM.Runtime
-    ViperVM.Runtime.Data
-    ViperVM.Runtime.Nodes
-    ViperVM.Runtime.Transfer
-    ViperVM.Runtime.Task
-    ViperVM.Runtime.Kernel
-    ViperVM.Runtime.DefaultRuntime
-    ViperVM.Runtime.UserInterface
-    ViperVM.Runtime.Compiler
-    ViperVM.Runtime.GenericScheduler
-    ViperVM.Runtime.Worker
-    ViperVM.Runtime.MemoryManager
-
-    ViperVM.Runtime.DefaultScheduler
-
     ViperVM.STM.Common
     ViperVM.STM.TSet
     ViperVM.STM.TList
@@ -177,14 +162,6 @@ executable KernelObjectOpenCLTest
   build-depends: 
     base,
     stm,
-    ViperVM
-
-executable RuntimeTest
-  main-is: RuntimeTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
     ViperVM
 
 executable GraphReduce
