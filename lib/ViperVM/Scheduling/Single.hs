@@ -36,13 +36,19 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
       parseMsg msg = case msg of 
          SchedExec k args res -> do
             let ker = peerKernel k
-            putStrLn ("[Single] Execute " ++ show k ++ " with params " ++ show args)
 
             -- Compile kernel if necessary
             atomically (TMap.lookup proc (compilations ker)) >>= \case
-               Just CLCompilationFailure -> error "Kernel cannot be executed by the specified processor"
-               Nothing -> compileObjectKernel km k [proc] >> parseMsg msg
+
+               Just CLCompilationFailure -> 
+                  error "Kernel cannot be executed by the specified processor"
+
+               Nothing -> do
+                  putStrLn ("[Single] Compiling " ++ show k ++ " for " ++ show proc)
+                  compileObjectKernel km k [proc] >> parseMsg msg
+
                Just (CLCompilationSuccess _) -> do
+                  putStrLn ("[Single] Executing " ++ show k ++ " with params " ++ show args)
 
                   -- Move input data in memory
                   let argModes = args `zip` lockModes k
