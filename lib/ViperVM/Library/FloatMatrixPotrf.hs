@@ -1,12 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Library.FloatMatrixPotrf (
   floatMatrixPotrfKernelCL, floatMatrixPotrfObjectKernelCL,
-  makeFloatMatrixPotrfBuiltin
+  floatMatrixPotrfBuiltin
   ) where
 
 import ViperVM.Platform
 import ViperVM.Platform.SharedObject
-import ViperVM.Graph.Graph
+import ViperVM.Platform.Runtime (MakeBuiltin)
 import ViperVM.Graph.Builtins
 import Paths_ViperVM
 
@@ -53,8 +53,8 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
       roRegions = [(srcBuf, matrixRegion msrc)]
       rwRegions = [(dstBuf, matrixRegion mdst)]
 
-makeFloatMatrixPotrfBuiltin :: (Expr -> SharedObject) -> (SharedObject -> Expr) -> (ObjectKernel -> [SharedObject] -> IO ()) -> (Descriptor -> IO SharedObject) -> IO Builtin
-makeFloatMatrixPotrfBuiltin readData writeData exec alloc = do
+floatMatrixPotrfBuiltin :: MakeBuiltin
+floatMatrixPotrfBuiltin readData writeData exec alloc = do
 
    ok <- floatMatrixPotrfObjectKernelCL
 

@@ -2,11 +2,14 @@
 module ViperVM.Platform.Runtime (
       initRuntime, allocate, release, releaseMany,
       peekFloatMatrix, pokeFloatMatrix,
-      execute, platform, scheduler
+      execute, platform, scheduler,
+      loadBuiltin, MakeBuiltin, readData
    ) where
 
 import ViperVM.Platform (Platform)
 import ViperVM.Platform.Memory
+import ViperVM.Graph.Graph
+import ViperVM.Graph.Builtins
 import ViperVM.Platform.Scheduler
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.ObjectKernel
@@ -20,6 +23,7 @@ import ViperVM.Platform.SharedObject
 import Data.Foldable (traverse_)
 import Control.Concurrent.STM
 import Control.Monad (when)
+import Data.Dynamic
 
 data Runtime = Runtime {
       platform :: Platform,
@@ -110,3 +114,18 @@ execute rt k args = do
       SchedSuccess -> return ()
       SchedError -> error "Error during scheduling"
       SchedNoResult -> error "Scheduler returned no result"
+
+type MakeBuiltin = (Expr -> SharedObject) -> (SharedObject -> Expr) -> (ObjectKernel -> [SharedObject] -> IO ()) -> (Descriptor -> IO SharedObject) -> IO Builtin
+
+-- | Initialize builtins
+loadBuiltin :: Runtime -> MakeBuiltin -> IO Builtin
+loadBuiltin rt make = make readData writeData exec alloc
+   where
+      exec = execute rt
+      alloc = allocate rt
+      writeData = Data . toDyn
+
+readData :: Expr -> SharedObject
+readData (Data u) = fromDyn u (error "Invalid data")
+readData _ = error "Invalid data parameter"
+

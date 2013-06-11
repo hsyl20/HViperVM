@@ -1,12 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Library.FloatMatrixAdd (
   floatMatrixAddKernelCL, floatMatrixAddObjectKernelCL,
-  makeFloatMatrixAddBuiltin
+  floatMatrixAddBuiltin
   ) where
 
 import ViperVM.Platform
 import ViperVM.Platform.SharedObject
-import ViperVM.Graph.Graph
+import ViperVM.Platform.Runtime (MakeBuiltin)
 import ViperVM.Graph.Builtins
 import Paths_ViperVM
 
@@ -44,8 +44,8 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
       rwRegions = [(c, matrixRegion mc)]
 
 
-makeFloatMatrixAddBuiltin :: (Expr -> SharedObject) -> (SharedObject -> Expr) -> (ObjectKernel -> [SharedObject] -> IO ()) -> (Descriptor -> IO SharedObject) -> IO Builtin
-makeFloatMatrixAddBuiltin readData writeData exec alloc = do
+floatMatrixAddBuiltin :: MakeBuiltin
+floatMatrixAddBuiltin readData writeData exec alloc = do
 
    ok <- floatMatrixAddObjectKernelCL
 

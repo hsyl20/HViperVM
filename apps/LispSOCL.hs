@@ -9,7 +9,6 @@ import ViperVM.Platform.Descriptor
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Primitive as Prim
 import ViperVM.Platform.Runtime
-import ViperVM.Platform.SharedObject
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub
@@ -39,7 +38,6 @@ main = do
    rt <- initRuntime pf (singleScheduler (head (processors pf)))
 
    let 
-      --(w,h) = (1024, 512)
       (w,h) = (32, 32)
       (w',h') = (fromIntegral w, fromIntegral h)
 
@@ -56,17 +54,13 @@ main = do
    c <- pokeFloatMatrix rt desc (triMul 32)
 
    let
-      exec = execute rt
-      alloc = allocate rt
-      writeData = Data . toDyn
       datas = registerData [("a",a),("b",b),("c",c)]
 
-   kernels <- traverse id $ Map.fromList [
-         ("add", makeFloatMatrixAddBuiltin readData writeData exec alloc),
-         ("sub", makeFloatMatrixSubBuiltin readData writeData exec alloc),
-         ("potrf", makeFloatMatrixPotrfBuiltin readData writeData exec alloc)
+   kernels <- traverse (loadBuiltin rt) $ Map.fromList [
+         ("add", floatMatrixAddBuiltin),
+         ("sub", floatMatrixSubBuiltin),
+         ("potrf", floatMatrixPotrfBuiltin)
       ]
-
 
    let builtins = Map.unions [defaultBuiltins, kernels, datas]
 
@@ -86,9 +80,6 @@ main = do
 
    putStrLn "Done."
 
-readData :: Expr -> SharedObject
-readData (Data u) = fromDyn u (error "Invalid data")
-readData _ = error "Invalid data parameter"
 
 registerData :: Typeable a => [(String,a)] -> Map String Builtin
 registerData ds = fmap f (Map.fromList ds)
