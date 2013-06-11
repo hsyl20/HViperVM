@@ -8,17 +8,23 @@ import ViperVM.Platform
 import ViperVM.Platform.SharedObject
 import ViperVM.Graph.Graph
 import ViperVM.Graph.Builtins
+import ViperVM.STM.TMap as TMap
+
+import Control.Concurrent.STM
+
 import Paths_ViperVM
 
 floatMatrixSubKernelCL :: IO Kernel
 floatMatrixSubKernelCL = do
    src <- readFile =<< getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixSub.cl"
+   compiled <- atomically TMap.empty
    return $ CLKernel {
          kernelName = "floatMatrixSub",
          constraints = [],
          options = "",
          configure = configFromParamsCL,
-         source = src
+         source = src,
+         compilations = compiled
       }
 
 configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration

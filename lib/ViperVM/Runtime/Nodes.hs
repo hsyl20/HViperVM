@@ -162,7 +162,6 @@ instance Ord MetaKernel where
 -- | A kernel
 data Kernel = Kernel {
    kernelPeer :: Pf.Kernel,
-   kernelCompiled :: TMap Processor Pf.CompiledKernel,
    kernelBeingCompiled :: TSet Processor
 }
 

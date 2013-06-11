@@ -8,18 +8,16 @@ import ViperVM.Platform
 import ViperVM.Platform.SharedObject
 import ViperVM.Graph.Graph
 import ViperVM.Graph.Builtins
+import ViperVM.STM.TMap as TMap
+
+import Control.Concurrent.STM
+
 import Paths_ViperVM
 
 floatMatrixAddKernelCL :: IO Kernel
 floatMatrixAddKernelCL = do
-   src <- readFile =<< getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixAdd.cl"
-   return $ CLKernel {
-         kernelName = "floatMatrixAdd",
-         constraints = [],
-         options = "",
-         configure = configFromParamsCL,
-         source = src
-      }
+   fileName <- getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixAdd.cl"
+   initCLKernelFromFile fileName "floatMatrixAdd" [] "" configFromParamsCL
 
 configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
 configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams

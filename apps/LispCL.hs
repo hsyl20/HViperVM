@@ -66,7 +66,6 @@ main = do
          ("potrf", floatMatrixPotrfKernelCL)
       ]
 
-   traverse_ (registerKernel km) kernelMap
    traverse_ (flip (compileKernel km) [proc]) kernelMap
 
 

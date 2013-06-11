@@ -1,7 +1,6 @@
 module ViperVM.Platform.ObjectKernel (
       KernelObjectConfig(..), ObjectKernel(..),
       executeObjectKernel,
-      registerObjectKernel,
       compileObjectKernel, lockModes
    ) where
 
@@ -41,9 +40,6 @@ executeObjectKernel om proc ok objs = do
       ObjectKernel k modes f = ok
       objsModes = objs `zip` modes
       KernelObjectConfig pms roRegions rwRegions = f objs
-
-registerObjectKernel :: KernelManager -> ObjectKernel -> IO ()
-registerObjectKernel km ok = registerKernel km (peerKernel ok)
 
 compileObjectKernel :: KernelManager -> ObjectKernel -> [Processor] -> IO [Processor]
 compileObjectKernel km ok = compileKernel km (peerKernel ok)

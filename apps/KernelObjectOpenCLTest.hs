@@ -31,7 +31,6 @@ main = do
 
    putStrLn "Registering kernel..." 
    ker <- floatMatrixAddObjectKernelCL
-   registerObjectKernel km ker
 
    putStrLn "OpenCL processors:"
    forM_ openclProcs (putStrLn . show)

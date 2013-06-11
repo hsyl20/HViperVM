@@ -31,12 +31,4 @@ sendRequest ch req@(k,ps) = do
    writeTChan ch req
 
 compilerThread :: TChan CompilationRequest -> IO ()
-compilerThread ch = forever $ do
-   (k,ps) <- atomically $ readTChan ch
-   ck <- Pf.compile (kernelPeer k) (map procPeer ps)
-   
-   let valids = catMaybes $ zipWith (\x y -> fmap (x,) y) ps ck
-
-   atomically $ do
-      afterKernelCompilation k ps
-      forM_ valids $ \(p,c) -> storeCompiledKernel k [p] c
+compilerThread ch = undefined

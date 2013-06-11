@@ -1,5 +1,6 @@
 module ViperVM.Platform.Processor (
-   Processor(..), procInfo, processorMemories
+   Processor(..), procInfo, processorMemories,
+   procCLDevice
 ) where
 
 import ViperVM.Backends.OpenCL
@@ -23,6 +24,12 @@ instance Ord Processor where
 
 instance Show Processor where
   show p = unsafePerformIO $ procInfo p
+
+
+-- | Return OpenCL device associated to the processor
+procCLDevice :: Processor -> CLDeviceID
+procCLDevice (CLProcessor _ _ _ dev) = dev
+procCLDevice _ = error "Not a valid OpenCL device"
 
 -- | Get processor information string
 procInfo :: Processor -> IO String
