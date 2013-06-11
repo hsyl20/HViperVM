@@ -13,9 +13,7 @@ import ViperVM.STM.TMap as TMap
 import Control.Concurrent.STM
 import Control.Concurrent
 import Control.Monad (void,forever,forM)
-import Control.Applicative ((<$>))
 import Data.Foldable (forM_)
-import Data.Set as Set
 
 -- | Scheduler using a single processor
 singleScheduler :: Processor -> Scheduler
@@ -53,14 +51,7 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
                   -- Move input data in memory
                   let argModes = args `zip` lockModes k
                   args' <- forM argModes $ \(arg,mode) -> case mode of
-                     ReadOnly -> do
-                        Set.elems <$> atomically (memoryObjects mem arg) >>= \case
-                           x:_ -> return x
-                           [] -> Set.elems <$> atomically (objects arg) >>= \case
-                              [] -> error "Uninitialized object accessed in read-only mode"
-                              src:_ -> allocateTransferAttach som arg src mem
-                              -- FIXME: select source policy is not clever
-
+                     ReadOnly -> ensureInMemory som mem arg 
                      ReadWrite -> allocateInstance som arg mem
 
                   -- Execute kernel

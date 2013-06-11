@@ -1,11 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Runtime (
       initRuntime, allocate, release, releaseMany,
-      initFloatMatrix,
-      execute
+      peekFloatMatrix, pokeFloatMatrix,
+      execute, platform, scheduler
    ) where
 
-import ViperVM.Platform (Platform, Configuration, initPlatform)
+import ViperVM.Platform (Platform)
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Scheduler
 import ViperVM.Platform.KernelManager
@@ -14,7 +14,7 @@ import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.BufferManager
 import ViperVM.Platform.RegionTransferManager
 import ViperVM.Platform.ObjectManager
-import ViperVM.Platform.SharedObjectManager (SharedObjectManager,createSharedObjectManager)
+import ViperVM.Platform.SharedObjectManager (SharedObjectManager,createSharedObjectManager,ensureInMemory)
 import ViperVM.Platform.SharedObject
 
 import Data.Foldable (traverse_)
@@ -23,12 +23,8 @@ import Control.Monad (when)
 
 data Runtime = Runtime {
       platform :: Platform,
-      bufferManager :: BufferManager,
-      regionManager :: RegionLockManager,
-      kernelManager :: KernelManager,
-      transferManager :: RegionTransferManager,
       objectManager :: ObjectManager,
-      shareObjectManager :: SharedObjectManager,
+      sharedObjectManager :: SharedObjectManager,
       scheduler :: Scheduler,
       schedChan :: TChan SchedMsg
    }
@@ -43,28 +39,29 @@ initRuntime pf sch = do
    om <- createObjectManager tm km
    som <- createSharedObjectManager om
    chan <- newBroadcastTChanIO
-   sched <- initScheduler sch som km =<< atomically(dupTChan chan)
+   
+   initScheduler sch som km =<< atomically(dupTChan chan)
 
-   return $ Runtime pf bm rm km tm om som sch chan
+   return $ Runtime pf om som sch chan
 
 -- | Allocate a new data
 allocate :: Runtime -> Descriptor -> IO SharedObject
-allocate rt desc = do
+allocate _ desc = do
    so <- atomically (createSharedObject desc)
    return so
 
 
 -- | Release data
 release :: Runtime -> SharedObject -> IO ()
-release rt so = return ()
+release _ _ = return () -- TODO
 
 -- | Release several data
 releaseMany :: Runtime -> [SharedObject] -> IO ()
 releaseMany rt = traverse_ (release rt)
 
 -- | Allocate and initialize a matrix of floats
-initFloatMatrix :: Runtime -> Descriptor -> [[Float]] -> IO SharedObject
-initFloatMatrix rt desc ds = do
+pokeFloatMatrix :: Runtime -> Descriptor -> [[Float]] -> IO SharedObject
+pokeFloatMatrix rt desc ds = do
    let 
       om = objectManager rt
       (MatrixDesc prim w h) = desc
@@ -78,6 +75,18 @@ initFloatMatrix rt desc ds = do
    atomically (attachObject so o)
 
    return so
+
+
+
+-- | Retrieve values of a matrix of floats
+peekFloatMatrix :: Runtime -> SharedObject -> IO [[Float]]
+peekFloatMatrix rt so = do
+   let 
+      som = sharedObjectManager rt
+      om = objectManager rt
+
+   obj <- ensureInMemory som HostMemory so
+   peekHostFloatMatrix om obj
 
 
 -- | Send a message to the scheduler and wait for its answer

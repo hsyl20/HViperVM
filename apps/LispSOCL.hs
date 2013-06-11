@@ -5,25 +5,26 @@ import ViperVM.Graph.Graph
 import ViperVM.Graph.ParallelReducer
 import ViperVM.Graph.Builtins
 
-import ViperVM.Platform.Platform
-import ViperVM.Platform.Runtime
 import ViperVM.Platform.Descriptor
+import ViperVM.Platform.Platform
+import ViperVM.Platform.Primitive as Prim
+import ViperVM.Platform.Runtime
 import ViperVM.Platform.SharedObject
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub
 import ViperVM.Library.FloatMatrixPotrf
 
-import ViperVM.Platform.Primitive as Prim
 
 import ViperVM.Scheduling.Single
 
-import Control.Monad
 import Control.Applicative
-import Data.Traversable (traverse)
-import Data.Map as Map
-import qualified Data.List as List
+import Control.Monad
 import Data.Dynamic
+import Data.Foldable (traverse_)
+import Data.Map as Map
+import Data.Traversable (traverse)
+import qualified Data.List as List
 import System.Environment
 
 
@@ -50,9 +51,9 @@ main = do
        crossWith f ys xs = fmap (\x -> fmap (\y -> f x y) ys) xs
        desc = MatrixDesc Prim.Float w h
 
-   a <- initFloatMatrix rt desc (replicate h' (replicate w' (5.0 :: Float)))
-   b <- initFloatMatrix rt desc (replicate h' (replicate w' (2.0 :: Float)))
-   c <- initFloatMatrix rt desc (triMul 32)
+   a <- pokeFloatMatrix rt desc (replicate h' (replicate w' (5.0 :: Float)))
+   b <- pokeFloatMatrix rt desc (replicate h' (replicate w' (2.0 :: Float)))
+   c <- pokeFloatMatrix rt desc (triMul 32)
 
    let
       exec = execute rt
@@ -76,11 +77,10 @@ main = do
 
    d <- readData <$> check builtins Map.empty expr
 
---   transferObject om d hc
---   result <- peekHostFloatMatrix om hc
---
---   putStrLn "================\nResult:"
---   traverse_ (putStrLn . show) result
+   result <- peekFloatMatrix rt d
+
+   putStrLn "================\nResult:"
+   traverse_ (putStrLn . show) result
 
    void $ releaseMany rt [a,b,c,d]
 

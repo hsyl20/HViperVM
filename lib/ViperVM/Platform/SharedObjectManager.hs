@@ -3,7 +3,7 @@
 module ViperVM.Platform.SharedObjectManager (
    SharedObjectManager, objectManager,
    createSharedObjectManager, allocateInstance,
-   allocateTransferAttach
+   allocateTransferAttach, ensureInMemory
 ) where
 
 import ViperVM.Platform.Object
@@ -12,6 +12,8 @@ import ViperVM.Platform.SharedObject
 import ViperVM.Platform.ObjectManager
 
 import Control.Concurrent.STM
+import Control.Applicative ( (<$>) )
+import Data.Set as Set
 
 data SharedObjectManager = SharedObjectManager {
    objectManager :: ObjectManager
@@ -46,3 +48,14 @@ allocateTransferAttach som so src mem = do
    atomically (attachObject so dst)
 
    return dst
+
+
+-- | Ensure that an instance of a shared object is in a given memory. perform a transfer if necessary
+ensureInMemory :: SharedObjectManager -> Memory -> SharedObject -> IO Object
+ensureInMemory som mem so = do
+   Set.elems <$> atomically (memoryObjects mem so) >>= \case
+      x:_ -> return x
+      [] -> Set.elems <$> atomically (objects so) >>= \case
+         [] -> error "Uninitialized object accessed in read-only mode"
+         src:_ -> allocateTransferAttach som so src mem
+         -- FIXME: select source policy is not clever
