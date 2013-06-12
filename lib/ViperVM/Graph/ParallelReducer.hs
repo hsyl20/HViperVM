@@ -23,8 +23,8 @@ parallel :: Bool
 parallel = True
 
 -- | Evaluate a node and return its expression
-eval :: Map Name Builtin -> Node -> IO Expr
-eval builtins node = getNodeExprIO =<< run builtins Map.empty node
+eval :: Map Name Builtin -> Map String Node -> Node -> IO Expr
+eval builtins ctx node = getNodeExprIO =<< run builtins ctx node
 
 -- | Perform several node reductions in parallel
 runParallel :: Map Name Builtin -> Map String Node -> [Node] -> IO [Node]

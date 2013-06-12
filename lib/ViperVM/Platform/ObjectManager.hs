@@ -183,8 +183,9 @@ transferMatrix om src dst = do
       
    
    res <- TM.performRegionTransfer tm transfr
-   when (any (/= RegionTransferSuccess) res) 
-      (error "Error during matrix transfer")
+   let res2 = Prelude.filter (/= RegionTransferSuccess) res
+   when (not (Prelude.null res2))
+      (error ("Error during matrix transfer: " ++ show res2))
 
 pokeHostFloatMatrix :: ObjectManager -> Object -> [[Float]] -> IO ()
 pokeHostFloatMatrix _ obj@(MatrixObject m) ds = do
@@ -232,7 +233,7 @@ peekHostFloatMatrix _ _ = error "Cannot peek the given object"
 -- | Allocate a compatible instance of the shared object, DO NOT atach it
 allocateFromDescriptor :: ObjectManager -> Memory -> Descriptor -> IO Object
 allocateFromDescriptor om mem (MatrixDesc prim w h) = do
-   let padding = w `mod` 32
+   let padding = (w * Prim.sizeOf prim) `mod` 4
    allocateMatrix om mem prim w h padding >>= \case
       Nothing -> error "Unable to allocate matrix"
       Just m -> return (MatrixObject m)

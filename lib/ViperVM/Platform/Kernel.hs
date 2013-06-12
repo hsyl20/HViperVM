@@ -69,13 +69,14 @@ data CLKernelConfiguration = CLKernelConfiguration {
    globalDim :: [Word],
    localDim :: [Word],
    parameters :: [CLKernelParameter]
-}
+} deriving (Show)
 
 data CLKernelParameter = CLMemParam CL.CLMem
                        | CLIntParam CL.CLint
                        | CLUIntParam CL.CLuint
                        | CLULongParam CL.CLulong
                        | CLBoolParam CL.CLbool
+                       deriving (Show)
 
 clMemParam :: Buffer -> CLKernelParameter
 clMemParam b = CLMemParam (getCLBuffer b)

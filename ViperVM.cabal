@@ -212,6 +212,15 @@ executable LispSOCL
     containers,
     ViperVM
 
+executable LispTest
+  main-is: LispTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    containers,
+    ViperVM
+
 executable GranularityAdaptation
   main-is: GranularityAdaptation.hs
   hs-source-dirs: apps

@@ -19,7 +19,9 @@ configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
 configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
    where
       [WordParam width, WordParam height, BufferParam a, BufferParam b, BufferParam c] = pms
-      gDim = [width + (mod width 32), height + (mod height 32),1]
+      roundTo to v = v + (if ms /= 0 then to - ms else 0)
+         where ms = mod v to
+      gDim = [roundTo 32 width, roundTo 32 height,1]
       lDim = [32,32,1]
       clParams = [clUIntParam width, clUIntParam height, 
                   clMemParam a, clMemParam b, clMemParam c]

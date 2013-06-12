@@ -10,13 +10,16 @@ import ViperVM.Platform.Memory
 import Control.Monad (void)
 import Foreign.Ptr
 
-data RegionTransferResult = RegionTransferSuccess | RegionTransferError
-                      deriving (Eq,Ord,Show)
+data RegionTransferResult =
+     RegionTransferSuccess 
+   | RegionTransferError DirectRegionTransfer
+   deriving (Eq,Ord,Show)
 
 data RegionTransferStep = RegionTransferStep Link Buffer Region
                     deriving (Eq,Ord)
 
 data DirectRegionTransfer = DirectRegionTransfer Link Buffer Region Buffer Region
+                            deriving (Eq,Ord,Show)
 
 data RegionTransfer = RegionTransfer Buffer Region [RegionTransferStep]
                 deriving (Eq,Ord)
@@ -57,4 +60,4 @@ transfer dt = case dt of
       void $ clReleaseEvent lib e
       return RegionTransferSuccess
 
-   _ -> return RegionTransferError
+   _ -> return (RegionTransferError dt)

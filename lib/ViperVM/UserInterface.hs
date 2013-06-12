@@ -1,5 +1,6 @@
 module ViperVM.UserInterface (
-      evalLisp, initFloatMatrix, printFloatMatrix
+      evalLisp, evalLispModule,
+      initFloatMatrix, printFloatMatrix
    ) where
 
 import ViperVM.Platform.Runtime
@@ -16,7 +17,14 @@ import Data.Foldable (traverse_)
 
 -- | Parse and evaluate a Lisp expression
 evalLisp :: Map Name Builtin -> String -> IO SharedObject
-evalLisp builtins expr = readData <$> (eval builtins =<< Lisp.readExpr expr)
+evalLisp builtins expr = readData <$> (eval builtins Map.empty =<< Lisp.readExpr expr)
+
+-- | Parse and evaluate a Lisp module
+evalLispModule :: Map Name Builtin -> String -> IO SharedObject
+evalLispModule builtins src = do
+   ctx <- Lisp.readModule src
+   e <- Lisp.readExpr "(main)"
+   readData <$> eval builtins ctx e
 
 -- | Allocate and initialize a matrix of floats
 initFloatMatrix :: Runtime -> [[Float]] -> IO SharedObject
