@@ -1,7 +1,9 @@
+{-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.ObjectKernel (
       KernelObjectConfig(..), ObjectKernel(..),
       executeObjectKernel, peerKernel,
-      compileObjectKernel, lockModes
+      compileObjectKernel, lockModes,
+      ensureCompiledFor
    ) where
 
 import ViperVM.Platform.Kernel
@@ -12,6 +14,7 @@ import ViperVM.Platform.Buffer
 import ViperVM.Platform.Region
 import ViperVM.Platform.ObjectManager
 import ViperVM.Platform.LockMode
+import ViperVM.STM.TMap as TMap
 
 import Control.Concurrent.STM
 import Data.Foldable (forM_)
@@ -43,3 +46,21 @@ executeObjectKernel om proc ok objs = do
 
 compileObjectKernel :: KernelManager -> ObjectKernel -> [Processor] -> IO [Processor]
 compileObjectKernel km ok = compileKernel km (peerKernel ok)
+
+
+
+ensureCompiledFor :: KernelManager -> ObjectKernel -> Processor -> IO ()
+ensureCompiledFor km k proc = do
+   let ker = peerKernel k
+
+   atomically (TMap.lookup proc (compilations ker)) >>= \case
+
+      Just CLCompilationFailure -> 
+         error "Kernel cannot be executed by the specified processor"
+
+      Nothing -> do
+         putStrLn ("Compiling " ++ show k ++ " for " ++ show proc)
+         _ <- compileObjectKernel km k [proc]
+         ensureCompiledFor km k proc
+
+      Just (CLCompilationSuccess _) -> return ()

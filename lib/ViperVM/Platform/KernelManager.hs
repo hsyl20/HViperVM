@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, LambdaCase #-}
 
 module ViperVM.Platform.KernelManager (
    KernelManager, KernelEvent, KernelExecution(..),
@@ -109,3 +109,5 @@ executeKernel km proc k ro rw params = do
    atomically $ writeTChan ch (exec, ev)
    waitEvent ev
    atomically $ cancelKernelExecution km exec
+
+

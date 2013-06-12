@@ -8,7 +8,6 @@ import ViperVM.Platform.SharedObject
 import ViperVM.Platform.SharedObjectManager
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.Scheduler
-import ViperVM.STM.TMap as TMap
 
 import Control.Concurrent.STM
 import Control.Concurrent
@@ -33,34 +32,24 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
       parseMsg :: SchedMsg -> IO ()
       parseMsg msg = case msg of 
          SchedExec k args res -> do
-            let ker = peerKernel k
+            
+            ensureCompiledFor km k proc
 
-            -- Compile kernel if necessary
-            atomically (TMap.lookup proc (compilations ker)) >>= \case
+            putStrLn ("[Single] Executing " ++ show k ++ " with params " ++ show args)
 
-               Just CLCompilationFailure -> 
-                  error "Kernel cannot be executed by the specified processor"
+            -- Move input data in memory
+            let argModes = args `zip` lockModes k
+            args' <- forM argModes $ \(arg,mode) -> case mode of
+               ReadOnly -> ensureInMemory som mem arg 
+               ReadWrite -> allocateInstance som arg mem
 
-               Nothing -> do
-                  putStrLn ("[Single] Compiling " ++ show k ++ " for " ++ show proc)
-                  compileObjectKernel km k [proc] >> parseMsg msg
+            -- Execute kernel
+            executeObjectKernel om proc k args'
 
-               Just (CLCompilationSuccess _) -> do
-                  putStrLn ("[Single] Executing " ++ show k ++ " with params " ++ show args)
-
-                  -- Move input data in memory
-                  let argModes = args `zip` lockModes k
-                  args' <- forM argModes $ \(arg,mode) -> case mode of
-                     ReadOnly -> ensureInMemory som mem arg 
-                     ReadWrite -> allocateInstance som arg mem
-
-                  -- Execute kernel
-                  executeObjectKernel om proc k args'
-
-                  -- Associate output parameters
-                  forM_ (argModes `zip` args') $ \((arg,mode),arg') -> case mode of
-                     ReadOnly -> return ()
-                     ReadWrite -> atomically (attachObject arg arg')
+            -- Associate output parameters
+            forM_ (argModes `zip` args') $ \((arg,mode),arg') -> case mode of
+               ReadOnly -> return ()
+               ReadWrite -> atomically (attachObject arg arg')
 
             -- Return result
             atomically (writeTVar res SchedSuccess)
