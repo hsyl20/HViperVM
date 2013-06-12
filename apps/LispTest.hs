@@ -36,8 +36,12 @@ main = do
       ("a", dataBuiltin a),
       ("b", dataBuiltin b)]
 
+   --let src = "(defun f (x y) (+ (* x y) (* y x))) (defun main () (f a b))"
+   let src = "(defun main () ((lambda (x y) (+ (* x y) (* y x))) a b))"
+
    -- Evaluate an expression
-   r <- evalLisp builtins "(+ (* a b) (* b a))"
+--   r <- evalLisp builtins "(+ (* a b) (* b a))"
+   r <- evalLispModule builtins src
 
    -- Display the result
    printFloatMatrix rt r
