@@ -37,7 +37,7 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
             
             ensureCompiledFor km k proc
 
-            customLog pf (printf "[Single] %s executing %s with params %s " (show proc) (show k) (show args))
+            customLog pf (printf "[Single] Proc %s executing %s with params %s " (show proc) (show k) (show args))
 
             -- Move input data in memory
             let argModes = args `zip` lockModes k

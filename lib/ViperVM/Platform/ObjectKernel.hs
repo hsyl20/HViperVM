@@ -63,7 +63,7 @@ ensureCompiledFor km k proc = do
          error "Kernel cannot be executed by the specified processor"
 
       Nothing -> do
-         customLog pf (printf "[Compiler] Compiling %s for %s" (show k) (show proc))
+         customLog pf (printf "[Compiler] Compiling kernel %s for processor %s" (show k) (show proc))
          _ <- compileObjectKernel km k [proc]
          ensureCompiledFor km k proc
 

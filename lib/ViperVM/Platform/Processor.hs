@@ -1,46 +1,59 @@
 module ViperVM.Platform.Processor (
    Processor(..), procInfo, processorMemories,
-   procCLDevice
+   procCLDevice, procId
 ) where
 
 import ViperVM.Backends.OpenCL
 import ViperVM.Platform.Memory
-import System.IO.Unsafe
+
+import Control.Applicative ( (<$>), (<*>) )
+import Text.Printf
 
 -- | A processing unit
 data Processor = HostProcessor
-               | CLProcessor OpenCLLibrary CLContext CLCommandQueue CLDeviceID
+               | CLProcessor OpenCLLibrary CLContext CLCommandQueue CLDeviceID ProcID
+
+type ProcID = String
 
 instance Eq Processor where
   (==) HostProcessor HostProcessor = True
-  (==) (CLProcessor lib1 _ _ id1) (CLProcessor lib2 _ _ id2) = lib1 == lib2 && id1 == id2
+  (==) (CLProcessor _ _ _ _ id1) (CLProcessor _ _ _ _ id2) = id1 == id2
   (==) _ _ = False
 
 instance Ord Processor where
   compare HostProcessor HostProcessor = EQ
   compare HostProcessor _ = GT
   compare _ HostProcessor = LT
-  compare (CLProcessor _ _ _ id1) (CLProcessor _ _ _ id2) = compare id1 id2
+  compare (CLProcessor _ _ _ _ id1) (CLProcessor _ _ _ _ id2) = compare id1 id2
 
 instance Show Processor where
-  show p = unsafePerformIO $ procInfo p
+  show = procId
 
+-- | Return processor unique identifier
+procId :: Processor -> String
+procId (CLProcessor _ _ _ _ pid) = printf "{%s}" pid
+procId HostProcessor = "{Host}"
+
+-- | Return processor name
+procName :: Processor -> IO String
+procName (CLProcessor lib _ _ dev _) = clGetDeviceName lib dev
+procName HostProcessor = return "Host processor"
+
+-- | Return processor vendor
+procVendor :: Processor -> IO String
+procVendor (CLProcessor lib _ _ dev _) = clGetDeviceVendor lib dev
+procVendor HostProcessor = return ""
 
 -- | Return OpenCL device associated to the processor
 procCLDevice :: Processor -> CLDeviceID
-procCLDevice (CLProcessor _ _ _ dev) = dev
+procCLDevice (CLProcessor _ _ _ dev _) = dev
 procCLDevice _ = error "Not a valid OpenCL device"
 
 -- | Get processor information string
 procInfo :: Processor -> IO String
-procInfo (CLProcessor lib _ _ dev) = do
-  name <- clGetDeviceName lib dev
-  vendor <- clGetDeviceVendor lib dev
-  return $ "[OpenCL] " ++ name ++ " (" ++ vendor ++ ")"
-
-procInfo HostProcessor = return "[Host]"
+procInfo proc = printf "%s %s (%s)" (procId proc) <$> procName proc <*> procVendor proc
 
 -- | Retrieve memories attached to a given processor
 processorMemories :: Processor -> [Memory]
-processorMemories (CLProcessor lib ctx _ dev) = [CLMemory lib ctx dev]
+processorMemories (CLProcessor lib ctx _ dev _) = [CLMemory lib ctx dev]
 processorMemories HostProcessor = [HostMemory]

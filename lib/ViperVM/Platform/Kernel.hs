@@ -117,7 +117,7 @@ supportConstraints cs p = all (`supportConstraint` p) cs
 
 -- | Indicate if a processor supports a given constraint
 supportConstraint :: KernelConstraint -> Processor -> Bool
-supportConstraint DoublePrecisionSupportRequired (CLProcessor lib _ _ dev) = not . null . unsafePerformIO $ clGetDeviceDoubleFPConfig lib dev
+supportConstraint DoublePrecisionSupportRequired (CLProcessor lib _ _ dev _) = not . null . unsafePerformIO $ clGetDeviceDoubleFPConfig lib dev
 supportConstraint DoublePrecisionSupportRequired HostProcessor = True
 
 -- | Indicate if a processor can execute a given kernel
@@ -162,13 +162,13 @@ compile ker@(CLKernel {..}) procs = do
    where
       forAssocM xs f = zip xs <$> traverse f xs
 
-      procKey (CLProcessor lib ctx _ _) = (lib,ctx)
+      procKey (CLProcessor lib ctx _ _ _) = (lib,ctx)
       procKey _ = undefined
 
       compareProc a b = compare (procKey a) (procKey b)
       eqProc a b = procKey a == procKey b
 
-      extractLibCtx (CLProcessor lib ctx _ _) = (lib,ctx)
+      extractLibCtx (CLProcessor lib ctx _ _ _) = (lib,ctx)
       extractLibCtx _ = undefined
 
       createProgram ((lib,ctx),_) = clCreateProgramWithSource lib ctx source
@@ -185,7 +185,7 @@ compile ker@(CLKernel {..}) procs = do
 -- | Execute a kernel on a given processor synchronously
 execute :: Processor -> Kernel -> [KernelParameter] -> IO ExecutionResult
 
-execute proc@(CLProcessor lib _ cq _) ker@(CLKernel {}) params = do
+execute proc@(CLProcessor lib _ cq _ _) ker@(CLKernel {}) params = do
 
    CLCompilationSuccess peer <- atomically (compilations ker TMap.! proc)
    let config = configure ker params
