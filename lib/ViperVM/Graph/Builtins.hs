@@ -3,6 +3,7 @@ module ViperVM.Graph.Builtins where
 
 import ViperVM.Graph.Graph
 import Data.Map as Map
+import Control.Applicative ( (<$>) )
 
 data Builtin = Builtin {
    evals :: [Bool],
@@ -92,7 +93,22 @@ listBuiltins = Map.fromList [
 
    ("List.snoc", Builtin [True,False] $ \case
       ([List xs],[_,x]) -> return (List (xs ++ [x]))
-      (e,_) -> error ("List.snoc cannot be applied (found " ++ show e ++")"))
+      (e,_) -> error ("List.snoc cannot be applied (found " ++ show e ++")")),
+
+   ("List.reduce", Builtin [False,True] $ \case
+      ([List []],[_,_]) -> error "List.reduce cannot be used with an empty list"
+      ([List xs],[f,_]) -> Alias . head <$> g xs
+         where
+            g :: [Node] -> IO [Node]
+            g [] = return []
+            g [a] = return [a]
+            g (a:b:rs) = do
+               fa <- newNodeIO (App f a)
+               fab <- newNodeIO (App fa b)
+               rs' <- g rs
+               g (fab:rs')
+
+      (e,_) -> error ("List.reduce cannot be applied (found " ++ show e ++")"))
 
    ]
 
