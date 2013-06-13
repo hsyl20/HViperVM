@@ -41,6 +41,8 @@ configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
       lDim = [32,32,1]
 
       clParams = [clUIntParam k, 
+                  clUIntParam w,
+                  clUIntParam h,
                   clMemParam a,
                   clUIntParam lda,
                   clUIntParam offa,
