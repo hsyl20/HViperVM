@@ -119,7 +119,8 @@ unlockObject om o = do
 
 transferObject :: ObjectManager -> Object -> Object -> IO ()
 transferObject om (MatrixObject src) (MatrixObject dst) = do
-   putStrLn (printf "[Transfer] %s -> %s" (show src) (show dst))
+   let pf = getObjectManagerPlatform om
+   customLog pf (printf "[Transfer] %s -> %s" (show src) (show dst))
    transferMatrix om src dst
 transferObject _ _ _ = error "Cannot transfer these objects"
 

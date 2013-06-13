@@ -5,7 +5,7 @@ module ViperVM.Scheduling.RoundRobin (
 import ViperVM.Platform.SharedObjectManager
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.Scheduler
-import ViperVM.Platform.Platform (processors)
+import ViperVM.Platform.Platform (processors,customLog)
 import ViperVM.Scheduling.Single
 
 import Control.Concurrent.STM
@@ -37,7 +37,9 @@ roundRobinThread som km ch = do
    schedule scheds 0
 
    where
-      procs = Vector.fromList $ processors (getSharedObjectManagerPlatform som)
+      procs = Vector.fromList $ processors pf
+
+      pf = getSharedObjectManagerPlatform som
 
       schedule :: Vector.Vector (TChan SchedMsg) -> Int -> IO ()
       schedule scheds n 
@@ -52,6 +54,6 @@ roundRobinThread som km ch = do
                         writeTChan (scheds ! n) msg
                         return ("[RoundRobin] Forward " ++ show k ++ " to " ++ show (procs ! n))
 
-               putStrLn str
+               customLog pf str
 
                schedule scheds (n+1)

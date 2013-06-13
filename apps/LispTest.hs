@@ -1,5 +1,6 @@
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Runtime
+import ViperVM.Platform.Logger
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub
@@ -12,7 +13,8 @@ main :: IO ()
 main = do
 
    let config = Configuration {
-          libraryOpenCL = "libOpenCL.so"
+          libraryOpenCL = "libOpenCL.so",
+          logger = stdOutLogger LogDebug
        }
 
    pf <- initPlatform config

@@ -4,6 +4,7 @@ import ViperVM.Graph.Builtins
 
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Runtime
+import ViperVM.Platform.Logger
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub
@@ -30,7 +31,8 @@ main = do
 
    -- Configuraing platform and runtime
    let config = Configuration {
-      libraryOpenCL = "/usr/lib/libOpenCL.so"
+      libraryOpenCL = "/usr/lib/libOpenCL.so",
+      logger = stdOutLogger LogDebug
    }
 
    putStrLn "Initializing platform and runtime..."

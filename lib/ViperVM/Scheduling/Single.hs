@@ -13,6 +13,7 @@ import Control.Concurrent.STM
 import Control.Concurrent
 import Control.Monad (void,forever,forM)
 import Data.Foldable (forM_)
+import Text.Printf
 
 -- | Scheduler using a single processor
 singleScheduler :: Processor -> Scheduler
@@ -28,6 +29,7 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
    where
       om = objectManager som
       mem = head (processorMemories proc)
+      pf = getSharedObjectManagerPlatform som
 
       parseMsg :: SchedMsg -> IO ()
       parseMsg msg = case msg of 
@@ -35,7 +37,7 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
             
             ensureCompiledFor km k proc
 
-            putStrLn ("[Single] Executing " ++ show k ++ " with params " ++ show args)
+            customLog pf (printf "[Single] %s executing %s with params %s " (show proc) (show k) (show args))
 
             -- Move input data in memory
             let argModes = args `zip` lockModes k

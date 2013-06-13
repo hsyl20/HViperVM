@@ -1,4 +1,5 @@
 import ViperVM.Platform
+import ViperVM.Platform.Logger
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.ObjectManager
@@ -13,7 +14,8 @@ import Control.Monad
 main :: IO ()
 main = do
    let config = Configuration {
-      libraryOpenCL = "/usr/lib/libOpenCL.so"
+      libraryOpenCL = "/usr/lib/libOpenCL.so",
+      logger = stdOutLogger LogDebug
    }
 
    putStrLn "Initializing platform..."

@@ -1,13 +1,16 @@
+{-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Platform (
    Platform, Configuration(..),
    initPlatform, platformInfo,
-   memories, links, processors
+   memories, links, processors, configuration,
+   customLog, errorLog, debugLog
 ) where
 
 import ViperVM.Backends.OpenCL
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Link
 import ViperVM.Platform.Processor
+import ViperVM.Platform.Logger
 
 import Data.Traversable
 import Control.Applicative
@@ -16,13 +19,15 @@ import Control.Applicative
 data Platform = Platform {
   memories :: [Memory],
   links :: [Link],
-  processors :: [Processor]
+  processors :: [Processor],
+  configuration :: Configuration
 }
 
 
 -- | Platform configuration
 data Configuration = Configuration {
-  libraryOpenCL :: String
+  libraryOpenCL :: String,
+  logger :: LogMsg -> IO ()
 }
 
 -- | Initialize platform
@@ -50,7 +55,7 @@ initPlatform config = do
        lnks = concat clLinks
        procs = clProcs
 
-   return $ Platform mems lnks procs
+   return $ Platform mems lnks procs config
 
 -- | Retrieve platform information string
 platformInfo :: Platform -> IO String
@@ -59,3 +64,16 @@ platformInfo pf = do
   mems <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse memInfo (memories pf)
   lks <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse linkInfo (links pf)
   return ("Processors:\n" ++ procs ++ "Memories:\n" ++ mems ++ "Links:\n" ++ lks)
+
+
+-- | Put custom message in log
+customLog :: Platform -> String -> IO ()
+customLog pf s = logger (configuration pf) (CustomLog s)
+
+-- | Put error message in log
+errorLog :: Platform -> String -> IO ()
+errorLog pf s = logger (configuration pf) (ErrorLog s)
+
+-- | Put debug message in log
+debugLog :: Platform -> String -> IO ()
+debugLog pf s = logger (configuration pf) (DebugLog s)

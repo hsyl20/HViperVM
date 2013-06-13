@@ -17,7 +17,6 @@ import Data.Traversable (traverse,forM)
 import Data.Word
 import Data.Maybe
 import Control.Monad (forM_,void)
-import System.Exit
 import System.IO.Unsafe
 
 type KernelName = String
@@ -27,6 +26,11 @@ data KernelConstraint = DoublePrecisionSupportRequired
 
 data CLCompilationResult = CLCompilationSuccess CL.CLKernel
                          | CLCompilationFailure
+
+data ExecutionResult = ExecuteSuccess 
+                     | ExecuteError
+                       deriving (Eq)
+
 
 -- | A kernel
 data Kernel = CLKernel {
@@ -178,9 +182,8 @@ compile ker@(CLKernel {..}) procs = do
         return $ fmap (,k) devs
 
 
-
 -- | Execute a kernel on a given processor synchronously
-execute :: Processor -> Kernel -> [KernelParameter] -> IO ()
+execute :: Processor -> Kernel -> [KernelParameter] -> IO ExecutionResult
 
 execute proc@(CLProcessor lib _ cq _) ker@(CLKernel {}) params = do
 
@@ -198,6 +201,6 @@ execute proc@(CLProcessor lib _ cq _) ker@(CLKernel {}) params = do
 
    void $ clWaitForEvents lib [ev]
 
-execute proc ker _ = do
-   putStrLn $ "We do not know how to execute kernel " ++ show ker ++ " on " ++ show proc
-   exitFailure
+   return ExecuteSuccess
+
+execute _ _ _ = return ExecuteError

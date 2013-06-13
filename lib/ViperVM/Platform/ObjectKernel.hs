@@ -6,6 +6,7 @@ module ViperVM.Platform.ObjectKernel (
       ensureCompiledFor
    ) where
 
+import ViperVM.Platform.Platform
 import ViperVM.Platform.Kernel
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.Processor
@@ -18,6 +19,7 @@ import ViperVM.STM.TMap as TMap
 
 import Control.Concurrent.STM
 import Data.Foldable (forM_)
+import Text.Printf
 
 data KernelObjectConfig = KernelObjectConfig [KernelParameter] [(Buffer,Region)] [(Buffer,Region)]
 
@@ -51,7 +53,9 @@ compileObjectKernel km ok = compileKernel km (peerKernel ok)
 
 ensureCompiledFor :: KernelManager -> ObjectKernel -> Processor -> IO ()
 ensureCompiledFor km k proc = do
-   let ker = peerKernel k
+   let 
+      ker = peerKernel k
+      pf = getKernelManagerPlatform km
 
    atomically (TMap.lookup proc (compilations ker)) >>= \case
 
@@ -59,7 +63,7 @@ ensureCompiledFor km k proc = do
          error "Kernel cannot be executed by the specified processor"
 
       Nothing -> do
-         putStrLn ("Compiling " ++ show k ++ " for " ++ show proc)
+         customLog pf (printf "[Compiler] Compiling %s for %s" (show k) (show proc))
          _ <- compileObjectKernel km k [proc]
          ensureCompiledFor km k proc
 

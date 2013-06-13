@@ -3,7 +3,8 @@
 module ViperVM.Platform.KernelManager (
    KernelManager, KernelEvent, KernelExecution(..),
    createKernelManager, compileKernel,
-   prepareKernelExecution, cancelKernelExecution, executeKernel
+   prepareKernelExecution, cancelKernelExecution, executeKernel,
+   getKernelManagerPlatform
 ) where
 
 import ViperVM.Platform.Platform
@@ -19,6 +20,8 @@ import Data.Map as Map
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad (forM,when)
+import System.Exit
+import Text.Printf
 
 data PrepareExecutionResult = PrepareExecSuccess | PrepareExecRegionAlreadyLocked
                               deriving (Eq)
@@ -30,12 +33,15 @@ data KernelExecution = KernelExecution {
       kernelParameters :: [KernelParameter]
    }
 
-type KernelEvent = Event ()
+type KernelEvent = Event ExecutionResult
 
 data KernelManager = KernelManager {
       regionManager :: RegionLockManager,
       procWorkers :: Map Processor (TChan (KernelExecution, KernelEvent))
    }
+
+getKernelManagerPlatform :: KernelManager -> Platform
+getKernelManagerPlatform =  getRegionLockManagerPlatform . regionManager
 
 createKernelManager :: RegionLockManager -> IO KernelManager
 createKernelManager rm = do
@@ -44,21 +50,31 @@ createKernelManager rm = do
    -- Create proc threads
    threads <- forM (processors pf) $ \proc -> do
       trs <- atomically newTChan
-      _ <- forkOS (procThread proc trs)
+      _ <- forkOS (procThread pf proc trs)
       return (proc, trs)
 
    return $ KernelManager rm (fromList threads)
 
 
 -- | Thread that perform kernel execution on a given proc
-procThread :: Processor -> TChan (KernelExecution, KernelEvent) -> IO ()
-procThread proc ch = do
+procThread :: Platform -> Processor -> TChan (KernelExecution, KernelEvent) -> IO ()
+procThread pf proc ch = do
    (exec,ev) <- atomically $ readTChan ch
+   let 
+      ker = executableKernel exec
+      args = kernelParameters exec
 
-   err <- execute proc (executableKernel exec) (kernelParameters exec)
+   err <- execute proc ker args
+
+   case err of
+      ExecuteSuccess -> return ()
+      ExecuteError -> do
+         errorLog pf (printf "We do not know how to execute kernel %s on %s" (show ker) (show proc))
+         exitFailure
+
    setEvent ev err
 
-   procThread proc ch
+   procThread pf proc ch
 
 
 -- | Compile a kernel for the given processors and return those for which it succeeded
@@ -107,7 +123,7 @@ executeKernel km proc k ro rw params = do
 
    ev <- newEvent
    atomically $ writeTChan ch (exec, ev)
-   waitEvent ev
+   _ <- waitEvent ev
    atomically $ cancelKernelExecution km exec
 
 

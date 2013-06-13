@@ -53,6 +53,7 @@ library
     ViperVM.Platform.RegionTransfer
     ViperVM.Platform.RegionTransferManager
     ViperVM.Platform.Runtime
+    ViperVM.Platform.Logger
     ViperVM.Platform.SharedObject
     ViperVM.Platform.SharedObjectManager
 
