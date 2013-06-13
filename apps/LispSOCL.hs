@@ -34,7 +34,7 @@ main = do
    -- Configuraing platform and runtime
    let config = Configuration {
       libraryOpenCL = "/usr/lib/libOpenCL.so",
-      logger = stdOutLogger LogDebug
+      logger = (stdOutLogger <=< clocked) . filterLevel LogDebug
    }
 
    putStrLn "Initializing platform and runtime..."

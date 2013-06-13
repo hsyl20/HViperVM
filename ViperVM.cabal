@@ -103,7 +103,8 @@ library
     monad-loops,
     parsec,
     future,
-    vector
+    vector,
+    clock
 
   build-tools: 
     c2hs

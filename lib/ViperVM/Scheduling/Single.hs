@@ -37,7 +37,8 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
             
             ensureCompiledFor km k proc
 
-            customLog pf (printf "[Single] Proc %s executing %s with params %s " (show proc) (show k) (show args))
+
+            customLog pf (printf "[Single %s] Transferring input data" (show proc))
 
             -- Move input data in memory
             let argModes = args `zip` lockModes k
@@ -46,12 +47,15 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
                ReadWrite -> allocateInstance som arg mem
 
             -- Execute kernel
+            customLog pf (printf "[Single %s] Executing %s with params %s " (show proc) (show k) (show args))
             executeObjectKernel om proc k args'
+            customLog pf (printf "[Single %s] Execution complete" (show proc))
 
             -- Associate output parameters
             forM_ (argModes `zip` args') $ \((arg,mode),arg') -> case mode of
                ReadOnly -> return ()
                ReadWrite -> atomically (attachObject arg arg')
+
 
             -- Return result
             atomically (writeTVar res SchedSuccess)

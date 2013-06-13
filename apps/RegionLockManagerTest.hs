@@ -10,7 +10,7 @@ main :: IO ()
 main = do
   let config = Configuration {
     libraryOpenCL = "/usr/lib/libOpenCL.so",
-    logger = stdOutLogger LogDebug
+    logger = stdOutLogger . filterLevel LogDebug
   }
 
   putStrLn "Initializing platform..."

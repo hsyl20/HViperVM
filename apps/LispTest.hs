@@ -14,7 +14,7 @@ main = do
 
    let config = Configuration {
           libraryOpenCL = "libOpenCL.so",
-          logger = stdOutLogger LogDebug
+          logger = stdOutLogger . filterLevel LogDebug
        }
 
    pf <- initPlatform config
