@@ -34,6 +34,7 @@ import Data.Word
 import Data.Map as Map
 import Foreign.Ptr
 import Foreign.Marshal.Array
+import Text.Printf
 
 data ObjectLockResult = LockSuccess | LockError
                         deriving (Show,Eq,Ord)
@@ -117,7 +118,9 @@ unlockObject om o = do
 
 
 transferObject :: ObjectManager -> Object -> Object -> IO ()
-transferObject om (MatrixObject src) (MatrixObject dst) = transferMatrix om src dst
+transferObject om (MatrixObject src) (MatrixObject dst) = do
+   putStrLn (printf "[Transfer] %s -> %s" (show src) (show dst))
+   transferMatrix om src dst
 transferObject _ _ _ = error "Cannot transfer these objects"
 
 ------------------------------------------
