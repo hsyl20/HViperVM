@@ -21,6 +21,7 @@ import Data.Map as Map
 import qualified Data.List as List
 import System.Environment
 
+import Paths_ViperVM
 
 main :: IO ()
 main = do
@@ -55,6 +56,9 @@ main = do
    c <- initFloatMatrix rt (triMul 32)
    t <- initFloatMatrix rt (List.transpose (triangular' 32))
 
+   let file = "apps/samples/lisp/Sample.lisp"
+   ctx <- readFile =<< getDataFileName file
+
    myBuiltins <- loadBuiltins rt [
          ("add", floatMatrixAddBuiltin),
          ("sub", floatMatrixSubBuiltin),
@@ -70,7 +74,7 @@ main = do
    putStrLn ("Evaluating: " ++ show expr)
 
    let builtins = Map.union defaultBuiltins myBuiltins
-   r <- evalLisp builtins expr
+   r <- evalLispWithContext builtins ctx expr
 
    putStrLn "================\nResult:"
    printFloatMatrix rt r

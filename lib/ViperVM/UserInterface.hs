@@ -1,5 +1,5 @@
 module ViperVM.UserInterface (
-      evalLisp, evalLispModule,
+      evalLisp, evalLispModule, evalLispWithContext,
       initFloatMatrix, printFloatMatrix
    ) where
 
@@ -21,9 +21,13 @@ evalLisp builtins expr = readData <$> (eval builtins Map.empty =<< Lisp.readExpr
 
 -- | Parse and evaluate a Lisp module
 evalLispModule :: Map Name Builtin -> String -> IO SharedObject
-evalLispModule builtins src = do
+evalLispModule builtins src = evalLispWithContext builtins src "(main)"
+
+-- | Parse and evaluate a Lisp expression with a module context
+evalLispWithContext :: Map Name Builtin -> String -> String -> IO SharedObject
+evalLispWithContext builtins src expr = do
    ctx <- Lisp.readModule src
-   e <- Lisp.readExpr "(main)"
+   e <- Lisp.readExpr expr
    readData <$> eval builtins ctx e
 
 -- | Allocate and initialize a matrix of floats

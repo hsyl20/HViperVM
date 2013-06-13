@@ -198,3 +198,9 @@
             m
             (List.cons (List.cons a' b') c''))))
 
+(defun reduce (f xs)
+   (if (List.null (List.tail xs))
+      (List.head xs)
+      (reduce f (List.cons 
+         (f (List.head xs) (List.head (List.tail xs)))
+         (List.tail (List.tail xs))))))
