@@ -1,7 +1,8 @@
 module ViperVM.Platform.RegionTransferManager (
    RegionTransferManager, PrepareRegionTransferResult(..),
    createRegionTransferManager, prepareRegionTransfer, performRegionTransfer, cancelRegionTransfer,
-   regionLockManager, prepareRegionTransferIO
+   regionLockManager, prepareRegionTransferIO,
+   getRegionTransferManagerPlatform
 ) where
 
 import ViperVM.Platform.Platform
@@ -27,6 +28,10 @@ data RegionTransferManager = RegionTransferManager {
       transferWorkers :: Map Link (TChan (DirectRegionTransfer, RegionTransferEvent))
    }
 
+-- | Return associated platform
+getRegionTransferManagerPlatform :: RegionTransferManager -> Platform
+getRegionTransferManagerPlatform = getRegionLockManagerPlatform . regionLockManager
+
 data PrepareRegionTransferResult = PrepareSuccess | 
                                    LockError [(Buffer,Region,RegionLockResult)] |
                                    InvalidRegionTransfer
@@ -35,7 +40,7 @@ data PrepareRegionTransferResult = PrepareSuccess |
 -- | Initialize a new transfer manager
 createRegionTransferManager :: RegionLockManager -> IO RegionTransferManager
 createRegionTransferManager rm = do
-   let pf = getRegionManagerPlatform rm
+   let pf = getRegionLockManagerPlatform rm
 
    -- Create transfer threads
    threads <- forM (links pf) $ \link -> do

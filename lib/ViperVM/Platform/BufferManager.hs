@@ -30,6 +30,10 @@ data BufferManager = BufferManager {
                         buffers :: Map Memory (TSet Buffer)
                      }
 
+-- | Return associated platform
+getBufferManagerPlatform :: BufferManager -> Platform
+getBufferManagerPlatform = platform
+
 -- | Initialize a new buffer manager
 createBufferManager :: Platform -> IO BufferManager
 createBufferManager pf = do
@@ -41,10 +45,6 @@ createBufferManager pf = do
 -- | Release a buffer manager
 releaseBufferManager :: BufferManager -> IO ()
 releaseBufferManager _ = return ()
-
--- | Retrieve platform used to create the buffer manager
-getBufferManagerPlatform :: BufferManager -> Platform
-getBufferManagerPlatform = platform
 
 -- | Allocate a buffer in a memory
 allocateBuffer :: BufferManager -> Memory -> Word64 -> IO (Maybe Buffer)

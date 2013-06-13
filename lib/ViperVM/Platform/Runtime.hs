@@ -47,7 +47,7 @@ initRuntime pf sch = do
    som <- createSharedObjectManager om
    chan <- newBroadcastTChanIO
    
-   initScheduler sch som km =<< atomically(dupTChan chan)
+   initScheduler sch som km =<< atomically (dupTChan chan)
 
    return $ Runtime pf om som sch chan
 

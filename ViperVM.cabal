@@ -57,7 +57,7 @@ library
     ViperVM.Platform.SharedObjectManager
 
     ViperVM.Scheduling.Single
-    ViperVM.Scheduling.Eager
+    ViperVM.Scheduling.RoundRobin
 
     ViperVM.UserInterface
     ViperVM.Event
@@ -96,7 +96,8 @@ library
     stm ==2.4.*,
     monad-loops,
     parsec,
-    future
+    future,
+    vector
 
   build-tools: 
     c2hs

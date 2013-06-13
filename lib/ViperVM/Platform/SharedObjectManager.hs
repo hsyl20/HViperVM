@@ -3,9 +3,11 @@
 module ViperVM.Platform.SharedObjectManager (
    SharedObjectManager, objectManager,
    createSharedObjectManager, allocateInstance,
-   allocateTransferAttach, ensureInMemory
+   allocateTransferAttach, ensureInMemory,
+   getSharedObjectManagerPlatform
 ) where
 
+import ViperVM.Platform.Platform
 import ViperVM.Platform.Object
 import ViperVM.Platform.Memory
 import ViperVM.Platform.SharedObject
@@ -18,6 +20,10 @@ import Data.Set as Set
 data SharedObjectManager = SharedObjectManager {
    objectManager :: ObjectManager
 }
+
+-- | Return associated platform
+getSharedObjectManagerPlatform :: SharedObjectManager -> Platform
+getSharedObjectManagerPlatform = getObjectManagerPlatform . objectManager
 
 -- | Create a shared object manager
 createSharedObjectManager :: ObjectManager -> IO SharedObjectManager

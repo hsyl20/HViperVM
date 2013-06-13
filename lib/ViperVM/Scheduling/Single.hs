@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Scheduling.Single (
-      singleScheduler
+      singleScheduler, initSingleScheduler
    ) where
 
 import ViperVM.Platform

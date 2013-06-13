@@ -5,7 +5,8 @@ module ViperVM.Platform.ObjectManager (
       allocateVector, allocateVectorObject, releaseVector,
       allocateMatrix, allocateMatrixObject, releaseMatrix,
       transferMatrix, pokeHostFloatMatrix, peekHostFloatMatrix,
-      allocateFromDescriptor
+      allocateFromDescriptor,
+      getObjectManagerPlatform
    ) where
 
 import ViperVM.STM.TSet as TSet
@@ -15,7 +16,7 @@ import ViperVM.Platform.Object
 import ViperVM.Platform.Primitive as Prim
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
-import ViperVM.Platform.RegionLockManager (RegionLockManager, LockMode(..), getRegionManagerPlatform, allocateBuffer)
+import ViperVM.Platform.RegionLockManager (RegionLockManager, LockMode(..), allocateBuffer)
 import qualified ViperVM.Platform.RegionTransferManager as TM
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Link
@@ -44,14 +45,17 @@ data ObjectManager = ObjectManager {
       locks :: TMap Object (LockMode,Int)
    }
 
+-- | Return associated platform
+getObjectManagerPlatform :: ObjectManager -> Platform
+getObjectManagerPlatform = TM.getRegionTransferManagerPlatform . regionTransferManager
+
 regionLockManager :: ObjectManager -> RegionLockManager
 regionLockManager = TM.regionLockManager . regionTransferManager
 
 createObjectManager :: TM.RegionTransferManager -> KernelManager -> IO ObjectManager
 createObjectManager tm km = do
    let
-      rm = TM.regionLockManager tm
-      mems = memories (getRegionManagerPlatform rm)
+      mems = memories (TM.getRegionTransferManagerPlatform tm)
 
    (objs,lcks) <- atomically $ do
       os <- forM mems (const TSet.empty)
@@ -167,8 +171,7 @@ releaseMatrix om v = releaseObject om (MatrixObject v)
 transferMatrix :: ObjectManager -> Matrix -> Matrix -> IO ()
 transferMatrix om src dst = do
    let tm = regionTransferManager om 
-       rm = TM.regionLockManager tm
-       pf = getRegionManagerPlatform rm
+       pf = TM.getRegionTransferManagerPlatform tm
        lks = links pf
        lk = head (linksBetween (getBufferMemory srcBuf) (getBufferMemory dstBuf) lks)
        transfr = RegionTransfer srcBuf srcReg [RegionTransferStep lk dstBuf dstReg]
