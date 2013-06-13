@@ -14,9 +14,9 @@ __kernel void floatMatrixPotrf(const uint n, const uint srcOffset, const uint sr
 
    __local float tmp[32][32];
 
-   if (x==0 && y==0) {
+   if (y==0) {
       tmp[x][y] = sqrt(src(x,y));
-      dst(x,y) = tmp[x][y];
+      dst(x,y) = tmp[x][y] * (x == 0);
    }
    barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -34,9 +34,9 @@ __kernel void floatMatrixPotrf(const uint n, const uint srcOffset, const uint sr
 
    for(int i=1 ; i<n ; i++) {
 
-      if (x==i && y==i) {
+      if (x>=i && y==i) {
          tmp[x][y] = sqrt(tmp[x][y]);
-         dst(x,y) = tmp[x][y];
+         dst(x,y) = tmp[x][y] * (x == i);
       }
       barrier(CLK_LOCAL_MEM_FENCE);
 
