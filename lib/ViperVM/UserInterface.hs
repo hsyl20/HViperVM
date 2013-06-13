@@ -1,6 +1,6 @@
 module ViperVM.UserInterface (
       evalLisp, evalLispModule, evalLispWithContext,
-      initFloatMatrix, printFloatMatrix
+      initFloatMatrix, printFloatMatrix, initDummyFloatMatrix
    ) where
 
 import ViperVM.Platform.Runtime
@@ -12,6 +12,7 @@ import ViperVM.Graph.Builtins
 import ViperVM.Platform.Primitive as Prim
 
 import Data.Map as Map
+import Data.Word
 import Control.Applicative ( (<$>) )
 import Data.Foldable (traverse_)
 
@@ -37,6 +38,12 @@ initFloatMatrix rt ds = pokeFloatMatrix rt desc ds
       desc = MatrixDesc Prim.Float w h
       w = fromIntegral (length (head ds))
       h = fromIntegral (length ds)
+
+-- | Allocate and initialize a dummy matrix of floats
+initDummyFloatMatrix :: Runtime -> Word64 -> Word64 -> IO SharedObject
+initDummyFloatMatrix rt w h = pokeDummyFloatMatrix rt desc
+   where
+      desc = MatrixDesc Prim.Float w h
 
 -- | Print a float matrix on the standard output
 printFloatMatrix :: Runtime -> SharedObject -> IO ()

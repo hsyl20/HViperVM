@@ -2,7 +2,7 @@
 module ViperVM.Platform.Runtime (
       Runtime,
       initRuntime, allocate, release, releaseMany,
-      peekFloatMatrix, pokeFloatMatrix,
+      peekFloatMatrix, pokeFloatMatrix, pokeDummyFloatMatrix,
       execute, platform, scheduler,
       loadBuiltin, loadBuiltins, MakeBuiltin, readData, dataBuiltin
    ) where
@@ -69,7 +69,10 @@ releaseMany rt = traverse_ (release rt)
 
 -- | Allocate and initialize a matrix of floats
 pokeFloatMatrix :: Runtime -> Descriptor -> [[Float]] -> IO SharedObject
-pokeFloatMatrix rt desc ds = do
+pokeFloatMatrix rt desc ds = pokeFloatMatrix' rt desc (Just ds)
+
+pokeFloatMatrix' :: Runtime -> Descriptor -> Maybe [[Float]] -> IO SharedObject
+pokeFloatMatrix' rt desc ds = do
    let 
       om = objectManager rt
       (MatrixDesc prim w h) = desc
@@ -78,12 +81,17 @@ pokeFloatMatrix rt desc ds = do
    
    Just o <- allocateMatrixObject om HostMemory prim w h 0
 
-   pokeHostFloatMatrix om o ds
+   case ds of
+      Just ds' -> pokeHostFloatMatrix om o ds'
+      Nothing -> return ()
 
    atomically (attachObject so o)
 
    return so
 
+
+pokeDummyFloatMatrix :: Runtime -> Descriptor -> IO SharedObject
+pokeDummyFloatMatrix r desc = pokeFloatMatrix' r desc Nothing
 
 
 -- | Retrieve values of a matrix of floats
