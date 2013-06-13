@@ -18,13 +18,24 @@ floatMatrixAddKernelCL = do
 configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
 configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
    where
-      [WordParam width, WordParam height, BufferParam a, BufferParam b, BufferParam c] = pms
+      [WordParam width, 
+       WordParam height, 
+       BufferParam a, 
+       BufferParam b, 
+       BufferParam c] = pms
+
       roundTo to v = v + (if ms /= 0 then to - ms else 0)
          where ms = mod v to
+
       gDim = [roundTo 32 width, roundTo 32 height,1]
+
       lDim = [32,32,1]
-      clParams = [clUIntParam width, clUIntParam height, 
-                  clMemParam a, clMemParam b, clMemParam c]
+
+      clParams = [clUIntParam width, 
+                  clUIntParam height, 
+                  clMemParam a, 
+                  clMemParam b, 
+                  clMemParam c]
 
 
 floatMatrixAddObjectKernelCL :: IO ObjectKernel
@@ -37,7 +48,11 @@ paramsFromObjects :: [Object] -> KernelObjectConfig
 paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
    where
       [MatrixObject ma, MatrixObject mb, MatrixObject mc] = objs
-      pms = [WordParam (fromIntegral width), WordParam (fromIntegral height), BufferParam a, BufferParam b, BufferParam c]
+      pms = [WordParam (fromIntegral width), 
+             WordParam (fromIntegral height), 
+             BufferParam a, 
+             BufferParam b, 
+             BufferParam c]
       (width, height) = matrixDimensions ma
       a = matrixBuffer ma
       b = matrixBuffer mb

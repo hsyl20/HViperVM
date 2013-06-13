@@ -16,6 +16,7 @@ data-files:
   apps/samples/lisp/Sample.lisp
   lib/ViperVM/Library/OpenCL/FloatMatrixAdd.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixSub.cl
+  lib/ViperVM/Library/OpenCL/FloatMatrixMul.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixPotrf.cl
 
 library
@@ -76,6 +77,7 @@ library
 
     ViperVM.Library.FloatMatrixAdd
     ViperVM.Library.FloatMatrixSub
+    ViperVM.Library.FloatMatrixMul
     ViperVM.Library.FloatMatrixPotrf
 
     ViperVM.Parsing.Parser

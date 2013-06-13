@@ -8,6 +8,7 @@ import ViperVM.Platform.Logger
 
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub
+import ViperVM.Library.FloatMatrixMul
 import ViperVM.Library.FloatMatrixPotrf
 
 import ViperVM.UserInterface
@@ -51,14 +52,17 @@ main = do
    a <- initFloatMatrix rt (replicate h (replicate w (5.0 :: Float)))
    b <- initFloatMatrix rt (replicate h (replicate w (2.0 :: Float)))
    c <- initFloatMatrix rt (triMul 32)
+   t <- initFloatMatrix rt (List.transpose (triangular' 32))
 
    myBuiltins <- loadBuiltins rt [
          ("add", floatMatrixAddBuiltin),
          ("sub", floatMatrixSubBuiltin),
+         ("mul", floatMatrixMulBuiltin),
          ("potrf", floatMatrixPotrfBuiltin),
          ("a", dataBuiltin a),
          ("b", dataBuiltin b),
-         ("c", dataBuiltin c)
+         ("c", dataBuiltin c),
+         ("t", dataBuiltin t)
       ]
 
    putStrLn ("Evaluating: " ++ show expr)

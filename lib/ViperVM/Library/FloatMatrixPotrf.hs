@@ -18,12 +18,22 @@ floatMatrixPotrfKernelCL = do
 configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
 configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
    where
-      [WordParam n, WordParam srcOffset, WordParam srcWidth, BufferParam srcBuf,
-                    WordParam dstOffset, WordParam dstWidth, BufferParam dstBuf] = pms
+      [WordParam n, 
+       WordParam srcOffset, 
+       WordParam srcWidth, 
+       BufferParam srcBuf,
+       WordParam dstOffset, 
+       WordParam dstWidth, 
+       BufferParam dstBuf] = pms
       gDim = [32,32,1]
       lDim = [32,32,1]
-      clParams = [clUIntParam n, clUIntParam srcOffset, clUIntParam srcWidth, clMemParam srcBuf,
-                                 clUIntParam dstOffset, clUIntParam dstWidth, clMemParam dstBuf]
+      clParams = [clUIntParam n, 
+                  clUIntParam srcOffset, 
+                  clUIntParam srcWidth, 
+                  clMemParam srcBuf,
+                  clUIntParam dstOffset, 
+                  clUIntParam dstWidth, 
+                  clMemParam dstBuf]
 
 
 floatMatrixPotrfObjectKernelCL :: IO ObjectKernel

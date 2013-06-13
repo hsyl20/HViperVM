@@ -8,3 +8,6 @@ data Descriptor = VectorDesc Primitive Word64         -- ^ Vector
                 | MatrixDesc Primitive Word64 Word64  -- ^ Matrix
                 deriving (Eq,Ord,Show)
 
+matrixDescDims :: Descriptor -> (Word64,Word64)
+matrixDescDims (MatrixDesc _ w h) = (w,h)
+matrixDescDims _ = error "Not a matrix descriptor"
