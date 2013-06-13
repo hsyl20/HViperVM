@@ -38,7 +38,8 @@ main = do
    forM_ openclProcs (putStrLn . show)
 
    putStrLn "\nCompiling kernel..." 
-   validProcs <- compileObjectKernel km ker openclProcs
+   compileObjectKernel km ker openclProcs
+   validProcs <- kernelCompiledProcessors (peerKernel ker)
 
    putStrLn "Compilation succeeded for processors:" 
    forM_ validProcs (putStrLn . show)

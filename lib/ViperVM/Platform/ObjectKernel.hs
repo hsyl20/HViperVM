@@ -46,7 +46,7 @@ executeObjectKernel om proc ok objs = do
       objsModes = objs `zip` modes
       KernelObjectConfig pms roRegions rwRegions = f objs
 
-compileObjectKernel :: KernelManager -> ObjectKernel -> [Processor] -> IO [Processor]
+compileObjectKernel :: KernelManager -> ObjectKernel -> [Processor] -> IO ()
 compileObjectKernel km ok = compileKernel km (peerKernel ok)
 
 
@@ -59,8 +59,8 @@ ensureCompiledFor km k proc = do
 
    atomically (TMap.lookup proc (compilations ker)) >>= \case
 
-      Just CLCompilationFailure -> 
-         error "Kernel cannot be executed by the specified processor"
+      Just (CLCompilationFailure buildLog) -> 
+         error (printf "Kernel %s cannot be compiled for processor %s:\n%s" (show k) (show proc) buildLog)
 
       Nothing -> do
          customLog pf (printf "[Compiler] Compiling kernel %s for processor %s" (show k) (show proc))

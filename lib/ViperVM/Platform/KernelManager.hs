@@ -77,8 +77,8 @@ procThread pf proc ch = do
    procThread pf proc ch
 
 
--- | Compile a kernel for the given processors and return those for which it succeeded
-compileKernel :: KernelManager -> Kernel -> [Processor] -> IO [Processor]
+-- | Compile a kernel for the given processors
+compileKernel :: KernelManager -> Kernel -> [Processor] -> IO ()
 compileKernel _ k ps = compile k ps
 
 

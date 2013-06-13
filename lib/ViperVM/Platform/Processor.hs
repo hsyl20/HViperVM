@@ -1,6 +1,6 @@
 module ViperVM.Platform.Processor (
    Processor(..), procInfo, processorMemories,
-   procCLDevice, procId
+   procCLDevice, procId, procCLLib, procCLContext
 ) where
 
 import ViperVM.Backends.OpenCL
@@ -48,6 +48,16 @@ procVendor HostProcessor = return ""
 procCLDevice :: Processor -> CLDeviceID
 procCLDevice (CLProcessor _ _ _ dev _) = dev
 procCLDevice _ = error "Not a valid OpenCL device"
+
+-- | Return associated OpenCL library
+procCLLib :: Processor -> OpenCLLibrary
+procCLLib (CLProcessor lib _ _ _ _) = lib
+procCLLib _ = error "Not a valid OpenCL device"
+
+-- | Return associated OpenCL context
+procCLContext :: Processor -> CLContext
+procCLContext (CLProcessor _ ctx _ _ _) = ctx
+procCLContext _ = error "Not a valid OpenCL device"
 
 -- | Get processor information string
 procInfo :: Processor -> IO String

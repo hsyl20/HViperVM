@@ -1,23 +1,25 @@
 {-# LANGUAGE RecordWildCards, TupleSections #-}
 
+{-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Kernel where
 
 import qualified ViperVM.Backends.OpenCL.Types as CL
 import ViperVM.Backends.OpenCL
-import ViperVM.Platform.Processor ( Processor(..), procCLDevice )
+import ViperVM.Platform.Processor ( Processor(..), procCLDevice, procCLLib, procCLContext )
 import ViperVM.Platform.Buffer
 import qualified ViperVM.STM.TMap as TMap
 import ViperVM.STM.TMap (TMap)
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Arrow
 import Control.Applicative ( (<$>) )
 import Data.List (sortBy, groupBy )
-import Data.Traversable (traverse,forM)
+import Data.Traversable (forM)
 import Data.Word
-import Data.Maybe
 import Control.Monad (forM_,void)
 import System.IO.Unsafe
+import qualified Data.Map as Map
 
 type KernelName = String
 type KernelSource = String
@@ -25,7 +27,7 @@ type Options = String
 data KernelConstraint = DoublePrecisionSupportRequired
 
 data CLCompilationResult = CLCompilationSuccess CL.CLKernel
-                         | CLCompilationFailure
+                         | CLCompilationFailure String
 
 data ExecutionResult = ExecuteSuccess 
                      | ExecuteError
@@ -61,6 +63,16 @@ initCLKernel src name consts opts conf = do
       compilations = compiled,
       mutex = mtex
    }
+
+-- | Processors for which the kernel is compiled
+kernelCompiledProcessors :: Kernel -> IO [Processor]
+kernelCompiledProcessors k@(CLKernel {}) = do
+   Map.keys . Map.filter f <$> atomically (readTVar (compilations k))
+   where
+      f = \case
+         CLCompilationSuccess _ -> True
+         _ -> False
+
 
 data KernelParameter = IntParam Int |
                        WordParam Word |
@@ -130,7 +142,7 @@ isOpenCLProcessor (CLProcessor {}) = True
 isOpenCLProcessor _ = False
 
 -- | Try to compile kernel for the given processors
-compile :: Kernel -> [Processor] -> IO [Processor]
+compile :: Kernel -> [Processor] -> IO ()
 compile ker@(CLKernel {..}) procs = do
 
    -- Exclude devices that do not support constraints
@@ -138,48 +150,35 @@ compile ker@(CLKernel {..}) procs = do
 
    -- Group devices that are in the same context to compile in one pass
    let groups = groupBy eqProc $ sortBy compareProc validProcs
-   let devGroups = fmap (\x -> (extractLibCtx $ head x, fmap procCLDevice x)) groups
 
-   devGroupsProg <- forAssocM devGroups createProgram
+   forM_ groups $ \procs' -> do
+      let 
+         devs = fmap procCLDevice procs'
+         lib = procCLLib (head procs')
+         ctx = procCLContext (head procs')
 
-   status <- concat <$> forM devGroupsProg buildProgram
+      prog <- clCreateProgramWithSource lib ctx source
+      _ <- clBuildProgram lib prog devs options
+      buildStatus <- forM devs (clGetProgramBuildStatus lib prog)
+      
+      forM_ (procs' `zip` buildStatus) $ \case 
+         (proc,CL_BUILD_SUCCESS) -> do
+            kernel <- clCreateKernel lib prog kernelName
+            atomically (TMap.insert_ compilations proc (CLCompilationSuccess kernel))
+            
+         (proc,CL_BUILD_ERROR) -> do
+            buildLog <- clGetProgramBuildLog lib prog (procCLDevice proc)
+            atomically (TMap.insert_ compilations proc (CLCompilationFailure buildLog))
 
-   kernels <- concat <$> forM devGroupsProg createKernel
-   let r = zipWith (\(x,a) (_,b) -> (x,(a,b))) status kernels
+         (_,err) -> error ("Unexpected build status: " ++ show err)
+      
 
-   ps <- forM procs $ \proc -> do
-      let dev = procCLDevice proc
-      case lookup dev r of
-         Just (CL_BUILD_SUCCESS,k) -> atomically $ do
-            TMap.insert_ compilations proc (CLCompilationSuccess k)
-            return (Just proc)
-         _ -> atomically $ do
-            TMap.insert_ compilations proc CLCompilationFailure
-            return Nothing
-
-   return (catMaybes ps)
-  
    where
-      forAssocM xs f = zip xs <$> traverse f xs
-
-      procKey (CLProcessor lib ctx _ _ _) = (lib,ctx)
-      procKey _ = undefined
+      procKey = procCLLib &&& procCLContext
 
       compareProc a b = compare (procKey a) (procKey b)
       eqProc a b = procKey a == procKey b
 
-      extractLibCtx (CLProcessor lib ctx _ _ _) = (lib,ctx)
-      extractLibCtx _ = undefined
-
-      createProgram ((lib,ctx),_) = clCreateProgramWithSource lib ctx source
-
-      buildProgram (((lib,_),devs),prog) = do
-        clBuildProgram lib prog devs options
-        forAssocM devs (clGetProgramBuildStatus lib prog)
-
-      createKernel (((lib,_),devs),prog) = do
-        k <- clCreateKernel lib prog kernelName
-        return $ fmap (,k) devs
 
 
 -- | Execute a kernel on a given processor synchronously

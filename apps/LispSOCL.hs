@@ -9,6 +9,7 @@ import ViperVM.Platform.Logger
 import ViperVM.Library.FloatMatrixAdd
 import ViperVM.Library.FloatMatrixSub
 import ViperVM.Library.FloatMatrixMul
+import ViperVM.Library.FloatMatrixTranspose
 import ViperVM.Library.FloatMatrixPotrf
 
 import ViperVM.UserInterface
@@ -58,6 +59,7 @@ main = do
          ("add", floatMatrixAddBuiltin),
          ("sub", floatMatrixSubBuiltin),
          ("mul", floatMatrixMulBuiltin),
+         ("transpose", floatMatrixTransposeBuiltin),
          ("potrf", floatMatrixPotrfBuiltin),
          ("a", dataBuiltin a),
          ("b", dataBuiltin b),

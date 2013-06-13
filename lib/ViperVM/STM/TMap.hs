@@ -50,6 +50,9 @@ foldl f x = readTVar >=$> Map.foldl f x
 elems :: TMap a b -> STM [b]
 elems = readTVar >=$> Map.elems
 
+keys :: TMap a b -> STM [a]
+keys= readTVar >=$> Map.keys
+
 toList :: TMap a b -> STM [(a,b)]
 toList = readTVar >=$> Map.toList
 

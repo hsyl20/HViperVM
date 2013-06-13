@@ -50,6 +50,7 @@ module ViperVM.Backends.OpenCL.Program(
 
 -- -----------------------------------------------------------------------------
 import Control.Monad( zipWithM, forM )
+import Control.Applicative ( (<$>) )
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String( CString, withCString, peekCString )
@@ -338,12 +339,11 @@ until the build has completed.
  * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
 by the OpenCL implementation on the host.  
 -}
-clBuildProgram :: OpenCLLibrary -> CLProgram -> [CLDeviceID] -> String -> IO ()
+clBuildProgram :: OpenCLLibrary -> CLProgram -> [CLDeviceID] -> String -> IO CLError
 clBuildProgram lib prg devs opts = allocaArray ndevs $ \pdevs -> do
   pokeArray pdevs devs
   withCString opts $ \copts -> do
-    whenSuccess (rawClBuildProgram lib prg cndevs pdevs copts nullFunPtr nullPtr)
-      $ return ()
+    getEnumCL <$> rawClBuildProgram lib prg cndevs pdevs copts nullFunPtr nullPtr
     where
       ndevs = length devs
       cndevs = fromIntegral ndevs
