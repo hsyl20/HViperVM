@@ -173,12 +173,16 @@ transferMatrix om src dst = do
    let tm = regionTransferManager om 
        pf = TM.getRegionTransferManagerPlatform tm
        lks = links pf
-       lk = head (linksBetween (getBufferMemory srcBuf) (getBufferMemory dstBuf) lks)
+       validLinks = linksBetween (getBufferMemory srcBuf) (getBufferMemory dstBuf) lks
+       lk = head validLinks
        transfr = RegionTransfer srcBuf srcReg [RegionTransferStep lk dstBuf dstReg]
        srcBuf = matrixBuffer src
        dstBuf = matrixBuffer dst
        srcReg = matrixRegion src
        dstReg = matrixRegion dst
+
+   when (Prelude.null validLinks)
+      (error "Cannot transfer (no link found)")
 
    pres <- TM.prepareRegionTransferIO tm transfr
    when (pres /= TM.PrepareSuccess)
