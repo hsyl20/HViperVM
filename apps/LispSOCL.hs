@@ -14,7 +14,7 @@ import ViperVM.Library.FloatMatrixPotrf
 
 import ViperVM.UserInterface
 
-import ViperVM.Scheduling.Single
+import ViperVM.Scheduling.Eager
 
 import Control.Monad
 import Data.Map as Map
@@ -40,7 +40,7 @@ main = do
 
    putStrLn "Initializing platform and runtime..."
    pf <- initPlatform config
-   rt <- initRuntime pf (singleScheduler (head (processors pf)))
+   rt <- initRuntime pf eagerScheduler
 
    let
       (w,h) = (32, 32)
@@ -79,6 +79,6 @@ main = do
    putStrLn "================\nResult:"
    printFloatMatrix rt r
 
-   void $ releaseMany rt [a,b,c,r]
+   void $ releaseMany rt [a,b,c,t,r]
 
    putStrLn "Done."
