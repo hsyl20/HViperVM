@@ -102,7 +102,6 @@ library
     stm ==2.4.*,
     monad-loops,
     parsec,
-    future,
     vector,
     clock
 

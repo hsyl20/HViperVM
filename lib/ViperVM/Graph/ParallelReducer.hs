@@ -7,20 +7,25 @@ import ViperVM.Graph.Graph
 import ViperVM.Graph.Builtins
 
 import Data.Map as Map
+import Control.Concurrent
 import Control.Concurrent.STM
-import Control.Monad ((<=<),when)
-import Control.Concurrent.Future
+import Control.Monad ((<=<),when,void)
 import Control.Applicative
 import Text.Printf
 import Data.Traversable (traverse)
 import Data.Foldable (traverse_)
 import Data.List (intersperse)
+import ViperVM.Event
 
 debug :: Bool
 debug = False
 
 parallel :: Bool
 parallel = True
+
+future :: IO a -> IO (Event a)
+future f = withNewEvent (\ev -> void (forkIO (setEvent ev =<< f)))
+   
 
 -- | Evaluate a node and return its expression
 eval :: Map Name Builtin -> Map String Node -> Node -> IO Expr
@@ -31,7 +36,7 @@ runParallel :: Map Name Builtin -> Map String Node -> [Node] -> IO [Node]
 runParallel builtins ctx = do
    if parallel
       then traverse (run builtins ctx)
-      else traverse get <=< traverse (forkPromise . run builtins ctx)
+      else traverse waitEvent <=< traverse (future . run builtins ctx)
 
 -- | Reduce a node
 run :: Map Name Builtin -> Map Name Node -> Node -> IO Node
