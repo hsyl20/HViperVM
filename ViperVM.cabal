@@ -59,6 +59,7 @@ library
 
     ViperVM.Scheduling.Single
     ViperVM.Scheduling.RoundRobin
+    ViperVM.Scheduling.Eager
 
     ViperVM.UserInterface
     ViperVM.Event
