@@ -108,7 +108,7 @@ library
   build-tools: 
     c2hs
 
-  ghc-options: -Wall -threaded
+  ghc-options: -Wall -threaded -O2
 
   hs-source-dirs: lib
 
@@ -222,7 +222,7 @@ executable LispSOCL
 executable Bench
   main-is: Bench.hs
   hs-source-dirs: apps
-  ghc-options: -Wall -threaded
+  ghc-options: -Wall -threaded -O2
   build-depends: 
     base,
     containers,
