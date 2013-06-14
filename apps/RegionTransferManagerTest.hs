@@ -6,6 +6,7 @@ import ViperVM.Platform.BufferManager (createBufferManager)
 
 import Control.Monad
 import Text.Printf
+import qualified Data.Set as Set
 
 main :: IO ()
 main = do
@@ -88,5 +89,30 @@ main = do
             else putStrLn "SUCCEEDED"
 
          forM_ [srcBuf, step1Buf, step2Buf, dstBuf] (releaseBuffer rm)
+
+  putStrLn "\nTrying to perform 2D transfer transfer on each link..."
+  forM_ (links platform) $ \link -> do
+      let (src,dst) = linkEndpoints link
+
+      if Set.notMember Transfer2D (linkCapabilities link)
+         then putStrLn ("2D transfers not supported by link " ++ show link)
+         else do
+            let reg2D = Region2D 0 32 30 2 -- 2 bytes of padding, 32 bytes aligned
+                bsize = 32*32
+
+            Just srcBuf <- allocateBuffer rm src bsize
+            Just dstBuf <- allocateBuffer rm dst bsize
+
+            putStrLn $ "Performing 2D transfer through " ++ show link
+            let tr = RegionTransfer srcBuf reg2D [
+                        RegionTransferStep link dstBuf reg2D
+                     ]
+            res <- performRegionTransfer tm tr
+            if any (/= RegionTransferSuccess) res
+               then putStrLn "ERROR"
+               else putStrLn "SUCCEEDED"
+
+            forM_ [srcBuf, dstBuf] (releaseBuffer rm)
+
 
   putStrLn "Done."

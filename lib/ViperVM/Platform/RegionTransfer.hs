@@ -7,8 +7,9 @@ import ViperVM.Backends.OpenCL
 import ViperVM.Platform.Link
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Memory
-import Control.Monad (void)
+import Control.Monad (void,when)
 import Foreign.Ptr
+import qualified Data.Set as Set
 
 data RegionTransferResult =
      RegionTransferSuccess 
@@ -52,6 +53,26 @@ transfer dt = case dt of
       void $ clReleaseEvent lib e
       return RegionTransferSuccess
 
+   -- Host --> CL, Region2D, Region2D
+   DirectRegionTransfer lk@(CLLink lib cq HostMemory (CLMemory {}) _) (HostBuffer _ ptr) r1@(Region2D {}) (CLBuffer _ _ buf _) r2@(Region2D {}) 
+      | Set.member Transfer2D (linkCapabilities lk) -> do
+      let (Region2D soff srowcount ssize spadding) = r1
+          (Region2D doff drowcount dsize dpadding) = r2
+          reg = (ssize,srowcount,1)
+          srowpitch = ssize + spadding
+          sslicepitch = 0
+          drowpitch = dsize + dpadding
+          dslicepitch = 0
+          sorigin = (soff, 0, 0)
+          dorigin = (doff, 0, 0)
+      
+      when (srowcount /= drowcount) (error "Regions do not have the same shape")
+
+      e <- clEnqueueWriteBufferRect lib cq buf True dorigin sorigin reg drowpitch dslicepitch srowpitch sslicepitch ptr []
+      void $ clWaitForEvents lib [e]
+      void $ clReleaseEvent lib e
+      return RegionTransferSuccess
+
    -- CL --> Host, Region1D, Region1D
    DirectRegionTransfer (CLLink lib cq (CLMemory {}) HostMemory _) (CLBuffer _ _ buf _) (Region1D soff sz) (HostBuffer _ ptr) (Region1D doff _) -> do
       let dstptr = plusPtr ptr (fromIntegral doff)
@@ -60,4 +81,23 @@ transfer dt = case dt of
       void $ clReleaseEvent lib e
       return RegionTransferSuccess
 
+   -- CL --> Host, Region2D, Region2D
+   DirectRegionTransfer lk@(CLLink lib cq (CLMemory {}) HostMemory _) (CLBuffer _ _ buf _) r2@(Region2D {}) (HostBuffer _ ptr) r1@(Region2D {}) 
+      | Set.member Transfer2D (linkCapabilities lk) -> do
+      let (Region2D soff srowcount ssize spadding) = r1
+          (Region2D doff drowcount dsize dpadding) = r2
+          reg = (ssize,srowcount,1)
+          srowpitch = ssize + spadding
+          sslicepitch = 0
+          drowpitch = dsize + dpadding
+          dslicepitch = 0
+          sorigin = (soff, 0, 0)
+          dorigin = (doff, 0, 0)
+      
+      when (srowcount /= drowcount) (error "Regions do not have the same shape")
+
+      e <- clEnqueueReadBufferRect lib cq buf True dorigin sorigin reg drowpitch dslicepitch srowpitch sslicepitch ptr []
+      void $ clWaitForEvents lib [e]
+      void $ clReleaseEvent lib e
+      return RegionTransferSuccess
    _ -> return (RegionTransferError dt)

@@ -155,6 +155,7 @@ executable RegionTransferManagerTest
   ghc-options: -Wall -threaded
   build-depends: 
     base,
+    containers,
     ViperVM
 
 executable KernelExecOpenCLTest

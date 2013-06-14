@@ -126,12 +126,19 @@ clEnqueueReadBuffer lib cq mem check off size dat =
    clEnqueue (rawClEnqueueReadBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
 
 clEnqueueReadBufferRect :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> 
-                        Ptr CSize -> Ptr CSize -> Ptr CSize -> a -> a -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
-clEnqueueReadBufferRect lib cq mem blck boff hoff reg brpitch bspitch hrpitch hspitch dat = 
-   clEnqueue (rawClEnqueueReadBufferRect' cq mem (fromBool blck) 
-               boff hoff reg (fromIntegral brpitch) (fromIntegral bspitch) (fromIntegral hrpitch) (fromIntegral hspitch) dat)
-   where
-      rawClEnqueueReadBufferRect' = fromMaybe (error "ReadBufferRect not supported") (rawClEnqueueReadBufferRect lib)
+                        (a,a,a) -> (a,a,a) -> (a,a,a) -> a -> a -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
+clEnqueueReadBufferRect lib cq mem blck boff hoff reg brpitch bspitch hrpitch hspitch dat evs = do
+   
+   let rawClEnqueueReadBufferRect' = fromMaybe (error "ReadBufferRect not supported") (rawClEnqueueReadBufferRect lib)
+       fromTriple (a,b,c) = [fromIntegral a, fromIntegral b, fromIntegral c]
+
+   withArray (fromTriple boff) $ \boff' ->
+      withArray (fromTriple hoff) $ \hoff' ->
+         withArray (fromTriple reg)  $ \reg'  ->
+
+            clEnqueue (rawClEnqueueReadBufferRect' cq mem (fromBool blck) 
+                  boff' hoff' reg' (fromIntegral brpitch) (fromIntegral bspitch) (fromIntegral hrpitch) (fromIntegral hspitch) dat) evs
+
 
 clEnqueueWriteBuffer :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
 clEnqueueWriteBuffer lib cq mem check off size dat = 
@@ -139,12 +146,19 @@ clEnqueueWriteBuffer lib cq mem check off size dat =
 
 
 clEnqueueWriteBufferRect :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> 
-                        Ptr CSize -> Ptr CSize -> Ptr CSize -> a -> a -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
-clEnqueueWriteBufferRect lib cq mem blck boff hoff reg brpitch bspitch hrpitch hspitch dat = 
-   clEnqueue (rawClEnqueueWriteBufferRect' cq mem (fromBool blck) 
-               boff hoff reg (fromIntegral brpitch) (fromIntegral bspitch) (fromIntegral hrpitch) (fromIntegral hspitch) dat)
-   where
-      rawClEnqueueWriteBufferRect' = fromMaybe (error "WriteBufferRect not supported") (rawClEnqueueWriteBufferRect lib)
+                        (a,a,a) -> (a,a,a) -> (a,a,a) -> a -> a -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
+clEnqueueWriteBufferRect lib cq mem blck boff hoff reg brpitch bspitch hrpitch hspitch dat evs = do
+   
+   let rawClEnqueueWriteBufferRect' = fromMaybe (error "WriteBufferRect not supported") (rawClEnqueueWriteBufferRect lib)
+       fromTriple (a,b,c) = [fromIntegral a, fromIntegral b, fromIntegral c]
+
+   withArray (fromTriple boff) $ \boff' ->
+      withArray (fromTriple hoff) $ \hoff' ->
+         withArray (fromTriple reg)  $ \reg'  ->
+
+            clEnqueue (rawClEnqueueWriteBufferRect' cq mem (fromBool blck) 
+                  boff' hoff' reg' (fromIntegral brpitch) (fromIntegral bspitch) (fromIntegral hrpitch) (fromIntegral hspitch) dat) evs
+
 
 clEnqueueReadImage :: Integral a 
                       => OpenCLLibrary
