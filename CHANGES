@@ -1,0 +1,19 @@
+Version 0.2 - 14/06/2013
+------------------------
+
+Some basic schedulers have been implemented (Single device, Round-Robin,
+Eager). Data transfers are automatically performed before kernel execution.
+Note that memory reclaiming is not yet implemented.
+
+LispSOCL is the most complete example. Several OpenCL kernels are available
+(add, sub, potrf, mul, transpose). Parallel reduction of a list is supported
+with "List.reduce".
+
+
+Version 0.1 - 31/05/2013
+------------------------
+
+First alpha release. A basic Lisp parser is implemented. Parallel graph
+reduction is implemented and support built-ins allowing us to replace a
+reduction by an IO. LispCL example executes an OpenCL kernel when an "add"
+application is to be reduced.
