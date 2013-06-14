@@ -3,7 +3,9 @@ module ViperVM.Platform.Processor (
    procCLDevice, procId, procCLLib, procCLContext
 ) where
 
-import ViperVM.Backends.OpenCL
+import ViperVM.Backends.OpenCL.Types
+import ViperVM.Backends.OpenCL.Loader
+import ViperVM.Backends.OpenCL.Query
 import ViperVM.Platform.Memory
 
 import Control.Applicative ( (<$>), (<*>) )

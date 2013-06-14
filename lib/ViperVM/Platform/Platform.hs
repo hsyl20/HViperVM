@@ -11,10 +11,10 @@ import ViperVM.Platform.Memory
 import ViperVM.Platform.Link
 import ViperVM.Platform.Processor
 import ViperVM.Platform.Logger
+import ViperVM.Platform.Configuration
 
 import Data.Traversable
 import Control.Applicative
-import Text.Printf
 
 -- | A computing platform
 data Platform = Platform {
@@ -24,37 +24,15 @@ data Platform = Platform {
   configuration :: Configuration
 }
 
-
--- | Platform configuration
-data Configuration = Configuration {
-  libraryOpenCL :: String,
-  logger :: LogMsg -> IO ()
-}
-
 -- | Initialize platform
 initPlatform :: Configuration -> IO Platform
 initPlatform config = do
 
-   -- Load OpenCL platform
-   lib <- loadOpenCL (libraryOpenCL config)
-
-   platforms <- clGetPlatformIDs lib
-   let indexes = [0..] :: [Integer]
-
-   (clMems, clLinks, clProcs) <- liftA (unzip3 . concat) $ forM (platforms `zip` indexes) $ \(platform,pfIdx) -> do
-      devices <- clGetDeviceIDs lib CL_DEVICE_TYPE_ALL platform
-      context <- clCreateContext lib [CL_CONTEXT_PLATFORM platform] devices putStrLn
-      forM (devices `zip` indexes) $ \(device,devIdx) -> do
-         let queueProps = [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, CL_QUEUE_PROFILING_ENABLE]
-         queue <- clCreateCommandQueue lib context device queueProps
-         let mem = CLMemory lib context device
-         let link = [CLLink lib queue HostMemory mem, CLLink lib queue mem HostMemory]
-         let proc = CLProcessor lib context queue device (printf "OpenCL %d %d" pfIdx devIdx)
-         return (mem,link,proc)
-
+   -- Initialize OpenCL driver
+   (clMems,clLinks,clProcs) <- initOpenCL config
 
    let mems = HostMemory : clMems 
-       lnks = concat clLinks
+       lnks = clLinks
        procs = clProcs
 
    return $ Platform mems lnks procs config

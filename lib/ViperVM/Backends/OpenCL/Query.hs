@@ -27,10 +27,12 @@ module ViperVM.Backends.OpenCL.Query(
   clGetDevicePreferredVectorWidthInt, clGetDevicePreferredVectorWidthLong, 
   clGetDevicePreferredVectorWidthFloat, clGetDevicePreferredVectorWidthDouble, 
   clGetDeviceProfile, clGetDeviceProfilingTimerResolution, clGetDeviceVendor, 
-  clGetDeviceVendorID, clGetDeviceVersion, clGetDeviceDriverVersion, 
+  clGetDeviceVendorID, clGetDeviceVersion, clGetDeviceOpenCLVersion, clGetDeviceDriverVersion, 
   clGetDeviceSingleFPConfig, clGetDeviceDoubleFPConfig, 
   clGetDeviceHalfFPConfig, clGetDeviceLocalMemType, 
-  clGetDeviceGlobalMemCacheType, clGetDeviceQueueProperties, clGetDeviceType )
+  clGetDeviceGlobalMemCacheType, clGetDeviceQueueProperties, clGetDeviceType,
+  clGetDevice2DTransferSupport
+  )
        where
 
 -- -----------------------------------------------------------------------------
@@ -38,6 +40,9 @@ import Foreign( Ptr, nullPtr, castPtr, alloca, allocaArray, peek, peekArray )
 import Foreign.C.String( CString, peekCString )
 import Foreign.C.Types( CSize )
 import Foreign.Storable( sizeOf )
+import Control.Applicative ( (<$>) )
+import Data.Maybe (isNothing)
+import Text.ParserCombinators.Parsec hiding (spaces)
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Types( 
   CLbool, CLuint, CLulong, CLDeviceType_,
@@ -810,14 +815,40 @@ clGetDeviceVendorID lib = (getDeviceInfoUint lib) . getCLValue $ CL_DEVICE_VENDO
 -- | OpenCL version string. Returns the OpenCL version supported by the device. 
 -- This version string has the following format:
 -- /OpenCL major_version.minor_version vendor-specific information/
--- The major_version.minor_version value returned will be 1.0.
 --
 -- This function execute OpenCL clGetDeviceInfo with 'CL_DEVICE_VERSION'.
 clGetDeviceVersion :: OpenCLLibrary -> CLDeviceID -> IO String
 clGetDeviceVersion lib = (getDeviceInfoString lib) . getCLValue $ CL_DEVICE_VERSION
+
+clGetDeviceOpenCLVersion :: OpenCLLibrary -> CLDeviceID -> IO (Int,Int)
+clGetDeviceOpenCLVersion lib dev = do
+   ver <- clGetDeviceVersion lib dev
+   case parse parser "" ver of
+      Left err -> error ("Unable to parse device OpenCL version: " ++ show err)
+      Right a -> return a
+   where
+      parser = do
+         _ <- string "OpenCL "
+         major <- read <$> many1 digit
+         _ <- char '.'
+         minor <- read <$> many1 digit
+         return (major,minor)
+   
 
 -- | OpenCL software driver version string in the form major_number.minor_number.
 --
 -- This function execute OpenCL clGetDeviceInfo with 'CL_DRIVER_VERSION'.
 clGetDeviceDriverVersion :: OpenCLLibrary -> CLDeviceID -> IO String
 clGetDeviceDriverVersion lib = (getDeviceInfoString lib) . getCLValue $ CL_DRIVER_VERSION
+
+
+-- | Indicate if 2D transfers are supported
+clGetDevice2DTransferSupport :: OpenCLLibrary -> CLDeviceID -> IO Bool
+clGetDevice2DTransferSupport lib dev = do
+   if  isNothing (rawClEnqueueReadBufferRect lib) || isNothing (rawClEnqueueWriteBufferRect lib)
+      then return False
+      else do
+         (major,minor) <- clGetDeviceOpenCLVersion lib dev
+         if major >= 1 && minor >= 1
+            then return True
+            else return False

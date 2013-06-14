@@ -24,6 +24,7 @@ library
   exposed-modules:     
     ViperVM
     ViperVM.Backends.OpenCL
+    ViperVM.Backends.OpenCL.Driver
     ViperVM.Backends.OpenCL.CommandQueue
     ViperVM.Backends.OpenCL.Context
     ViperVM.Backends.OpenCL.Event
@@ -35,6 +36,7 @@ library
 
     ViperVM.Platform
     ViperVM.Platform.Buffer
+    ViperVM.Platform.Configuration
     ViperVM.Platform.BufferManager
     ViperVM.Platform.DataDesc
     ViperVM.Platform.Descriptor

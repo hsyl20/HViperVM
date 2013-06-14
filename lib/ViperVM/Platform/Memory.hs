@@ -2,7 +2,9 @@ module ViperVM.Platform.Memory (
    Memory(..), memName, memInfo
 ) where
 
-import ViperVM.Backends.OpenCL
+import ViperVM.Backends.OpenCL.Types
+import ViperVM.Backends.OpenCL.Loader
+import ViperVM.Backends.OpenCL.Query
 import System.IO.Unsafe
 import Text.Printf
 

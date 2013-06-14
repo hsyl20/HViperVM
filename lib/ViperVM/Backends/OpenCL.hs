@@ -7,3 +7,4 @@ import ViperVM.Backends.OpenCL.Memory as CL
 import ViperVM.Backends.OpenCL.CommandQueue as CL
 import ViperVM.Backends.OpenCL.Event as CL
 import ViperVM.Backends.OpenCL.Program as CL
+import ViperVM.Backends.OpenCL.Driver as CL
