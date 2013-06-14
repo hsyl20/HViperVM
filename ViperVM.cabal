@@ -106,7 +106,6 @@ library
     clock
 
   build-tools: 
-    c2hs
 
   ghc-options: -Wall -threaded -O2
 

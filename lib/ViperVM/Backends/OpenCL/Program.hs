@@ -1,35 +1,4 @@
-{- Copyright (c) 2011 Luis Cabellos,
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of  nor the names of other
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
--}
-{-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module ViperVM.Backends.OpenCL.Program(  
   -- * Types
   CLProgram, CLBuildStatus(..), CLKernel,
@@ -61,95 +30,12 @@ import ViperVM.Backends.OpenCL.Types(
   CLKernelInfo_, wrapCheckSuccess, 
   whenSuccess, wrapPError, wrapGetInfo, getCLValue, getEnumCL )
 
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
-
--- -----------------------------------------------------------------------------
-{-| Creates a program object for a context, and loads the source code specified
-by the text strings in the strings array into the program object. The devices
-associated with the program object are the devices associated with context.
-
-OpenCL allows applications to create a program object using the program source
-or binary and build appropriate program executables. This allows applications to
-determine whether they want to use the pre-built offline binary or load and
-compile the program source and use the executable compiled/linked online as the
-program executable. This can be very useful as it allows applications to load
-and build program executables online on its first instance for appropriate
-OpenCL devices in the system. These executables can now be queried and cached by
-the application. Future instances of the application launching will no longer
-need to compile and build the program executables. The cached executables can be
-read and loaded by the application, which can help significantly reduce the
-application initialization time.
-
-An OpenCL program consists of a set of kernels that are identified as functions
-declared with the __kernel qualifier in the program source. OpenCL programs may
-also contain auxiliary functions and constant data that can be used by __kernel
-functions. The program executable can be generated online or offline by the
-OpenCL compiler for the appropriate target device(s).
-
-'clCreateProgramWithSource' returns a valid non-zero program object if the
-program object is created successfully. Otherwise, it throws one of the
-following 'CLError' exceptions:
-
- * 'CL_INVALID_CONTEXT' if context is not a valid context.
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
-by the OpenCL implementation on the host.  
--}
 clCreateProgramWithSource :: OpenCLLibrary -> CLContext -> String -> IO CLProgram
 clCreateProgramWithSource lib ctx source =
   withCString source $ \cSource ->
   withArray [cSource] $ \sourcesP ->
   wrapPError (rawClCreateProgramWithSource lib ctx 1 sourcesP nullPtr)
 
-{-| Creates a program object for a context, and loads specified binary data into
-the program object.
-
-The program binaries specified by binaries contain the bits that describe the
-program executable that will be run on the device(s) associated with
-context. The program binary can consist of either or both of device-specific
-executable(s), and/or implementation-specific intermediate representation (IR)
-which will be converted to the device-specific executable.
-
-OpenCL allows applications to create a program object using the program
-source or binary and build appropriate program executables. This allows
-applications to determine whether they want to use the pre-built offline binary
-or load and compile the program source and use the executable compiled/linked
-online as the program executable. This can be very useful as it allows
-applications to load and build program executables online on its first instance
-for appropriate OpenCL devices in the system. These executables can now be
-queried and cached by the application. Future instances of the application
-launching will no longer need to compile and build the program executables. The
-cached executables can be read and loaded by the application, which can help
-significantly reduce the application initialization time.
-
-Returns a valid non-zero program object and a list of 'CLError' values whether
-the program binary for each device specified in device_list was loaded
-successfully or not. It is list of the same length the list of devices with
-'CL_SUCCESS' if binary was successfully loaded for device specified by same
-position; otherwise returns 'CL_INVALID_VALUE' if length of binary is zero or
-'CL_INVALID_BINARY' if program binary is not a valid binary
-for the specified device.
-
-The function can throw on of the following 'CLError' exceptions:
-
- * 'CL_INVALID_CONTEXT' if context is not a valid context.  
-
- * 'CL_INVALID_VALUE' if the device list is empty; or if lengths or binaries are
-empty.
-
- * 'CL_INVALID_DEVICE' if OpenCL devices listed in the device list are not in
-the list of devices associated with context.
-
- * 'CL_INVALID_BINARY' if an invalid program binary was encountered for any
-device.
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
-by the OpenCL implementation on the host.  
--} 
 clCreateProgramWithBinary :: OpenCLLibrary -> CLContext -> [CLDeviceID] -> [[Word8]] 
                              -> IO (CLProgram, [CLError])
 clCreateProgramWithBinary lib ctx devs bins = wrapPError $ \perr ->
@@ -196,149 +82,6 @@ clReleaseProgram lib prg = wrapCheckSuccess $ rawClReleaseProgram lib prg
 clUnloadCompiler :: OpenCLLibrary -> IO ()
 clUnloadCompiler lib = rawClUnloadCompiler lib >> return ()
 
-{-| Builds (compiles and links) a program executable from the program source or
-binary. OpenCL allows program executables to be built using the source or the
-binary. The build options are categorized as pre-processor options, options for
-math intrinsics, options that control optimization and miscellaneous
-options. This specification defines a standard set of options that must be
-supported by an OpenCL compiler when building program executables online or
-offline. These may be extended by a set of vendor- or platform-specific options.
-
- * Preprocessor Options
-
-These options control the OpenCL preprocessor which is run on each program
-source before actual compilation. -D options are processed in the order they are
-given in the options argument to clBuildProgram.
-
- [-D name] Predefine name as a macro, with definition 1.
-
- [-D name=definition] The contents of definition are tokenized and processed as
-if they appeared during translation phase three in a `#define' directive. In
-particular, the definition will be truncated by embedded newline characters.
-
- [-I dir] Add the directory dir to the list of directories to be searched for
-header files.
-
- * Math Intrinsics Options
-
-These options control compiler behavior regarding floating-point
-arithmetic. These options trade off between speed and correctness.
-
- [-cl-single-precision-constant] Treat double precision floating-point constant
-as single precision constant.
-
- [-cl-denorms-are-zero] This option controls how single precision and double
-precision denormalized numbers are handled. If specified as a build option, the
-single precision denormalized numbers may be flushed to zero and if the optional
-extension for double precision is supported, double precision denormalized
-numbers may also be flushed to zero. This is intended to be a performance hint
-and the OpenCL compiler can choose not to flush denorms to zero if the device
-supports single precision (or double precision) denormalized numbers.
-
-This option is ignored for single precision numbers if the device does not
-support single precision denormalized numbers i.e. 'CL_FP_DENORM' bit is not set
-in 'clGetDeviceSingleFPConfig'.
-
-This option is ignored for double precision numbers if the device does not
-support double precision or if it does support double precison but
-'CL_FP_DENORM' bit is not set in 'clGetDeviceDoubleFPConfig'.
-
-This flag only applies for scalar and vector single precision floating-point
-variables and computations on these floating-point variables inside a
-program. It does not apply to reading from or writing to image objects.
-
- * Optimization Options
-
-These options control various sorts of optimizations. Turning on optimization
-flags makes the compiler attempt to improve the performance and/or code size at
-the expense of compilation time and possibly the ability to debug the program.
-
- [-cl-opt-disable] This option disables all optimizations. The default is
-optimizations are enabled.
-
- [-cl-strict-aliasing] This option allows the compiler to assume the strictest
-aliasing rules.
-
-The following options control compiler behavior regarding floating-point
-arithmetic. These options trade off between performance and correctness and must
-be specifically enabled. These options are not turned on by default since it can
-result in incorrect output for programs which depend on an exact implementation
-of IEEE 754 rules/specifications for math functions.
-
- [-cl-mad-enable] Allow a * b + c to be replaced by a mad. The mad computes a *
-b + c with reduced accuracy. For example, some OpenCL devices implement mad as
-truncate the result of a * b before adding it to c.
-
- [-cl-no-signed-zeros] Allow optimizations for floating-point arithmetic that
-ignore the signedness of zero. IEEE 754 arithmetic specifies the behavior of
-distinct +0.0 and -0.0 values, which then prohibits simplification of
-expressions such as x+0.0 or 0.0*x (even with -clfinite-math only). This option
-implies that the sign of a zero result isn't significant.
-
- [-cl-unsafe-math-optimizations] Allow optimizations for floating-point
-arithmetic that (a) assume that arguments and results are valid, (b) may violate
-IEEE 754 standard and (c) may violate the OpenCL numerical compliance
-requirements as defined in section 7.4 for single-precision floating-point,
-section 9.3.9 for double-precision floating-point, and edge case behavior in
-section 7.5. This option includes the -cl-no-signed-zeros and -cl-mad-enable
-options.
-
- [-cl-finite-math-only] Allow optimizations for floating-point arithmetic that
-assume that arguments and results are not NaNs or ±∞. This option may violate
-the OpenCL numerical compliance requirements defined in in section 7.4 for
-single-precision floating-point, section 9.3.9 for double-precision
-floating-point, and edge case behavior in section 7.5.
-
- [-cl-fast-relaxed-math] Sets the optimization options -cl-finite-math-only and
--cl-unsafe-math-optimizations. This allows optimizations for floating-point
-arithmetic that may violate the IEEE 754 standard and the OpenCL numerical
-compliance requirements defined in the specification in section 7.4 for
-single-precision floating-point, section 9.3.9 for double-precision
-floating-point, and edge case behavior in section 7.5. This option causes the
-preprocessor macro __FAST_RELAXED_MATH__ to be defined in the OpenCL program.
-
- * Options to Request or Suppress Warnings
-
-Warnings are diagnostic messages that report constructions which are not
-inherently erroneous but which are risky or suggest there may have been an
-error. The following languageindependent options do not enable specific warnings
-but control the kinds of diagnostics produced by the OpenCL compiler.
-
- [-w] Inhibit all warning messages.
- 
- [-Werror] Make all warnings into errors.
-
-clBuildProgram can throw the following 'CLError' exceptions when fails:
-
- * 'CL_INVALID_PROGRAM' if program is not a valid program object.
-
- * 'CL_INVALID_DEVICE' if OpenCL devices listed in device_list are not in the
-list of devices associated with program.
-
- * 'CL_INVALID_BINARY' if program is created with
-'clCreateWithProgramWithBinary' and devices listed in device_list do not have a
-valid program binary loaded.
-
- * 'CL_INVALID_BUILD_OPTIONS' if the build options specified by options are
-invalid.
-
- * 'CL_INVALID_OPERATION' if the build of a program executable for any of the
-devices listed in device_list by a previous call to 'clBuildProgram' for program
-has not completed.
-
- * 'CL_COMPILER_NOT_AVAILABLE' if program is created with
-'clCreateProgramWithSource' and a compiler is not available
-i.e. 'clGetDeviceCompilerAvailable' is set to 'False'.
-
- * 'CL_BUILD_PROGRAM_FAILURE' if there is a failure to build the program
-executable. This error will be returned if 'clBuildProgram' does not return
-until the build has completed.
-
- * 'CL_INVALID_OPERATION' if there are kernel objects attached to program.
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
-by the OpenCL implementation on the host.  
--}
 clBuildProgram :: OpenCLLibrary -> CLProgram -> [CLDeviceID] -> String -> IO CLError
 clBuildProgram lib prg devs opts = allocaArray ndevs $ \pdevs -> do
   pokeArray pdevs devs
@@ -348,18 +91,38 @@ clBuildProgram lib prg devs opts = allocaArray ndevs $ \pdevs -> do
       ndevs = length devs
       cndevs = fromIntegral ndevs
 
-#c
-enum CLProgramInfo {
-  cL_PROGRAM_REFERENCE_COUNT=CL_PROGRAM_REFERENCE_COUNT,
-  cL_PROGRAM_CONTEXT=CL_PROGRAM_CONTEXT,
-  cL_PROGRAM_NUM_DEVICES=CL_PROGRAM_NUM_DEVICES,
-  cL_PROGRAM_DEVICES=CL_PROGRAM_DEVICES,
-  cL_PROGRAM_SOURCE=CL_PROGRAM_SOURCE,
-  cL_PROGRAM_BINARY_SIZES=CL_PROGRAM_BINARY_SIZES,
-  cL_PROGRAM_BINARIES=CL_PROGRAM_BINARIES,
-  };
-#endc
-{#enum CLProgramInfo {upcaseFirstLetter} #}
+data CLProgramInfo =
+     CL_PROGRAM_REFERENCE_COUNT
+   | CL_PROGRAM_CONTEXT
+   | CL_PROGRAM_NUM_DEVICES
+   | CL_PROGRAM_DEVICES
+   | CL_PROGRAM_SOURCE
+   | CL_PROGRAM_BINARY_SIZES
+   | CL_PROGRAM_BINARIES
+   | CL_PROGRAM_NUM_KERNELS
+   | CL_PROGRAM_KERNEL_NAMES
+
+instance Enum CLProgramInfo where
+   fromEnum CL_PROGRAM_REFERENCE_COUNT = 0x1160
+   fromEnum CL_PROGRAM_CONTEXT         = 0x1161
+   fromEnum CL_PROGRAM_NUM_DEVICES     = 0x1162
+   fromEnum CL_PROGRAM_DEVICES         = 0x1163
+   fromEnum CL_PROGRAM_SOURCE          = 0x1164
+   fromEnum CL_PROGRAM_BINARY_SIZES    = 0x1165
+   fromEnum CL_PROGRAM_BINARIES        = 0x1166
+   fromEnum CL_PROGRAM_NUM_KERNELS     = 0x1167
+   fromEnum CL_PROGRAM_KERNEL_NAMES    = 0x1168
+
+   toEnum 0x1160 = CL_PROGRAM_REFERENCE_COUNT
+   toEnum 0x1161 = CL_PROGRAM_CONTEXT
+   toEnum 0x1162 = CL_PROGRAM_NUM_DEVICES
+   toEnum 0x1163 = CL_PROGRAM_DEVICES
+   toEnum 0x1164 = CL_PROGRAM_SOURCE
+   toEnum 0x1165 = CL_PROGRAM_BINARY_SIZES
+   toEnum 0x1166 = CL_PROGRAM_BINARIES
+   toEnum 0x1167 = CL_PROGRAM_NUM_KERNELS
+   toEnum 0x1168 = CL_PROGRAM_KERNEL_NAMES
+   toEnum _ = error "Invalid Program Info value"
 
 getProgramInfoSize :: OpenCLLibrary -> CLProgram -> CLProgramInfo_ -> IO CSize
 getProgramInfoSize lib prg infoid = alloca $ \(value_size :: Ptr CSize) -> do
@@ -485,15 +248,24 @@ clGetProgramBinaries lib prg = do
       infoid = getCLValue CL_PROGRAM_BINARIES
       elemSize = sizeOf (nullPtr::Ptr Word8)
 
--- -----------------------------------------------------------------------------
-#c
-enum CLProgramBuildInfo {
-  cL_PROGRAM_BUILD_STATUS=CL_PROGRAM_BUILD_STATUS,
-  cL_PROGRAM_BUILD_OPTIONS=CL_PROGRAM_BUILD_OPTIONS,
-  cL_PROGRAM_BUILD_LOG=CL_PROGRAM_BUILD_LOG,
-  };
-#endc
-{#enum CLProgramBuildInfo {upcaseFirstLetter} #}
+
+data CLProgramBuildInfo =
+     CL_PROGRAM_BUILD_STATUS
+   | CL_PROGRAM_BUILD_OPTIONS
+   | CL_PROGRAM_BUILD_LOG
+   | CL_PROGRAM_BINARY_TYPE
+
+instance Enum CLProgramBuildInfo where
+   fromEnum CL_PROGRAM_BUILD_STATUS  = 0x1181
+   fromEnum CL_PROGRAM_BUILD_OPTIONS = 0x1182
+   fromEnum CL_PROGRAM_BUILD_LOG     = 0x1183
+   fromEnum CL_PROGRAM_BINARY_TYPE   = 0x1184
+
+   toEnum 0x1181 = CL_PROGRAM_BUILD_STATUS
+   toEnum 0x1182 = CL_PROGRAM_BUILD_OPTIONS
+   toEnum 0x1183 = CL_PROGRAM_BUILD_LOG
+   toEnum 0x1184 = CL_PROGRAM_BINARY_TYPE
+   toEnum _ = error "Invalid Program Build Info value"
 
 getProgramBuildInfoSize :: OpenCLLibrary -> CLProgram -> CLDeviceID -> CLProgramInfo_ -> IO CSize
 getProgramBuildInfoSize lib prg device infoid = alloca $ \(val :: Ptr CSize) -> do
@@ -542,60 +314,10 @@ clGetProgramBuildLog lib prg device = do
     where 
       infoid = getCLValue CL_PROGRAM_BUILD_LOG
   
--- -----------------------------------------------------------------------------
-{-| Creates a kernal object. A kernel is a function declared in a program. A
-kernel is identified by the __kernel qualifier applied to any function in a
-program. A kernel object encapsulates the specific __kernel function declared in
-a program and the argument values to be used when executing this __kernel
-function.
-
-'clCreateKernel' returns a valid non-zero kernel object if the kernel object is
-created successfully. Otherwise, it throws one of the following 'CLError'
-exceptions:
-
- * 'CL_INVALID_PROGRAM' if program is not a valid program object.
-
- * 'CL_INVALID_PROGRAM_EXECUTABLE' if there is no successfully built executable
- for program.
-
- * 'CL_INVALID_KERNEL_NAME' if kernel_name is not found in program.
-
- * 'CL_INVALID_KERNEL_DEFINITION' if the function definition for __kernel
-function given by kernel_name such as the number of arguments, the argument
-types are not the same for all devices for which the program executable has been
-built.
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
-by the OpenCL implementation on the host.  
--}
 clCreateKernel :: OpenCLLibrary -> CLProgram -> String -> IO CLKernel
 clCreateKernel lib prg name = withCString name $ \cname -> wrapPError $ \perr -> do
   rawClCreateKernel lib prg cname perr
 
-{-| Creates kernel objects for all kernel functions in a program object. Kernel
-objects are not created for any __kernel functions in program that do not have
-the same function definition across all devices for which a program executable
-has been successfully built.
-
-Kernel objects can only be created once you have a program object with a valid
-program source or binary loaded into the program object and the program
-executable has been successfully built for one or more devices associated with
-program. No changes to the program executable are allowed while there are kernel
-objects associated with a program object. This means that calls to
-'clBuildProgram' return 'CL_INVALID_OPERATION' if there are kernel objects
-attached to a program object. The OpenCL context associated with program will be
-the context associated with kernel. The list of devices associated with program
-are the devices associated with kernel. Devices associated with a program object
-for which a valid program executable has been built can be used to execute
-kernels declared in the program object.
-
-'clCreateKernelsInProgram' will return the kernel objects if the kernel objects
-were successfully allocated, throws 'CL_INVALID_PROGRAM' if program is not a
-valid program object, throws 'CL_INVALID_PROGRAM_EXECUTABLE' if there is no
-successfully built executable for any device in program and throws
-'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required by
-the OpenCL implementation on the host.
--}
 clCreateKernelsInProgram :: OpenCLLibrary -> CLProgram -> IO [CLKernel]
 clCreateKernelsInProgram lib prg = do
   n <- alloca $ \pn -> do
@@ -619,41 +341,6 @@ clRetainKernel lib krn = wrapCheckSuccess $ rawClRetainKernel lib krn
 clReleaseKernel :: OpenCLLibrary -> CLKernel -> IO Bool
 clReleaseKernel lib krn = wrapCheckSuccess $ rawClReleaseKernel lib krn
 
-{-| Used to set the argument value for a specific argument of a kernel.
-
-A kernel object does not update the reference count for objects such as memory,
-sampler objects specified as argument values by 'clSetKernelArg', Users may not
-rely on a kernel object to retain objects specified as argument values to the
-kernel.
-
-Implementations shall not allow 'CLKernel' objects to hold reference counts to
-'CLKernel' arguments, because no mechanism is provided for the user to tell the
-kernel to release that ownership right. If the kernel holds ownership rights on
-kernel args, that would make it impossible for the user to tell with certainty
-when he may safely release user allocated resources associated with OpenCL
-objects such as the CLMem backing store used with 'CL_MEM_USE_HOST_PTR'.
-
-'clSetKernelArg' throws one of the following 'CLError' exceptions when fails:
-
- * 'CL_INVALID_KERNEL' if kernel is not a valid kernel object.
- 
- * 'CL_INVALID_ARG_INDEX' if arg_index is not a valid argument index.
-
- * 'CL_INVALID_ARG_VALUE' if arg_value specified is NULL for an argument that is
-not declared with the __local qualifier or vice-versa.
-
- * 'CL_INVALID_MEM_OBJECT' for an argument declared to be a memory object when
-the specified arg_value is not a valid memory object.
-
- * 'CL_INVALID_SAMPLER' for an argument declared to be of type sampler_t when
-the specified arg_value is not a valid sampler object.
-
- * 'CL_INVALID_ARG_SIZE' if arg_size does not match the size of the data type
-for an argument that is not a memory object or if the argument is a memory
-object and arg_size != sizeof(cl_mem) or if arg_size is zero and the argument is
-declared with the __local qualifier or if the argument is a sampler and arg_size
-!= sizeof(cl_sampler).  
--}
 clSetKernelArg :: Integral a => OpenCLLibrary -> CLKernel -> CLuint -> a -> Ptr b -> IO ()
 clSetKernelArg lib krn idx sz pval = do
   whenSuccess (rawClSetKernelArg lib krn idx (fromIntegral sz) (castPtr pval))
@@ -665,16 +352,29 @@ clSetKernelArgSto lib krn idx val = with val $ \pval -> do
   whenSuccess (rawClSetKernelArg lib krn idx (fromIntegral . sizeOf $ val) (castPtr pval))
     $ return ()
 
-#c
-enum CLKernelInfo {
-  cL_KERNEL_FUNCTION_NAME=CL_KERNEL_FUNCTION_NAME,
-  cL_KERNEL_NUM_ARGS=CL_KERNEL_NUM_ARGS,
-  cL_KERNEL_REFERENCE_COUNT=CL_KERNEL_REFERENCE_COUNT,
-  cL_KERNEL_CONTEXT=CL_KERNEL_CONTEXT,
-  cL_KERNEL_PROGRAM=CL_KERNEL_PROGRAM
-  };
-#endc
-{#enum CLKernelInfo {upcaseFirstLetter} #}
+data CLKernelInfo =
+     CL_KERNEL_FUNCTION_NAME
+   | CL_KERNEL_NUM_ARGS
+   | CL_KERNEL_REFERENCE_COUNT
+   | CL_KERNEL_CONTEXT
+   | CL_KERNEL_PROGRAM
+   | CL_KERNEL_ATTRIBUTES
+
+instance Enum CLKernelInfo where
+   fromEnum CL_KERNEL_FUNCTION_NAME   = 0x1190
+   fromEnum CL_KERNEL_NUM_ARGS        = 0x1191
+   fromEnum CL_KERNEL_REFERENCE_COUNT = 0x1192
+   fromEnum CL_KERNEL_CONTEXT         = 0x1193
+   fromEnum CL_KERNEL_PROGRAM         = 0x1194
+   fromEnum CL_KERNEL_ATTRIBUTES      = 0x1195
+
+   toEnum 0x1190 = CL_KERNEL_FUNCTION_NAME
+   toEnum 0x1191 = CL_KERNEL_NUM_ARGS
+   toEnum 0x1192 = CL_KERNEL_REFERENCE_COUNT
+   toEnum 0x1193 = CL_KERNEL_CONTEXT
+   toEnum 0x1194 = CL_KERNEL_PROGRAM
+   toEnum 0x1195 = CL_KERNEL_ATTRIBUTES
+   toEnum _ = error "Invalid Kernel Info value"
 
 getKernelInfoSize :: OpenCLLibrary -> CLKernel -> CLKernelInfo_ -> IO CSize
 getKernelInfoSize lib krn infoid = alloca $ \(val :: Ptr CSize) -> do
@@ -740,15 +440,30 @@ clGetKernelProgram lib krn =
       infoid = getCLValue CL_KERNEL_PROGRAM
       size = fromIntegral $ sizeOf (nullPtr::CLProgram)
 
+data CLKernelGroupInfo =
+     CL_KERNEL_WORK_GROUP_SIZE
+   | CL_KERNEL_COMPILE_WORK_GROUP_SIZE
+   | CL_KERNEL_LOCAL_MEM_SIZE
+   | CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
+   | CL_KERNEL_PRIVATE_MEM_SIZE
+   | CL_KERNEL_GLOBAL_WORK_SIZE
 
-#c
-enum CLKernelGroupInfo {
-  cL_KERNEL_WORK_GROUP_SIZE=CL_KERNEL_WORK_GROUP_SIZE,
-  cL_KERNEL_COMPILE_WORK_GROUP_SIZE=CL_KERNEL_COMPILE_WORK_GROUP_SIZE,
-  cL_KERNEL_LOCAL_MEM_SIZE=CL_KERNEL_LOCAL_MEM_SIZE,
-  };
-#endc
-{#enum CLKernelGroupInfo {upcaseFirstLetter} #}
+instance Enum CLKernelGroupInfo where
+   fromEnum CL_KERNEL_WORK_GROUP_SIZE                    = 0x11B0
+   fromEnum CL_KERNEL_COMPILE_WORK_GROUP_SIZE            = 0x11B1
+   fromEnum CL_KERNEL_LOCAL_MEM_SIZE                     = 0x11B2
+   fromEnum CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE = 0x11B3
+   fromEnum CL_KERNEL_PRIVATE_MEM_SIZE                   = 0x11B4
+   fromEnum CL_KERNEL_GLOBAL_WORK_SIZE                   = 0x11B5
+
+   toEnum 0x11B0 = CL_KERNEL_WORK_GROUP_SIZE
+   toEnum 0x11B1 = CL_KERNEL_COMPILE_WORK_GROUP_SIZE
+   toEnum 0x11B2 = CL_KERNEL_LOCAL_MEM_SIZE
+   toEnum 0x11B3 = CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
+   toEnum 0x11B4 = CL_KERNEL_PRIVATE_MEM_SIZE
+   toEnum 0x11B5 = CL_KERNEL_GLOBAL_WORK_SIZE
+   toEnum _ = error "Invalid Kernel Work Group Info value"
+
 
 -- | This provides a mechanism for the application to query the work-group size
 -- that can be used to execute a kernel on a specific device given by

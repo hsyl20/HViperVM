@@ -1,35 +1,4 @@
-{- Copyright (c) 2011 Luis Cabellos,
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of  nor the names of other
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
--}
-{-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module ViperVM.Backends.OpenCL.Memory(
   -- * Memory Functions
   clCreateBuffer, clRetainMemObject, clReleaseMemObject, clGetMemType, 
@@ -58,109 +27,23 @@ import ViperVM.Backends.OpenCL.Types(
 
 import ViperVM.Backends.OpenCL.Loader
 
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
-
--- -----------------------------------------------------------------------------
-{-| Creates a buffer object. Returns a valid non-zero buffer object if the
-buffer object is created successfully. Otherwise, it throws the 'CLError': 
-
- * 'CL_INVALID_CONTEXT' if context is not a valid context.
-
- * 'CL_INVALID_VALUE' if values specified in flags are not valid.
-
- * 'CL_INVALID_BUFFER_SIZE' if size is 0 or is greater than
-'clDeviceMaxMemAllocSize' value for all devices in context.
-
- * 'CL_INVALID_HOST_PTR' if host_ptr is NULL and 'CL_MEM_USE_HOST_PTR' or
-'CL_MEM_COPY_HOST_PTR' are set in flags or if host_ptr is not NULL but
-'CL_MEM_COPY_HOST_PTR' or 'CL_MEM_USE_HOST_PTR' are not set in flags.
-
- * 'CL_MEM_OBJECT_ALLOCATION_FAILURE' if there is a failure to allocate memory
-for buffer object.
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
-by the OpenCL implementation on the host.
--}
 clCreateBuffer :: Integral a => OpenCLLibrary -> CLContext -> [CLMemFlag] -> (a, Ptr ()) -> IO CLMem
 clCreateBuffer lib ctx xs (sbuff,buff) = wrapPError $ \perr -> do
   rawClCreateBuffer lib ctx flags (fromIntegral sbuff) buff perr
     where
       flags = bitmaskFromFlags xs
 
-{-| Creates an OpenCL buffer object from an OpenGL buffer object. Returns a valid non-zero OpenCL buffer object if the buffer object is created successfully. Otherwise it throws the 'CLError':
- * 'CL_INVALID_CONTEXT' if context is not a valid context or was not created from a GL context.
-
- * 'CL_INVALID_VALUE' if values specified in flags are not valid.
-
- * 'CL_INVALID_GL_OBJECT' if bufobj is not a GL buffer object or is a GL buffer object but does not have an existing data store.
-
- * 'CL_OUT_OF_RESOURCES' if there is a failure to allocate resources required by the OpenCL implementation on the device.
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required by the OpenCL implementation on the host.
--}
 clCreateFromGLBuffer :: Integral a => OpenCLLibrary -> CLContext -> [CLMemFlag] -> a -> IO CLMem
 clCreateFromGLBuffer lib ctx xs glObj = wrapPError $ \perr -> do
   rawClCreateFromGLBuffer lib ctx flags cglObj perr
     where flags = bitmaskFromFlags xs
           cglObj = fromIntegral glObj
     
--- | Increments the memory object reference count. returns 'True' if the
--- function is executed successfully. After the memobj reference count becomes
--- zero and commands queued for execution on a command-queue(s) that use memobj
--- have finished, the memory object is deleted. It returns 'False' if memobj is
--- not a valid memory object.
 clRetainMemObject :: OpenCLLibrary -> CLMem -> IO Bool
 clRetainMemObject lib mem = wrapCheckSuccess $ rawClRetainMemObject lib mem
 
--- | Decrements the memory object reference count. After the memobj reference
--- count becomes zero and commands queued for execution on a command-queue(s)
--- that use memobj have finished, the memory object is deleted. Returns 'True'
--- if the function is executed successfully. It returns 'False' if memobj is not
--- a valid memory object.
 clReleaseMemObject :: OpenCLLibrary -> CLMem -> IO Bool
 clReleaseMemObject lib mem = wrapCheckSuccess $ rawClReleaseMemObject lib mem
-
--- -----------------------------------------------------------------------------
-{-| Creates a 2D image object.
-
-'clCreateImage2D' returns a valid non-zero image object created if the image
-object is created successfully. Otherwise, it throws one of the following
-'CLError' exceptions:
-
- * 'CL_INVALID_CONTEXT' if context is not a valid context.
-
- * 'CL_INVALID_VALUE' if values specified in flags are not valid.
-
- * 'CL_INVALID_IMAGE_FORMAT_DESCRIPTOR' if values specified in image_format are
-not valid.
-
- * 'CL_INVALID_IMAGE_SIZE' if image_width or image_height are 0 or if they
-exceed values specified in 'CL_DEVICE_IMAGE2D_MAX_WIDTH' or
-'CL_DEVICE_IMAGE2D_MAX_HEIGHT' respectively for all devices in context or if
-values specified by image_row_pitch do not follow rules described in the
-argument description above.
-
- * 'CL_INVALID_HOST_PTR' if host_ptr is 'nullPtr' and 'CL_MEM_USE_HOST_PTR' or
-'CL_MEM_COPY_HOST_PTR' are set in flags or if host_ptr is not 'nullPtr' but
-'CL_MEM_COPY_HOST_PTR' or 'CL_MEM_USE_HOST_PTR' are not set in flags.
-
- * 'CL_IMAGE_FORMAT_NOT_SUPPORTED' if the image_format is not supported.
-
- * 'CL_MEM_OBJECT_ALLOCATION_FAILURE' if there is a failure to allocate memory
-for image object.
-
- * 'CL_INVALID_OPERATION' if there are no devices in context that support images
-(i.e. 'CL_DEVICE_IMAGE_SUPPORT' (specified in the table of OpenCL Device Queries
-for 'clGetDeviceInfo') is 'False').
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
-by the OpenCL implementation on the host.
-
--}
 
 clCreateImage2D :: Integral a => OpenCLLibrary -> CLContext -- ^ A valid OpenCL context on which
                                            -- the image object is to be created.
@@ -200,43 +83,6 @@ clCreateImage2D lib ctx xs fmt iw ih irp ptr = wrapPError $ \perr -> with fmt $ 
       cih = fromIntegral ih
       cirp = fromIntegral irp
 
-{-| Creates a 3D image object.
-
-'clCreateImage3D' returns a valid non-zero image object created if the image
-object is created successfully. Otherwise, it throws one of the following
-'CLError' exceptions:
-
- * 'CL_INVALID_CONTEXT' if context is not a valid context.
-
- * 'CL_INVALID_VALUE' if values specified in flags are not valid.
-
- * 'CL_INVALID_IMAGE_FORMAT_DESCRIPTOR' if values specified in image_format are
-not valid.
-
- * 'CL_INVALID_IMAGE_SIZE' if image_width, image_height are 0 or if image_depth
-less than or equal to 1 or if they exceed values specified in
-'CL_DEVICE_IMAGE3D_MAX_WIDTH', CL_DEVICE_IMAGE3D_MAX_HEIGHT' or
-'CL_DEVICE_IMAGE3D_MAX_DEPTH' respectively for all devices in context or if
-values specified by image_row_pitch and image_slice_pitch do not follow rules
-described in the argument description above.
-
- * 'CL_INVALID_HOST_PTR' if host_ptr is 'nullPtr' and 'CL_MEM_USE_HOST_PTR' or
-'CL_MEM_COPY_HOST_PTR' are set in flags or if host_ptr is not 'nullPtr' but
-'CL_MEM_COPY_HOST_PTR' or 'CL_MEM_USE_HOST_PTR' are not set in flags.
-
- * 'CL_IMAGE_FORMAT_NOT_SUPPORTED' if the image_format is not supported.
-
- * 'CL_MEM_OBJECT_ALLOCATION_FAILURE' if there is a failure to allocate memory
-for image object.
-
- * 'CL_INVALID_OPERATION' if there are no devices in context that support images
-(i.e. 'CL_DEVICE_IMAGE_SUPPORT' (specified in the table of OpenCL Device Queries
-for clGetDeviceInfo) is 'False').
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
-by the OpenCL implementation on the host.
-
--}
 clCreateImage3D :: Integral a => OpenCLLibrary
 	           -> CLContext -- ^ A valid OpenCL context on which
                                            -- the image object is to be created.
@@ -290,42 +136,6 @@ clCreateImage3D lib ctx xs fmt iw ih idepth irp isp ptr = wrapPError $ \perr -> 
       cirp = fromIntegral irp
       cisp = fromIntegral isp  
 
-{-| Creates a 2D OpenCL image object from an existing OpenGL texture.
-
-'clCreateFromGLTexture2D' returns a non-zero image object if the image
-object is created successfully. Otherwise, it throws one of the
-following 'CLError' exceptions:
-
- * 'CL_INVALID_CONTEXT' if context is not a valid context or was not
-created from a GL context.
-
- * 'CL_INVALID_VALUE' if values specified in flags are not valid or if
-value specified in texture_target is not one of the values specified
-in the description of texture_target.
-
- * 'CL_INVALID_MIPLEVEL' if miplevel is less than the value of
-levelbase (for OpenGL implementations) or zero (for OpenGL ES
-implementations); or greater than the value of q (for both OpenGL and
-OpenGL ES). levelbase and q are defined for the texture in section
-3.8.10 (Texture Completeness) of the OpenGL 2.1 specification and
-section 3.7.10 of the OpenGL ES 2.0 specification.
-
- * 'CL_INVALID_MIPLEVEL' if miplevel is greater than zero and the
-OpenGL implementation does not support creating from non-zero mipmap
-levels.
-
- * 'CL_INVALID_GL_OBJECT' if texture is not a GL texture object whose
-type matches texture_target, if the specified miplevel of texture is
-not defined, or if the width or height of the specified miplevel is
-zero.
-
- * 'CL_INVALID_IMAGE_FORMAT_DESCRIPTOR' if the OpenGL texture internal
-format does not map to a supported OpenCL image format.
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources
-required by the OpenCL implementation on the host.
-
--}
 clCreateFromGLTexture2D :: (Integral a, Integral b, Integral c) =>
 			   OpenCLLibrary -> 
                            CLContext -- ^ A valid OpenCL context in
@@ -354,19 +164,6 @@ getNumSupportedImageFormats lib ctx xs mtype = alloca $ \(value_size :: Ptr CLui
     where
       flags = bitmaskFromFlags xs
   
-{-| Get the list of image formats supported by an OpenCL
-implementation. 'clGetSupportedImageFormats' can be used to get the list of
-image formats supported by an OpenCL implementation when the following
-information about an image memory object is specified:
-
- * Context
- * Image type - 2D or 3D image
- * Image object allocation information
-
-Throws 'CL_INVALID_CONTEXT' if context is not a valid context, throws
-'CL_INVALID_VALUE' if flags or image_type are not valid.
-
--}
 clGetSupportedImageFormats :: OpenCLLibrary 
 			      -> CLContext -- ^ A valid OpenCL context on which the
                                         -- image object(s) will be created.
@@ -387,19 +184,46 @@ clGetSupportedImageFormats lib ctx xs mtype = do
     where
       flags = bitmaskFromFlags xs
 
--- -----------------------------------------------------------------------------
-#c
-enum CLImageInfo {
-  cL_IMAGE_FORMAT=CL_IMAGE_FORMAT,
-  cL_IMAGE_ELEMENT_SIZE=CL_IMAGE_ELEMENT_SIZE,
-  cL_IMAGE_ROW_PITCH=CL_IMAGE_ROW_PITCH,
-  cL_IMAGE_SLICE_PITCH=CL_IMAGE_SLICE_PITCH,
-  cL_IMAGE_WIDTH=CL_IMAGE_WIDTH,
-  cL_IMAGE_HEIGHT=CL_IMAGE_HEIGHT,
-  cL_IMAGE_DEPTH=CL_IMAGE_DEPTH,
-  };
-#endc
-{#enum CLImageInfo {upcaseFirstLetter} #}
+
+data CLImageInfo = 
+     CL_IMAGE_FORMAT
+   | CL_IMAGE_ELEMENT_SIZE
+   | CL_IMAGE_ROW_PITCH
+   | CL_IMAGE_SLICE_PITCH
+   | CL_IMAGE_WIDTH
+   | CL_IMAGE_HEIGHT
+   | CL_IMAGE_DEPTH
+   | CL_IMAGE_ARRAY_SIZE
+   | CL_IMAGE_BUFFER
+   | CL_IMAGE_NUM_MIP_LEVELS
+   | CL_IMAGE_NUM_SAMPLES
+
+instance Enum CLImageInfo where
+   fromEnum CL_IMAGE_FORMAT          = 0x1110
+   fromEnum CL_IMAGE_ELEMENT_SIZE    = 0x1111
+   fromEnum CL_IMAGE_ROW_PITCH       = 0x1112
+   fromEnum CL_IMAGE_SLICE_PITCH     = 0x1113
+   fromEnum CL_IMAGE_WIDTH           = 0x1114
+   fromEnum CL_IMAGE_HEIGHT          = 0x1115
+   fromEnum CL_IMAGE_DEPTH           = 0x1116
+   fromEnum CL_IMAGE_ARRAY_SIZE      = 0x1117
+   fromEnum CL_IMAGE_BUFFER          = 0x1118
+   fromEnum CL_IMAGE_NUM_MIP_LEVELS  = 0x1119
+   fromEnum CL_IMAGE_NUM_SAMPLES     = 0x111A
+
+   toEnum 0x1110 = CL_IMAGE_FORMAT
+   toEnum 0x1111 = CL_IMAGE_ELEMENT_SIZE
+   toEnum 0x1112 = CL_IMAGE_ROW_PITCH
+   toEnum 0x1113 = CL_IMAGE_SLICE_PITCH
+   toEnum 0x1114 = CL_IMAGE_WIDTH
+   toEnum 0x1115 = CL_IMAGE_HEIGHT
+   toEnum 0x1116 = CL_IMAGE_DEPTH
+   toEnum 0x1117 = CL_IMAGE_ARRAY_SIZE
+   toEnum 0x1118 = CL_IMAGE_BUFFER
+   toEnum 0x1119 = CL_IMAGE_NUM_MIP_LEVELS
+   toEnum 0x111A = CL_IMAGE_NUM_SAMPLES
+   toEnum _ = error "Invalid Image Info value"
+   
 
 -- | Return image format descriptor specified when image is created with
 -- clCreateImage2D or clCreateImage3D.
@@ -483,19 +307,39 @@ clGetImageDepth lib mem =
       infoid = getCLValue CL_IMAGE_DEPTH
       size = fromIntegral $ sizeOf (undefined :: CSize)
 
--- -----------------------------------------------------------------------------
-#c
-enum CLMemInfo {
-  cL_MEM_TYPE=CL_MEM_TYPE,
-  cL_MEM_FLAGS=CL_MEM_FLAGS,
-  cL_MEM_SIZE=CL_MEM_SIZE,
-  cL_MEM_HOST_PTR=CL_MEM_HOST_PTR,
-  cL_MEM_MAP_COUNT=CL_MEM_MAP_COUNT,
-  cL_MEM_REFERENCE_COUNT=CL_MEM_REFERENCE_COUNT,
-  cL_MEM_CONTEXT=CL_MEM_CONTEXT,
-  };
-#endc
-{#enum CLMemInfo {upcaseFirstLetter} #}
+
+data CLMemInfo =
+     CL_MEM_TYPE
+   | CL_MEM_FLAGS
+   | CL_MEM_SIZE
+   | CL_MEM_HOST_PTR
+   | CL_MEM_MAP_COUNT
+   | CL_MEM_REFERENCE_COUNT
+   | CL_MEM_CONTEXT
+   | CL_MEM_ASSOCIATED_MEMOBJECT
+   | CL_MEM_OFFSET
+
+instance Enum CLMemInfo where
+   fromEnum CL_MEM_TYPE                  = 0x1100
+   fromEnum CL_MEM_FLAGS                 = 0x1101
+   fromEnum CL_MEM_SIZE                  = 0x1102
+   fromEnum CL_MEM_HOST_PTR              = 0x1103
+   fromEnum CL_MEM_MAP_COUNT             = 0x1104
+   fromEnum CL_MEM_REFERENCE_COUNT       = 0x1105
+   fromEnum CL_MEM_CONTEXT               = 0x1106
+   fromEnum CL_MEM_ASSOCIATED_MEMOBJECT  = 0x1107
+   fromEnum CL_MEM_OFFSET                = 0x1108
+
+   toEnum 0x1100 = CL_MEM_TYPE
+   toEnum 0x1101 = CL_MEM_FLAGS
+   toEnum 0x1102 = CL_MEM_SIZE
+   toEnum 0x1103 = CL_MEM_HOST_PTR
+   toEnum 0x1104 = CL_MEM_MAP_COUNT
+   toEnum 0x1105 = CL_MEM_REFERENCE_COUNT
+   toEnum 0x1106 = CL_MEM_CONTEXT
+   toEnum 0x1107 = CL_MEM_ASSOCIATED_MEMOBJECT
+   toEnum 0x1108 = CL_MEM_OFFSET
+   toEnum _ = error "Invalid Mem Info value"
 
 -- | Returns the mem object type.
 --
@@ -578,30 +422,7 @@ clGetMemContext lib mem =
       infoid = getCLValue CL_MEM_CONTEXT
       size = fromIntegral $ sizeOf (0 :: CLuint)
 
--- -----------------------------------------------------------------------------
-{-| Creates a sampler object. A sampler object describes how to sample an image
-when the image is read in the kernel. The built-in functions to read from an
-image in a kernel take a sampler as an argument. The sampler arguments to the
-image read function can be sampler objects created using OpenCL functions and
-passed as argument values to the kernel or can be samplers declared inside a
-kernel. In this section we discuss how sampler objects are created using OpenCL
-functions.
 
-Returns a valid non-zero sampler object if the sampler object is created
-successfully. Otherwise, it throws one of the following 'CLError' exceptions:
-
- * 'CL_INVALID_CONTEXT' if context is not a valid context.
-
- * 'CL_INVALID_VALUE' if addressing_mode, filter_mode, or normalized_coords or a
-combination of these argument values are not valid.
-
- * 'CL_INVALID_OPERATION' if images are not supported by any device associated
-with context (i.e. 'CL_DEVICE_IMAGE_SUPPORT' specified in the table of OpenCL
-Device Queries for clGetDeviceInfo is 'False').
-
- * 'CL_OUT_OF_HOST_MEMORY' if there is a failure to allocate resources required
-by the OpenCL implementation on the host.
--}
 clCreateSampler :: OpenCLLibrary -> CLContext -> Bool -> CLAddressingMode -> CLFilterMode 
                    -> IO CLSampler
 clCreateSampler lib ctx norm am fm = wrapPError $ \perr -> do
@@ -621,16 +442,26 @@ clRetainSampler lib mem = wrapCheckSuccess $ rawClRetainSampler lib mem
 clReleaseSampler :: OpenCLLibrary -> CLSampler -> IO Bool
 clReleaseSampler lib mem = wrapCheckSuccess $ rawClReleaseSampler lib mem
 
-#c
-enum CLSamplerInfo {
-  cL_SAMPLER_REFERENCE_COUNT=CL_SAMPLER_REFERENCE_COUNT,
-  cL_SAMPLER_CONTEXT=CL_SAMPLER_CONTEXT,
-  cL_SAMPLER_ADDRESSING_MODE=CL_SAMPLER_ADDRESSING_MODE,
-  cL_SAMPLER_FILTER_MODE=CL_SAMPLER_FILTER_MODE,
-  cL_SAMPLER_NORMALIZED_COORDS=CL_SAMPLER_NORMALIZED_COORDS
-  };
-#endc
-{#enum CLSamplerInfo {upcaseFirstLetter} #}
+data CLSamplerInfo = 
+     CL_SAMPLER_REFERENCE_COUNT
+   | CL_SAMPLER_CONTEXT
+   | CL_SAMPLER_NORMALIZED_COORDS
+   | CL_SAMPLER_ADDRESSING_MODE
+   | CL_SAMPLER_FILTER_MODE
+
+instance Enum CLSamplerInfo where
+   fromEnum CL_SAMPLER_REFERENCE_COUNT   = 0x1150
+   fromEnum CL_SAMPLER_CONTEXT           = 0x1151
+   fromEnum CL_SAMPLER_NORMALIZED_COORDS = 0x1152
+   fromEnum CL_SAMPLER_ADDRESSING_MODE   = 0x1153
+   fromEnum CL_SAMPLER_FILTER_MODE       = 0x1154
+
+   toEnum 0x1150 = CL_SAMPLER_REFERENCE_COUNT
+   toEnum 0x1151 = CL_SAMPLER_CONTEXT
+   toEnum 0x1152 = CL_SAMPLER_NORMALIZED_COORDS
+   toEnum 0x1153 = CL_SAMPLER_ADDRESSING_MODE
+   toEnum 0x1154 = CL_SAMPLER_FILTER_MODE
+   toEnum _ = error "Invalid Sampler Info value"
 
 -- | Return the sampler reference count. The reference count returned should be
 -- considered immediately stale. It is unsuitable for general use in
@@ -693,4 +524,3 @@ clGetSamplerNormalizedCoords lib sam =
       infoid = getCLValue CL_SAMPLER_NORMALIZED_COORDS
       size = fromIntegral $ sizeOf (0 :: CLbool)
 
--- -----------------------------------------------------------------------------
