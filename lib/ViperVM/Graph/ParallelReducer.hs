@@ -34,7 +34,7 @@ eval builtins ctx node = getNodeExprIO =<< run builtins ctx node
 -- | Perform several node reductions in parallel
 runParallel :: Map Name Builtin -> Map String Node -> [Node] -> IO [Node]
 runParallel builtins ctx = do
-   if parallel
+   if not parallel
       then traverse (run builtins ctx)
       else traverse waitEvent <=< traverse (future . run builtins ctx)
 
