@@ -9,7 +9,7 @@ import ViperVM.Graph.Builtins
 import Data.Map as Map
 import Control.Concurrent
 import Control.Concurrent.STM
-import Control.Monad ((<=<),when,void)
+import Control.Monad (when,void)
 import Control.Applicative
 import Text.Printf
 import Data.Traversable (traverse)
@@ -33,10 +33,16 @@ eval builtins ctx node = getNodeExprIO =<< run builtins ctx node
 
 -- | Perform several node reductions in parallel
 runParallel :: Map Name Builtin -> Map String Node -> [Node] -> IO [Node]
-runParallel builtins ctx = do
+runParallel _ _ [] = return []
+runParallel builtins ctx nodes@(x:xs)= do
    if not parallel
-      then traverse (run builtins ctx)
-      else traverse waitEvent <=< traverse (future . run builtins ctx)
+      then traverse (run builtins ctx) nodes
+      else do
+         -- Spare one thread: the current one evaluates the first node
+         events <- traverse (future . run builtins ctx) xs
+         x' <- run builtins ctx x
+         xs' <- traverse waitEvent events
+         return (x':xs')
 
 -- | Reduce a node
 run :: Map Name Builtin -> Map Name Node -> Node -> IO Node
