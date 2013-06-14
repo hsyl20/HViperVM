@@ -34,9 +34,10 @@ main = do
       _ -> error "Invalid parameters"
 
    -- Configuraing platform and runtime
+   myLogger <- threadSafe ((stdOutLogger <=< clocked) . filterLevel LogDebug)
    let config = Configuration {
       libraryOpenCL = "/usr/lib/libOpenCL.so",
-      logger = (stdOutLogger <=< clocked) . filterLevel LogDebug
+      logger = myLogger
    }
 
    putStrLn "Initializing platform and runtime..."

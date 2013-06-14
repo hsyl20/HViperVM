@@ -1,7 +1,10 @@
 module ViperVM.Platform.Logger where
 
 import System.Clock
+import Control.Concurrent
+import Control.Concurrent.STM
 import Control.Applicative ( (<$>) )
+import Control.Monad (forever)
 
 data LogMsg = CustomLog String
             | DebugLog String
@@ -38,3 +41,15 @@ stdOutLogger (Clocked msg t) = putStr (show t) >> putStr ": " >> stdOutLogger ms
 clocked :: LogMsg -> IO LogMsg
 clocked NullMsg = return NullMsg
 clocked msg = Clocked msg <$> getTime Monotonic
+
+-- | Thread safe logging
+threadSafe :: (LogMsg -> IO ()) -> IO (LogMsg -> IO ())
+threadSafe f = do
+   ch <- newBroadcastTChanIO
+
+   _ <- forkIO $ do
+      ch' <- atomically (dupTChan ch)
+      forever (atomically (readTChan ch') >>= f)
+
+   return (atomically . writeTChan ch)
+
