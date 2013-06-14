@@ -1,4 +1,4 @@
-ViperVM 0.2
+ViperVM 0.3
 ===========
 
 ViperVM is a runtime system for high-performance computing on heterogeneous
