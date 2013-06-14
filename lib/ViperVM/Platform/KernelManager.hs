@@ -50,7 +50,7 @@ createKernelManager rm = do
    -- Create proc threads
    threads <- forM (processors pf) $ \proc -> do
       trs <- atomically newTChan
-      _ <- forkOS (procThread pf proc trs)
+      _ <- forkIO (procThread pf proc trs)
       return (proc, trs)
 
    return $ KernelManager rm (fromList threads)

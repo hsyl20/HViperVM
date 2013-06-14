@@ -45,7 +45,7 @@ createRegionTransferManager rm = do
    -- Create transfer threads
    threads <- forM (links pf) $ \link -> do
       trs <- atomically newTChan
-      _ <- forkOS (transferThread link trs)
+      _ <- forkIO (transferThread link trs)
       return (link, trs)
       
    return $ RegionTransferManager rm (fromList threads)
