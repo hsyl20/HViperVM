@@ -24,6 +24,7 @@ data OpenCLLibrary = OpenCLLibrary {
   rawClGetPlatformInfo   :: CLPlatformID -> CLPlatformInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint,
   rawClGetDeviceIDs      :: CLPlatformID -> CLDeviceType_ -> CLuint -> Ptr CLDeviceID -> Ptr CLuint -> IO CLint,
   rawClGetDeviceInfo     :: CLDeviceID -> CLDeviceInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint,
+
   -- Memory
   rawClCreateBuffer      :: CLContext -> CLMemFlags_ -> CSize -> Ptr () -> Ptr CLint -> IO CLMem,
   rawClCreateImage2D     :: CLContext -> CLMemFlags_ -> CLImageFormat_p -> CSize -> CSize -> CSize -> Ptr () -> Ptr CLint -> IO CLMem,
@@ -39,12 +40,14 @@ data OpenCLLibrary = OpenCLLibrary {
   rawClRetainSampler     :: CLSampler -> IO CLint,
   rawClReleaseSampler    :: CLSampler -> IO CLint,
   rawClGetSamplerInfo    :: CLSampler -> CLSamplerInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint,
+
   -- Context
   rawClCreateContext     :: Ptr CLContextProperty_ -> CLuint -> Ptr CLDeviceID -> FunPtr ContextCallback -> Ptr () -> Ptr CLint -> IO CLContext,
   rawClCreateContextFromType :: Ptr CLContextProperty_ -> CLDeviceType_ -> FunPtr ContextCallback -> Ptr () -> Ptr CLint -> IO CLContext,
   rawClRetainContext     :: CLContext -> IO CLint,
   rawClReleaseContext    :: CLContext -> IO CLint,
   rawClGetContextInfo    :: CLContext -> CLContextInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint,
+
   -- CommandQueue
   rawClCreateCommandQueue    :: CLContext -> CLDeviceID -> CLCommandQueueProperty_ -> Ptr CLint -> IO CLCommandQueue,
   rawClRetainCommandQueue    :: CLCommandQueue -> IO CLint,
@@ -52,7 +55,9 @@ data OpenCLLibrary = OpenCLLibrary {
   rawClGetCommandQueueInfo   :: CLCommandQueue -> CLCommandQueueInfo_ -> CSize -> Ptr () -> Ptr CSize -> IO CLint,
   rawClSetCommandQueueProperty :: CLCommandQueue -> CLCommandQueueProperty_ -> CLbool -> Ptr CLCommandQueueProperty_ -> IO CLint,
   rawClEnqueueReadBuffer     :: CLCommandQueue -> CLMem -> CLbool -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,
+  rawClEnqueueReadBufferRect :: Maybe(CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint),
   rawClEnqueueWriteBuffer    :: CLCommandQueue -> CLMem -> CLbool -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,
+  rawClEnqueueWriteBufferRect :: Maybe(CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint),
   rawClEnqueueReadImage      :: CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,
   rawClEnqueueWriteImage     :: CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,
   rawClEnqueueCopyImage      :: CLCommandQueue -> CLMem -> CLMem -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,

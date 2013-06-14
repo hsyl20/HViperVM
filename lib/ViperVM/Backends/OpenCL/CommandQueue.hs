@@ -9,6 +9,7 @@ module ViperVM.Backends.OpenCL.CommandQueue(
   clSetCommandQueueProperty,
   -- * Memory Commands
   clEnqueueReadBuffer, clEnqueueWriteBuffer, clEnqueueReadImage, 
+  clEnqueueReadBufferRect, clEnqueueWriteBufferRect,
   clEnqueueWriteImage, clEnqueueCopyImage, clEnqueueCopyImageToBuffer,
   clEnqueueCopyBufferToImage, clEnqueueMapBuffer, clEnqueueMapImage,
   clEnqueueUnmapMemObject,
@@ -21,6 +22,7 @@ module ViperVM.Backends.OpenCL.CommandQueue(
 
 import Foreign
 import Foreign.C.Types
+import Data.Maybe (fromMaybe)
 import ViperVM.Backends.OpenCL.Types(
   CLCommandQueueInfo(..),
   CLint, CLuint, CLCommandQueueProperty_,  
@@ -119,13 +121,30 @@ clEnqueue f events = allocaArray nevents $ \pevents -> do
       nevents = length events
       cnevents = fromIntegral nevents
 
-clEnqueueReadBuffer :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> a -> a
-                       -> Ptr () -> [CLEvent] -> IO CLEvent
-clEnqueueReadBuffer lib cq mem check off size dat = clEnqueue (rawClEnqueueReadBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
+clEnqueueReadBuffer :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
+clEnqueueReadBuffer lib cq mem check off size dat = 
+   clEnqueue (rawClEnqueueReadBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
 
-clEnqueueWriteBuffer :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> a -> a
-                       -> Ptr () -> [CLEvent] -> IO CLEvent
-clEnqueueWriteBuffer lib cq mem check off size dat = clEnqueue (rawClEnqueueWriteBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
+clEnqueueReadBufferRect :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> 
+                        Ptr CSize -> Ptr CSize -> Ptr CSize -> a -> a -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
+clEnqueueReadBufferRect lib cq mem blck boff hoff reg brpitch bspitch hrpitch hspitch dat = 
+   clEnqueue (rawClEnqueueReadBufferRect' cq mem (fromBool blck) 
+               boff hoff reg (fromIntegral brpitch) (fromIntegral bspitch) (fromIntegral hrpitch) (fromIntegral hspitch) dat)
+   where
+      rawClEnqueueReadBufferRect' = fromMaybe (error "ReadBufferRect not supported") (rawClEnqueueReadBufferRect lib)
+
+clEnqueueWriteBuffer :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
+clEnqueueWriteBuffer lib cq mem check off size dat = 
+   clEnqueue (rawClEnqueueWriteBuffer lib cq mem (fromBool check) (fromIntegral off) (fromIntegral size) dat)
+
+
+clEnqueueWriteBufferRect :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> Bool -> 
+                        Ptr CSize -> Ptr CSize -> Ptr CSize -> a -> a -> a -> a -> Ptr () -> [CLEvent] -> IO CLEvent
+clEnqueueWriteBufferRect lib cq mem blck boff hoff reg brpitch bspitch hrpitch hspitch dat = 
+   clEnqueue (rawClEnqueueWriteBufferRect' cq mem (fromBool blck) 
+               boff hoff reg (fromIntegral brpitch) (fromIntegral bspitch) (fromIntegral hrpitch) (fromIntegral hspitch) dat)
+   where
+      rawClEnqueueWriteBufferRect' = fromMaybe (error "WriteBufferRect not supported") (rawClEnqueueWriteBufferRect lib)
 
 clEnqueueReadImage :: Integral a 
                       => OpenCLLibrary
