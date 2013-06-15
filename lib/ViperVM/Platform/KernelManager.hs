@@ -12,6 +12,8 @@ import ViperVM.Platform.Processor
 import ViperVM.Platform.Kernel
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Region
+import ViperVM.Platform.KernelParameter
+import ViperVM.Platform.KernelExecutionResult
 import ViperVM.Platform.RegionLockManager
 import ViperVM.Event
 

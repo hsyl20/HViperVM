@@ -7,22 +7,26 @@ module ViperVM.Library.FloatMatrixSub (
 import ViperVM.Platform
 import ViperVM.Platform.SharedObject
 import ViperVM.Platform.Runtime (MakeBuiltin)
+import ViperVM.Platform.KernelParameter
+import qualified ViperVM.Backends.OpenCL.Kernel as CL
+import ViperVM.Backends.OpenCL.Kernel (clUIntParam,clMemParam)
 import ViperVM.Graph.Builtins
+import Control.Applicative ( (<$>) )
 import Paths_ViperVM
 
-floatMatrixSubKernelCL :: IO Kernel
+floatMatrixSubKernelCL :: IO CL.Kernel
 floatMatrixSubKernelCL = do
    fileName <- getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixSub.cl"
-   initCLKernelFromFile fileName "floatMatrixSub" [] "" configFromParamsCL
+   CL.initKernelFromFile fileName "floatMatrixSub" [] "" configFromParamsCL
 
-configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
-configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
+configFromParamsCL :: [KernelParameter] -> CL.KernelConfiguration
+configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
    where
       [WordParam width, 
        WordParam height, 
-       BufferParam a, 
-       BufferParam b, 
-       BufferParam c] = pms
+       BufferParam (CLBuffer a), 
+       BufferParam (CLBuffer b), 
+       BufferParam (CLBuffer c)] = pms
 
       roundTo to v = v + (if ms /= 0 then to - ms else 0)
          where ms = mod v to
@@ -41,7 +45,7 @@ configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
 floatMatrixSubObjectKernelCL :: IO ObjectKernel
 floatMatrixSubObjectKernelCL = do
    let modes = [ReadOnly,ReadOnly,ReadWrite]
-   ker <- floatMatrixSubKernelCL
+   ker <- CLKernel <$> floatMatrixSubKernelCL
    return (ObjectKernel ker modes paramsFromObjects)
 
 paramsFromObjects :: [Object] -> KernelObjectConfig

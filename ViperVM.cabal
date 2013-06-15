@@ -23,8 +23,15 @@ data-files:
 library
   exposed-modules:     
     ViperVM
+
+    ViperVM.Backends.Host.Buffer
+
     ViperVM.Backends.OpenCL
     ViperVM.Backends.OpenCL.Driver
+    ViperVM.Backends.OpenCL.Buffer
+    ViperVM.Backends.OpenCL.Processor
+    ViperVM.Backends.OpenCL.Link
+    ViperVM.Backends.OpenCL.Kernel
     ViperVM.Backends.OpenCL.CommandQueue
     ViperVM.Backends.OpenCL.Context
     ViperVM.Backends.OpenCL.Event
@@ -38,10 +45,15 @@ library
     ViperVM.Platform.Buffer
     ViperVM.Platform.Configuration
     ViperVM.Platform.BufferManager
+    ViperVM.Platform.LinkCapability
+    ViperVM.Platform.KernelParameter
+    ViperVM.Platform.TransferResult
     ViperVM.Platform.DataDesc
     ViperVM.Platform.Descriptor
     ViperVM.Platform.Scheduler
     ViperVM.Platform.Kernel
+    ViperVM.Platform.KernelConstraint
+    ViperVM.Platform.KernelExecutionResult
     ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
     ViperVM.Platform.LockMode
@@ -52,6 +64,7 @@ library
     ViperVM.Platform.Platform
     ViperVM.Platform.Primitive
     ViperVM.Platform.Processor
+    ViperVM.Platform.ProcessorCapabilities
     ViperVM.Platform.Region
     ViperVM.Platform.RegionLockManager
     ViperVM.Platform.RegionTransfer
@@ -158,23 +171,6 @@ executable RegionTransferManagerTest
     containers,
     ViperVM
 
-executable KernelExecOpenCLTest
-  main-is: KernelExecOpenCLTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    ViperVM
-
-executable KernelObjectOpenCLTest
-  main-is: KernelObjectOpenCLTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    stm,
-    ViperVM
-
 executable GraphReduce
   main-is: GraphReducer.hs
   hs-source-dirs: apps
@@ -192,24 +188,6 @@ executable LispParser
     base,
     containers,
     random,
-    ViperVM
-
-executable LispCL
-  main-is: LispCL.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    ViperVM
-
-executable LispOCL
-  main-is: LispOCL.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
     ViperVM
 
 executable LispSOCL

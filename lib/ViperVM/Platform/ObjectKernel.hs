@@ -15,7 +15,7 @@ import ViperVM.Platform.Buffer
 import ViperVM.Platform.Region
 import ViperVM.Platform.ObjectManager
 import ViperVM.Platform.LockMode
-import ViperVM.STM.TMap as TMap
+import ViperVM.Platform.KernelParameter
 
 import Control.Concurrent.STM
 import Data.Foldable (forM_)
@@ -57,14 +57,8 @@ ensureCompiledFor km k proc = do
       ker = peerKernel k
       pf = getKernelManagerPlatform km
 
-   atomically (TMap.lookup proc (compilations ker)) >>= \case
-
-      Just (CLCompilationFailure buildLog) -> 
-         error (printf "Kernel %s cannot be compiled for processor %s:\n%s" (show k) (show proc) buildLog)
-
-      Nothing -> do
+   kernelIsCompiledFor ker proc >>= \case
+      True -> return ()
+      False -> do
          customLog pf (printf "[Compiler] Compiling kernel %s for processor %s" (show k) (show proc))
-         _ <- compileObjectKernel km k [proc]
-         ensureCompiledFor km k proc
-
-      Just (CLCompilationSuccess _) -> return ()
+         kernelEnsureCompiledFor ker proc

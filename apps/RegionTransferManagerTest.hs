@@ -1,5 +1,7 @@
 import ViperVM.Platform
 import ViperVM.Platform.Logger
+import ViperVM.Platform.TransferResult
+import ViperVM.Platform.LinkCapability
 import ViperVM.Platform.RegionTransferManager
 import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.BufferManager (createBufferManager)
@@ -23,14 +25,14 @@ main = do
   rm <- createRegionLockManager bm
   tm <- createRegionTransferManager rm
 
-  let bufferSize = 1024 * 1024
+  let bSize = 1024 * 1024
 
-  putStrLn $ printf "\nTrying to transfer %d KB on each link..." (bufferSize `div` 1024)
+  putStrLn $ printf "\nTrying to transfer %d KB on each link..." (bSize `div` 1024)
   forM_ (links platform) $ \link -> do
       let (src,dst) = linkEndpoints link
-      Just srcBuf <- allocateBuffer rm src bufferSize
-      Just dstBuf <- allocateBuffer rm dst bufferSize
-      let reg = Region1D 0 bufferSize
+      Just srcBuf <- allocateBuffer rm src bSize
+      Just dstBuf <- allocateBuffer rm dst bSize
+      let reg = Region1D 0 bSize
 
       putStrLn $ "Transferring on " ++ (show link) ++ "... "
       let tr = RegionTransfer srcBuf reg [RegionTransferStep link dstBuf reg]
@@ -63,18 +65,18 @@ main = do
       void $ releaseBuffer rm dstBuf
 
 
-  putStrLn $ printf "\nTrying to perform multi-step (ping pong) transfer of %d KB on each couple of links..." (bufferSize `div` 1024)
+  putStrLn $ printf "\nTrying to perform multi-step (ping pong) transfer of %d KB on each couple of links..." (bSize `div` 1024)
   forM_ (links platform) $ \link -> do
       let (src,dst) = linkEndpoints link
 
       -- Find associated reverse link
       let r = filter (\x -> linkEndpoints x == (dst,src)) (links platform)
       forM r $ \link2 -> do
-         Just srcBuf <- allocateBuffer rm src bufferSize
-         Just step1Buf <- allocateBuffer rm dst bufferSize
-         Just step2Buf <- allocateBuffer rm src bufferSize
-         Just dstBuf <- allocateBuffer rm dst bufferSize
-         let reg = Region1D 0 bufferSize
+         Just srcBuf <- allocateBuffer rm src bSize
+         Just step1Buf <- allocateBuffer rm dst bSize
+         Just step2Buf <- allocateBuffer rm src bSize
+         Just dstBuf <- allocateBuffer rm dst bSize
+         let reg = Region1D 0 bSize
 
          putStrLn $ "Ping-pong through " ++ show link ++ " and " ++ show link2 ++ "... "
          let tr = RegionTransfer srcBuf reg [

@@ -6,7 +6,7 @@ module ViperVM.Platform.Platform (
    customLog, errorLog, debugLog
 ) where
 
-import ViperVM.Backends.OpenCL
+import ViperVM.Backends.OpenCL.Driver
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Link
 import ViperVM.Platform.Processor
@@ -31,9 +31,9 @@ initPlatform config = do
    -- Initialize OpenCL driver
    (clMems,clLinks,clProcs) <- initOpenCL config
 
-   let mems = HostMemory : clMems 
-       lnks = clLinks
-       procs = clProcs
+   let mems = HostMemory : fmap CLMemory clMems 
+       lnks = fmap CLLink clLinks
+       procs = fmap CLProcessor clProcs
 
    return $ Platform mems lnks procs config
 
@@ -41,7 +41,7 @@ initPlatform config = do
 platformInfo :: Platform -> IO String
 platformInfo pf = do
   procs <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse procInfo (processors pf)
-  mems <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse memInfo (memories pf)
+  mems <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse memoryInfo (memories pf)
   lks <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse linkInfo (links pf)
   return ("Processors:\n" ++ procs ++ "Memories:\n" ++ mems ++ "Links:\n" ++ lks)
 

@@ -7,23 +7,27 @@ module ViperVM.Library.FloatMatrixTranspose (
 import ViperVM.Platform
 import ViperVM.Platform.SharedObject
 import ViperVM.Platform.Runtime (MakeBuiltin)
+import ViperVM.Platform.KernelParameter
+import qualified ViperVM.Backends.OpenCL.Kernel as CL
+import ViperVM.Backends.OpenCL.Kernel (clUIntParam,clMemParam)
 import ViperVM.Graph.Builtins
+import Control.Applicative ( (<$>) )
 import Paths_ViperVM
 
-floatMatrixTransposeKernelCL :: IO Kernel
+floatMatrixTransposeKernelCL :: IO CL.Kernel
 floatMatrixTransposeKernelCL = do
    fileName <- getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixTranspose.cl"
-   initCLKernelFromFile fileName "floatMatrixTranspose" [] "" configFromParamsCL
+   CL.initKernelFromFile fileName "floatMatrixTranspose" [] "" configFromParamsCL
 
-configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
-configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
+configFromParamsCL :: [KernelParameter] -> CL.KernelConfiguration
+configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
    where
       [WordParam width, 
        WordParam height, 
-       BufferParam a, 
+       BufferParam (CLBuffer a), 
        WordParam lda,
        WordParam offa,
-       BufferParam b, 
+       BufferParam (CLBuffer b), 
        WordParam ldb,
        WordParam offb] = pms
 
@@ -47,7 +51,7 @@ configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
 floatMatrixTransposeObjectKernelCL :: IO ObjectKernel
 floatMatrixTransposeObjectKernelCL = do
    let modes = [ReadOnly,ReadWrite]
-   ker <- floatMatrixTransposeKernelCL
+   ker <- CLKernel <$> floatMatrixTransposeKernelCL
    return (ObjectKernel ker modes paramsFromObjects)
 
 paramsFromObjects :: [Object] -> KernelObjectConfig

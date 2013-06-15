@@ -61,7 +61,7 @@ allocateBuffer mm mem sz = do
 -- | Release a buffer
 releaseBuffer :: BufferManager -> Buffer -> IO ()
 releaseBuffer mm b = do
-   let m = getBufferMemory b
+   let m = bufferMemory b
        bufs = buffers mm ! m
    atomically $ TSet.delete b bufs
    Buffer.release b

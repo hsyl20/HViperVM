@@ -1,5 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module ViperVM.Backends.OpenCL.Memory(
+   Memory(..), 
+   memoryGlobalSize, memoryName,
   -- * Memory Functions
   clCreateBuffer, clRetainMemObject, clReleaseMemObject, clGetMemType, 
   clGetMemFlags, clGetMemSize, clGetMemHostPtr, clGetMemMapCount, 
@@ -18,14 +20,37 @@ module ViperVM.Backends.OpenCL.Memory(
 -- -----------------------------------------------------------------------------
 import Foreign
 import Foreign.C.Types
-import ViperVM.Backends.OpenCL.Types( 
-  CLMem, CLImageFormat, CLContext, CLSampler, CLuint, CLbool, CLMemFlags_,
-  CLAddressingMode_, CLFilterMode_, CLMemObjectType(..), 
-  CLAddressingMode(..), CLFilterMode(..), CLMemFlag(..), CLMemObjectType_, 
-  wrapPError, wrapCheckSuccess, wrapGetInfo, whenSuccess, getEnumCL, 
-  bitmaskFromFlags, bitmaskToMemFlags, getCLValue )
-
+import ViperVM.Backends.OpenCL.Types
 import ViperVM.Backends.OpenCL.Loader
+import ViperVM.Backends.OpenCL.Query
+
+
+data Memory = Memory {
+   memoryLibrary :: OpenCLLibrary,
+   memoryContext :: CLContext,
+   memoryDevice  :: CLDeviceID
+}
+
+instance Eq Memory where
+   (==) a b = memoryDevice a == memoryDevice b
+
+instance Ord Memory where
+   compare a b = compare (memoryDevice a) (memoryDevice b)
+
+instance Show Memory where
+   show m = "(" ++ show (memoryDevice m) ++ ")"
+
+
+memoryGlobalSize :: Memory -> IO Word64
+memoryGlobalSize m = clGetDeviceGlobalMemSize (memoryLibrary m) (memoryDevice m)
+
+memoryName :: Memory -> IO String
+memoryName m = clGetDeviceName (memoryLibrary m) (memoryDevice m)
+
+
+
+
+
 
 clCreateBuffer :: Integral a => OpenCLLibrary -> CLContext -> [CLMemFlag] -> (a, Ptr ()) -> IO CLMem
 clCreateBuffer lib ctx xs (sbuff,buff) = wrapPError $ \perr -> do

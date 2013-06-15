@@ -1,47 +1,29 @@
 module ViperVM.Platform.Memory (
-   Memory(..), memName, memInfo
+   Memory(..), memoryName, memoryInfo
 ) where
 
-import ViperVM.Backends.OpenCL.Types
-import ViperVM.Backends.OpenCL.Loader
-import ViperVM.Backends.OpenCL.Query
-import System.IO.Unsafe
+import qualified ViperVM.Backends.OpenCL.Memory as CL
 import Text.Printf
 
 -- | A memory node
 data Memory = HostMemory
-            | CLMemory OpenCLLibrary CLContext CLDeviceID
-
-instance Eq Memory where
-  (==) HostMemory HostMemory = True
-  (==) (CLMemory _ _ m1) (CLMemory _ _ m2) = (==) m1 m2
-  (==) _ _ = False
-
-instance Ord Memory where
-  compare HostMemory HostMemory = EQ
-  compare (CLMemory _ _ m1) (CLMemory _ _ m2) = compare m1 m2
-  compare HostMemory _ = GT
-  compare _ HostMemory = LT
-
-instance Show Memory where
-  show m = unsafePerformIO $ memInfo m
+            | CLMemory CL.Memory
+            deriving (Eq,Ord,Show)
 
 data Unit = Base | Kilo | Mega | Giga | Tera | Peta deriving (Show)
 
 -- | Retrieve memory information string
-memInfo :: Memory -> IO String
-memInfo HostMemory = return "[Host] Host Memory"
-memInfo (CLMemory lib _ dev) = do
-  sz <- clGetDeviceGlobalMemSize lib dev
-  devName <- clGetDeviceName lib dev
+memoryInfo :: Memory -> IO String
+memoryInfo HostMemory = return "[Host] Host Memory"
+memoryInfo (CLMemory m) = do
+  sz <- CL.memoryGlobalSize m
+  devName <- CL.memoryName m
   return $ printf "[OpenCL] Memory %sBytes (%s)" (prettyShowSize (fromIntegral sz) Base) devName
 
 -- | Retrieve memory name
-memName :: Memory -> IO String
-memName HostMemory = return "Host Memory"
-memName (CLMemory lib _ dev) = do
-   devName <- clGetDeviceName lib dev
-   return $ printf "%s (OpenCL)" devName
+memoryName :: Memory -> IO String
+memoryName HostMemory = return "Host Memory"
+memoryName (CLMemory m) = CL.memoryName m
 
 -- | Pretty print a size
 prettyShowSize :: Double -> Unit -> String

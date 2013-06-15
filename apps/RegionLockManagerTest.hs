@@ -20,14 +20,14 @@ main = do
   bm <- createBufferManager platform
   rm <- createRegionLockManager bm
 
-  let bufferSize = 1024 * 1024
+  let bSize = 1024 * 1024
       r1 = Region1D 100 500
       r2 = Region2D 50 10 100 50
 
   forM_ (memories platform) $ \mem -> do
-      putStrLn =<< memInfo mem
+      putStrLn =<< memoryInfo mem
       putStrLn " - Allocating buffer... "
-      buf <- allocateBuffer rm mem bufferSize
+      buf <- allocateBuffer rm mem bSize
       case buf of
          Nothing -> putStrLn "  FAILED"
          Just b  -> do

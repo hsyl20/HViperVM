@@ -23,6 +23,8 @@ import ViperVM.Platform.Link
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.RegionTransfer
 import ViperVM.Platform.Descriptor
+import ViperVM.Platform.TransferResult
+import ViperVM.Backends.Host.Buffer as Host
 
 import Control.Monad (when)
 import Control.Concurrent.STM
@@ -131,11 +133,11 @@ transferObject _ _ _ = error "Cannot transfer these objects"
 allocateVector :: ObjectManager -> Memory -> Primitive -> Word64 -> IO (Maybe Vector)
 allocateVector om mem p sz = do
    let rm = regionLockManager om
-       bufferSize = sz * (sizeOf p)
-       reg = Region1D 0 bufferSize
+       bSize = sz * (sizeOf p)
+       reg = Region1D 0 bSize
        makeVec buf = createVector buf reg p
 
-   ret <- liftM (fmap makeVec) (allocateBuffer rm mem bufferSize)
+   ret <- liftM (fmap makeVec) (allocateBuffer rm mem bSize)
 
    forM_ (VectorObject <$> ret) (atomically . registerObject om mem)
 
@@ -156,11 +158,11 @@ allocateMatrix :: ObjectManager -> Memory -> Primitive -> Word64 -> Word64 -> Wo
 allocateMatrix om mem p width height padding = do
    let rm = regionLockManager om
        rowSize = width * (sizeOf p)
-       bufferSize = (rowSize+padding) * height
+       bSize = (rowSize+padding) * height
        reg = Region2D 0 height rowSize padding
        makeMat buf = createMatrix buf reg p
 
-   ret <- liftM (fmap makeMat) (allocateBuffer rm mem bufferSize)
+   ret <- liftM (fmap makeMat) (allocateBuffer rm mem bSize)
 
    forM_ (MatrixObject <$> ret) (atomically . registerObject om mem)
 
@@ -177,7 +179,7 @@ transferMatrix om src dst = do
    let tm = regionTransferManager om 
        pf = TM.getRegionTransferManagerPlatform tm
        lks = links pf
-       validLinks = linksBetween (getBufferMemory srcBuf) (getBufferMemory dstBuf) lks
+       validLinks = linksBetween (bufferMemory srcBuf) (bufferMemory dstBuf) lks
        lk = head validLinks
        transfr = RegionTransfer srcBuf srcReg [RegionTransferStep lk dstBuf dstReg]
        srcBuf = matrixBuffer src
@@ -207,7 +209,8 @@ pokeHostFloatMatrix _ obj@(MatrixObject m) ds = do
       (error "Cannot initialize the matrix: invalid cell type")
 
    let rowSize = matrixWidth m * Prim.sizeOf (matrixCellType m) + matrixPadding m
-       startPtr = getHostBufferPtr (matrixBuffer m) `plusPtr` (fromIntegral $ matrixOffset m)
+       HostBuffer buf = matrixBuffer m
+       startPtr = Host.bufferPtr buf `plusPtr` (fromIntegral $ matrixOffset m)
 
    forM_ (ds `zip` [0..]) $ \(xs,i) -> do
       let ptr = startPtr `plusPtr` (fromIntegral $ i*rowSize)
@@ -227,7 +230,8 @@ peekHostFloatMatrix _ obj@(MatrixObject m) = do
       (error "Cannot initialize the matrix: invalid cell type")
 
    let rowSize = matrixWidth m * Prim.sizeOf (matrixCellType m) + matrixPadding m
-       startPtr = getHostBufferPtr (matrixBuffer m) `plusPtr` (fromIntegral $ matrixOffset m)
+       HostBuffer buf = matrixBuffer m
+       startPtr = Host.bufferPtr buf `plusPtr` (fromIntegral $ matrixOffset m)
        height = matrixHeight m
        width = fromIntegral (matrixWidth m)
 

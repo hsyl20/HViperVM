@@ -4,7 +4,6 @@ module ViperVM.Platform (
    module X
 ) where
 
-import ViperVM.Backends.OpenCL as X
 import ViperVM.Platform.Buffer as X
 import ViperVM.Platform.DataDesc as X
 import ViperVM.Platform.Kernel as X

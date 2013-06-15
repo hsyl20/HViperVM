@@ -23,8 +23,8 @@ data Object = VectorObject Vector   -- ^ Vector object
 
 -- | Return the memory into which the object is stored
 objectMemory :: Object -> Memory
-objectMemory (VectorObject o) = getBufferMemory (vectorBuffer o)
-objectMemory (MatrixObject o) = getBufferMemory (matrixBuffer o)
+objectMemory (VectorObject o) = bufferMemory (vectorBuffer o)
+objectMemory (MatrixObject o) = bufferMemory (matrixBuffer o)
 
 -- | Vector object
 data Vector = Vector {

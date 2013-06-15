@@ -11,6 +11,7 @@ import ViperVM.Platform.Region
 import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.RegionTransfer
 import ViperVM.Platform.Link
+import ViperVM.Platform.TransferResult
 import ViperVM.Event
 
 import Data.Map

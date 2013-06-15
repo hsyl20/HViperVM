@@ -9,25 +9,29 @@ import ViperVM.Platform.Descriptor
 import qualified ViperVM.Platform.Primitive as Prim
 import ViperVM.Platform.SharedObject
 import ViperVM.Platform.Runtime (MakeBuiltin)
+import ViperVM.Platform.KernelParameter
+import qualified ViperVM.Backends.OpenCL.Kernel as CL
+import ViperVM.Backends.OpenCL.Kernel (clUIntParam,clMemParam)
 import ViperVM.Graph.Builtins
+import Control.Applicative ( (<$>) )
 import Paths_ViperVM
 
-floatMatrixMulKernelCL :: IO Kernel
+floatMatrixMulKernelCL :: IO CL.Kernel
 floatMatrixMulKernelCL = do
    fileName <- getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixMul.cl"
-   initCLKernelFromFile fileName "floatMatrixMul" [] "" configFromParamsCL
+   CL.initKernelFromFile fileName "floatMatrixMul" [] "" configFromParamsCL
 
-configFromParamsCL :: [KernelParameter] -> CLKernelConfiguration
-configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
+configFromParamsCL :: [KernelParameter] -> CL.KernelConfiguration
+configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
    where
       [WordParam k,
-       BufferParam a, 
+       BufferParam (CLBuffer a), 
        WordParam lda,
        WordParam offa,
-       BufferParam b, 
+       BufferParam (CLBuffer b), 
        WordParam ldb,
        WordParam offb,
-       BufferParam c, 
+       BufferParam (CLBuffer c), 
        WordParam ldc,
        WordParam offc,
        WordParam w,
@@ -57,7 +61,7 @@ configFromParamsCL pms = CLKernelConfiguration gDim lDim clParams
 floatMatrixMulObjectKernelCL :: IO ObjectKernel
 floatMatrixMulObjectKernelCL = do
    let modes = [ReadOnly,ReadOnly,ReadWrite]
-   ker <- floatMatrixMulKernelCL
+   ker <- CLKernel <$> floatMatrixMulKernelCL
    return (ObjectKernel ker modes paramsFromObjects)
 
 

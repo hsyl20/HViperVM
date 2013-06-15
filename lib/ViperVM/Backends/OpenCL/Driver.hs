@@ -9,13 +9,15 @@ import Control.Applicative ( (<$>) )
 import Text.Printf
 
 import ViperVM.Platform.Configuration
-import ViperVM.Platform.Link
-import ViperVM.Platform.Processor
-import ViperVM.Platform.Memory
+import ViperVM.Platform.LinkCapability
+import qualified ViperVM.Platform.Memory as PF
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Query
 import ViperVM.Backends.OpenCL.Context
 import ViperVM.Backends.OpenCL.CommandQueue
+import ViperVM.Backends.OpenCL.Processor
+import ViperVM.Backends.OpenCL.Link
+import ViperVM.Backends.OpenCL.Memory
 
 -- | Compute link capabilities of a device
 computeLinkCapabilities :: OpenCLLibrary -> CLDeviceID -> IO (Set LinkCapability)
@@ -32,15 +34,15 @@ createLinks lib ctx (dev,mem) = do
    queue <- clCreateCommandQueue lib ctx dev props
    caps <- computeLinkCapabilities lib dev
    
-   return [CLLink lib queue HostMemory mem caps, 
-           CLLink lib queue mem HostMemory caps]
+   return [Link lib queue PF.HostMemory (PF.CLMemory mem) caps, 
+           Link lib queue (PF.CLMemory mem) PF.HostMemory caps]
 
 -- | Create processor
 createProc :: OpenCLLibrary -> Int -> CLContext -> (CLDeviceID, Int) -> IO Processor
 createProc lib pfIdx ctx (dev,devIdx) = do
    let props = [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE] -- FIXME: Ensure that out-of-order mode is supported
    queue <- clCreateCommandQueue lib ctx dev props
-   return (CLProcessor lib ctx queue dev (printf "OpenCL %d %d" pfIdx devIdx))
+   return (Processor lib ctx queue dev (printf "OpenCL %d %d" pfIdx devIdx))
 
 -- | Initialize an OpenCL platform
 initOpenCLPlatform :: OpenCLLibrary -> (CLPlatformID,Int) -> IO ([Memory],[Link],[Processor])
@@ -49,7 +51,7 @@ initOpenCLPlatform lib (platform,pfIdx) = do
    context <- clCreateContext lib [CL_CONTEXT_PLATFORM platform] devices putStrLn
    procs <- traverse (createProc lib pfIdx context) (devices `zip` [0..])
 
-   let mems  = fmap (CLMemory lib context) devices
+   let mems  = fmap (Memory lib context) devices
 
    links <- concat <$> traverse (createLinks lib context) (devices `zip` mems)
 
