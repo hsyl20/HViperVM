@@ -48,7 +48,6 @@ library
     ViperVM.Platform.LinkCapability
     ViperVM.Platform.KernelParameter
     ViperVM.Platform.TransferResult
-    ViperVM.Platform.DataDesc
     ViperVM.Platform.Descriptor
     ViperVM.Platform.Scheduler
     ViperVM.Platform.Kernel
