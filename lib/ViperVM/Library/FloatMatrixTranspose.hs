@@ -6,6 +6,7 @@ module ViperVM.Library.FloatMatrixTranspose (
 
 import ViperVM.Platform
 import ViperVM.Platform.SharedObject
+import ViperVM.Platform.Objects.Matrix
 import ViperVM.Platform.Runtime (MakeBuiltin)
 import ViperVM.Platform.KernelParameter
 import qualified ViperVM.Backends.OpenCL.Kernel as CL

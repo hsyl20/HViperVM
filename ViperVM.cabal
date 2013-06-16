@@ -73,6 +73,9 @@ library
     ViperVM.Platform.SharedObject
     ViperVM.Platform.SharedObjectManager
     ViperVM.Platform.Event
+    ViperVM.Platform.Objects.Vector
+    ViperVM.Platform.Objects.Matrix
+
 
     ViperVM.Scheduling.Single
     ViperVM.Scheduling.RoundRobin

@@ -13,6 +13,8 @@ import ViperVM.STM.TSet as TSet
 import ViperVM.STM.TMap as TMap
 import ViperVM.Platform.Buffer
 import ViperVM.Platform.Object
+import ViperVM.Platform.Objects.Vector
+import ViperVM.Platform.Objects.Matrix
 import ViperVM.Platform.Primitive as Prim
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Region

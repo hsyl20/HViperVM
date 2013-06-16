@@ -8,6 +8,7 @@ import ViperVM.Platform
 import ViperVM.Platform.Descriptor
 import qualified ViperVM.Platform.Primitive as Prim
 import ViperVM.Platform.SharedObject
+import ViperVM.Platform.Objects.Matrix
 import ViperVM.Platform.Runtime (MakeBuiltin)
 import ViperVM.Platform.KernelParameter
 import qualified ViperVM.Backends.OpenCL.Kernel as CL
