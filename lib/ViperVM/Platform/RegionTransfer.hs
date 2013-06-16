@@ -40,5 +40,3 @@ transfer dt = case dt of
 
    -- OpenCl
    DirectRegionTransfer (CLLink link) src sreg dst dreg -> CL.linkTransfer link src sreg dst dreg
-
-   _ -> return RegionTransferError

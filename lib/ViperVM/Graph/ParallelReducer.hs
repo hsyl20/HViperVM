@@ -15,7 +15,7 @@ import Text.Printf
 import Data.Traversable (traverse)
 import Data.Foldable (traverse_)
 import Data.List (intersperse)
-import ViperVM.Event
+import ViperVM.Platform.Event
 
 debug :: Bool
 debug = False

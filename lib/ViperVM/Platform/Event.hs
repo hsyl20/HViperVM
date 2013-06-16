@@ -1,6 +1,6 @@
 -- | Event Management Module. Events are containers for values that are
 -- computed asynchronously
-module ViperVM.Event (
+module ViperVM.Platform.Event (
   Event, OwnedEvent,
   newEvent, waitEvent, setEvent, withNewEvent,publishEvent
  ) where

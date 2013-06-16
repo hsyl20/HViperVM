@@ -12,7 +12,7 @@ import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.RegionTransfer
 import ViperVM.Platform.Link
 import ViperVM.Platform.TransferResult
-import ViperVM.Event
+import ViperVM.Platform.Event
 
 import Data.Map
 import Data.Traversable (forM)

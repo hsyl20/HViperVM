@@ -15,7 +15,7 @@ import ViperVM.Platform.Region
 import ViperVM.Platform.KernelParameter
 import ViperVM.Platform.KernelExecutionResult
 import ViperVM.Platform.RegionLockManager
-import ViperVM.Event
+import ViperVM.Platform.Event
 
 import Data.Map as Map
 
