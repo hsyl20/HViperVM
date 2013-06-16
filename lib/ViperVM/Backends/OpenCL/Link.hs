@@ -4,7 +4,7 @@ module ViperVM.Backends.OpenCL.Link (
    linkTransfer
 ) where
 
-import ViperVM.Platform.LinkCapability
+import ViperVM.Platform.LinkCapabilities
 import ViperVM.Backends.OpenCL.Types
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Event

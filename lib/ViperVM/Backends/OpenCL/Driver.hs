@@ -9,7 +9,7 @@ import Control.Applicative ( (<$>) )
 import Text.Printf
 
 import ViperVM.Platform.Configuration
-import ViperVM.Platform.LinkCapability
+import ViperVM.Platform.LinkCapabilities
 import qualified ViperVM.Platform.Memory as PF
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Query

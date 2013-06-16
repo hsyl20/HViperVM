@@ -45,7 +45,7 @@ library
     ViperVM.Platform.Buffer
     ViperVM.Platform.Configuration
     ViperVM.Platform.BufferManager
-    ViperVM.Platform.LinkCapability
+    ViperVM.Platform.LinkCapabilities
     ViperVM.Platform.KernelParameter
     ViperVM.Platform.TransferResult
     ViperVM.Platform.Descriptor

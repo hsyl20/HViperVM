@@ -5,7 +5,7 @@ module ViperVM.Platform.Link (
 
 import qualified ViperVM.Backends.OpenCL.Link as CL
 import ViperVM.Platform.Memory
-import ViperVM.Platform.LinkCapability
+import ViperVM.Platform.LinkCapabilities
 import Text.Printf
 import Data.Set (Set)
 

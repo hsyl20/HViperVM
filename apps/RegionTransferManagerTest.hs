@@ -1,7 +1,7 @@
 import ViperVM.Platform
 import ViperVM.Platform.Logger
 import ViperVM.Platform.TransferResult
-import ViperVM.Platform.LinkCapability
+import ViperVM.Platform.LinkCapabilities
 import ViperVM.Platform.RegionTransferManager
 import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.BufferManager (createBufferManager)

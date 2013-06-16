@@ -1,4 +1,4 @@
-module ViperVM.Platform.LinkCapability (
+module ViperVM.Platform.LinkCapabilities (
    LinkCapability(..)
 ) where
 
