@@ -32,7 +32,9 @@ data Link = Link {
 } deriving (Eq,Ord)
 
 instance Show Link where
-  show l = printf "OpenCL link between %s and %s" (show (linkSource l)) (show (linkTarget l))
+  show l = if linkSource l == linkTarget l
+            then printf "OpenCL loopback link (%s)" (show (linkSource l))
+            else printf "OpenCL link between %s and %s" (show (linkSource l)) (show (linkTarget l))
 
 linkEndpoints :: Link -> (Memory,Memory)
 linkEndpoints = linkSource &&& linkTarget

@@ -5,6 +5,7 @@ import ViperVM.Graph.Builtins
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Runtime
 import ViperVM.Platform.SharedObject
+import ViperVM.Platform.Descriptor
 import ViperVM.Graph.Graph
 import ViperVM.Platform.Logger
 
@@ -45,12 +46,11 @@ main = do
    rt <- initRuntime pf eagerScheduler
 
    let 
-      (w,h) = (128, 256) :: (Int,Int)
+      (w,h) = (32, 48) :: (Int,Int)
 
    putStrLn "Initializing input data"
    t <- initFloatMatrixF rt (\x y -> if x <= y then fromIntegral x+1.0 else 0.0) w h
-
-   t11 <- allocateLinked rt (MatrixSplit 4 8) (MatrixSplitIdx 1 1) t
+   a <- initFloatMatrixF rt (\x y -> fromIntegral (x+y)) 16 16
 
    let file = "apps/samples/lisp/Sample.lisp"
    ctx <- readFile =<< getDataFileName file
@@ -62,7 +62,7 @@ main = do
          ("transpose", floatMatrixTransposeBuiltin),
          ("potrf", floatMatrixPotrfBuiltin),
          ("t", dataBuiltin t),
-         ("t11", dataBuiltin t11),
+         ("a", dataBuiltin a),
          ("split", splitBuiltin rt),
          ("unsplit", unsplitBuiltin rt)
       ]
@@ -84,15 +84,20 @@ splitBuiltin :: Runtime -> MakeBuiltin
 splitBuiltin rt rdData writeData _ _ = do
 
    return $ Builtin [True,True,True] $ \case
-      ([ConstInteger w, ConstInteger h, d],_) -> do
-         let m = rdData d
-         let f = MatrixSplit (fromIntegral w) (fromIntegral h)
-         let splt x y = do
+      ([ConstInteger w', ConstInteger h', d],_) -> do
+         let
+            m = rdData d
+            f = MatrixSplit w h
+            (gw,gh) = matrixDescDims (descriptor m)
+            (w,h) = (fromIntegral w', fromIntegral h')
+            hn = (gw + (w-1)) `div` w
+            vn = (gh + (h-1)) `div` h
+            splt x y = do
                m' <- allocateLinked rt f (MatrixSplitIdx x y) m
                newNodeIO (writeData m')
 
-         List <$> (forM [0..h-1] $ \y ->
-                  newNodeIO =<< (List <$> (forM [0..w-1] $ \x ->
+         List <$> (forM [0..vn-1] $ \y ->
+                  newNodeIO =<< (List <$> (forM [0..hn-1] $ \x ->
                      splt (fromIntegral x) (fromIntegral y))))
       _ -> error "Invalid split parameters"
 

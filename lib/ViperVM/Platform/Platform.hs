@@ -6,6 +6,7 @@ module ViperVM.Platform.Platform (
    customLog, errorLog, debugLog
 ) where
 
+import ViperVM.Backends.Host.Driver
 import ViperVM.Backends.OpenCL.Driver
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Link
@@ -28,11 +29,14 @@ data Platform = Platform {
 initPlatform :: Configuration -> IO Platform
 initPlatform config = do
 
+   -- Initialize Host driver
+   hostLinks <- initHost config
+
    -- Initialize OpenCL driver
    (clMems,clLinks,clProcs) <- initOpenCL config
 
    let mems = HostMemory : fmap CLMemory clMems 
-       lnks = fmap CLLink clLinks
+       lnks = fmap HostLink hostLinks ++ fmap CLLink clLinks
        procs = fmap CLProcessor clProcs
 
    return $ Platform mems lnks procs config

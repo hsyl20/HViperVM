@@ -25,6 +25,8 @@ library
     ViperVM
 
     ViperVM.Backends.Host.Buffer
+    ViperVM.Backends.Host.Link
+    ViperVM.Backends.Host.Driver
 
     ViperVM.Backends.OpenCL
     ViperVM.Backends.OpenCL.Driver

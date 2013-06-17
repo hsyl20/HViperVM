@@ -3,6 +3,7 @@
 module ViperVM.Platform.RegionTransfer where
 
 import ViperVM.Platform.Region
+import qualified ViperVM.Backends.Host.Link as Host
 import qualified ViperVM.Backends.OpenCL.Link as CL
 import ViperVM.Platform.Link
 import ViperVM.Platform.Buffer
@@ -37,6 +38,11 @@ transfer dt = case dt of
    -- Trick: Region2D (padding = 0), Region2D (padding = 0)
    DirectRegionTransfer link src (Region2D soff rows sz 0) dst (Region2D doff drows dsz 0) ->
       transfer (DirectRegionTransfer link src (Region1D soff (rows*sz)) dst (Region1D doff (drows*dsz)))
+
+
+   -- Host
+   DirectRegionTransfer (HostLink link) src sreg dst dreg -> 
+      Host.linkTransfer link src sreg dst dreg
 
    -- OpenCL
    DirectRegionTransfer (CLLink link) src sreg dst dreg -> 
