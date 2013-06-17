@@ -204,3 +204,16 @@
       (reduce f (List.cons 
          (f (List.head xs) (List.head (List.tail xs)))
          (List.tail (List.tail xs))))))
+
+(defun dotProduct (xs ys)
+   (List.reduce add (zipWith mul xs ys)))
+
+(defun transpose (xs)
+   (if (List.null (List.head xs))
+      '()
+      (List.cons 
+         (map List.head xs)
+         (transpose (map List.tail xs)))))
+
+(defun matmul (xs ys)
+   (crossWith dotProduct xs (transpose ys)))

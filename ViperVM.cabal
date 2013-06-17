@@ -210,6 +210,7 @@ executable Split
   build-depends: 
     base,
     containers,
+    monad-loops,
     ViperVM
 
 executable Bench

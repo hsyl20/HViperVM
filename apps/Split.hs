@@ -20,6 +20,7 @@ import ViperVM.UserInterface
 import ViperVM.Scheduling.Eager
 
 import Control.Monad
+import Control.Monad.Loops
 import Control.Applicative ( (<$>) )
 import Data.Map as Map
 import System.Environment
@@ -32,7 +33,7 @@ main = do
    -- Parsing command line
    expr <- getArgs >>= \case
       ["-e",s] -> return s
-      [] -> return "(List.index 1 (List.index 1 (split 4 4 t)))"
+      [] -> return "(unsplit (matmul (split 32 32 a) (split 32 32 b)))"
       _ -> error "Invalid parameters"
 
    -- Configuraing platform and runtime
@@ -46,11 +47,15 @@ main = do
    rt <- initRuntime pf eagerScheduler
 
    let 
-      (w,h) = (32, 48) :: (Int,Int)
+      (w,h) = (128, 128) :: (Int,Int)
 
    putStrLn "Initializing input data"
    t <- initFloatMatrixF rt (\x y -> if x <= y then fromIntegral x+1.0 else 0.0) w h
-   a <- initFloatMatrixF rt (\x y -> fromIntegral (x+y)) 16 16
+   a <- initFloatMatrixF rt (\x y -> fromIntegral (x+y :: Int)) w h
+   let
+      const2 :: Int -> Int -> Float
+      const2 x y = if x == y then 2.0 else 0.0
+   b <- initFloatMatrixF rt const2 w h
 
    let file = "apps/samples/lisp/Sample.lisp"
    ctx <- readFile =<< getDataFileName file
@@ -63,6 +68,7 @@ main = do
          ("potrf", floatMatrixPotrfBuiltin),
          ("t", dataBuiltin t),
          ("a", dataBuiltin a),
+         ("b", dataBuiltin b),
          ("split", splitBuiltin rt),
          ("unsplit", unsplitBuiltin rt)
       ]
@@ -105,12 +111,22 @@ unsplitBuiltin :: Runtime -> MakeBuiltin
 unsplitBuiltin rt rdData writeData _ _ = do
 
    return $ Builtin [True] $ \case
-      ([List ys],_) -> do
-         -- FIXME: We suppose xs has been computed
-         vs <- forM ys $ \xs -> do
-                  List xs' <- getNodeExprIO xs
-                  forM xs' $ \x ->
-                     rdData <$> getNodeExprIO x
-         d' <- unsplit rt vs
-         return (writeData d')
+      ([List ys],[l]) -> do
+         let 
+            isList (List _) = True
+            isList _ = False
+         chk <- allM (\x -> isList <$> getNodeExprIO x) ys
+         if chk 
+            then do
+               vs <- forM ys $ \xs -> do
+                        List xs' <- getNodeExprIO xs
+                        forM xs' $ \x ->
+                           rdData <$> getNodeExprIO x
+               d' <- unsplit rt vs
+               return (writeData d')
+            else do
+               dseq <- newNodeIO (Symbol "deepSeq")
+               l' <-newNodeIO (App dseq l)
+               unsplt <- newNodeIO (Symbol "unsplit")
+               return (App unsplt l')
       _ -> error "Invalid split parameters"
