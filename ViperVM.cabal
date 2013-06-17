@@ -201,6 +201,15 @@ executable LispSOCL
     containers,
     ViperVM
 
+executable Split
+  main-is: Split.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall -threaded
+  build-depends: 
+    base,
+    containers,
+    ViperVM
+
 executable Bench
   main-is: Bench.hs
   hs-source-dirs: apps

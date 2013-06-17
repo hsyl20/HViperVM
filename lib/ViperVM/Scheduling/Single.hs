@@ -54,7 +54,7 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
             -- Associate output parameters
             forM_ (argModes `zip` args') $ \((arg,mode),arg') -> case mode of
                ReadOnly -> return ()
-               ReadWrite -> atomically (attachObject arg arg')
+               ReadWrite -> atomically (attachInstance arg arg')
 
 
             -- Return result

@@ -4,7 +4,8 @@ module ViperVM.Platform.Runtime (
       initRuntime, allocate, release, releaseMany,
       peekFloatMatrix, pokeFloatMatrix, pokeDummyFloatMatrix,
       execute, platform, scheduler,
-      loadBuiltin, loadBuiltins, MakeBuiltin, readData, dataBuiltin
+      loadBuiltin, loadBuiltins, MakeBuiltin, readData, dataBuiltin,
+      allocateLinked
    ) where
 
 import ViperVM.Platform (Platform)
@@ -18,7 +19,7 @@ import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.BufferManager
 import ViperVM.Platform.RegionTransferManager
 import ViperVM.Platform.ObjectManager
-import ViperVM.Platform.SharedObjectManager (SharedObjectManager,createSharedObjectManager,ensureInMemory)
+import ViperVM.Platform.SharedObjectManager hiding (objectManager)
 import ViperVM.Platform.SharedObject
 
 import Data.Foldable (traverse_)
@@ -53,9 +54,14 @@ initRuntime pf sch = do
 
 -- | Allocate a new data
 allocate :: Runtime -> Descriptor -> IO SharedObject
-allocate _ desc = do
-   so <- atomically (createSharedObject desc)
-   return so
+allocate rt desc = do
+   let som = sharedObjectManager rt
+   atomically (allocateSharedObject som desc)
+
+allocateLinked :: Runtime -> LinkType -> LinkIdx -> SharedObject -> IO SharedObject
+allocateLinked rt typ idx so = do
+   let som = sharedObjectManager rt
+   atomically (allocateLinkedSharedObject som so typ idx)
 
 
 -- | Release data
@@ -85,7 +91,7 @@ pokeFloatMatrix' rt desc ds = do
       Just ds' -> pokeHostFloatMatrix om o ds'
       Nothing -> return ()
 
-   atomically (attachObject so o)
+   atomically (attachInstance so o)
 
    return so
 

@@ -2,7 +2,8 @@
 
 module ViperVM.Platform.SharedObjectManager (
    SharedObjectManager, objectManager,
-   createSharedObjectManager, allocateInstance,
+   createSharedObjectManager, allocateInstance, releaseInstance,
+   allocateSharedObject, allocateLinkedSharedObject,
    allocateTransferAttach, ensureInMemory,
    getSharedObjectManagerPlatform
 ) where
@@ -18,26 +19,51 @@ import Control.Concurrent.STM
 import Control.Applicative ( (<$>) )
 import Control.Monad (foldM)
 import Data.Set as Set
+import Data.Word
 
 data SharedObjectManager = SharedObjectManager {
-   objectManager :: ObjectManager
+   objectManager :: ObjectManager,
+   lastId :: TVar Word64
 }
 
 -- | Return associated platform
 getSharedObjectManagerPlatform :: SharedObjectManager -> Platform
 getSharedObjectManagerPlatform = getObjectManagerPlatform . objectManager
 
+-- | Allocate a shared object
+allocateSharedObject :: SharedObjectManager -> Descriptor -> STM SharedObject
+allocateSharedObject som desc = do
+   soId <- readTVar (lastId som)
+   writeTVar (lastId som) (soId + 1)
+   createSharedObject soId desc
+
+-- | Allocate a shared object that is a sub object of the given one
+allocateLinkedSharedObject :: SharedObjectManager -> SharedObject -> LinkType -> LinkIdx -> STM SharedObject
+allocateLinkedSharedObject som so typ idx = do
+   so' <- allocateSharedObject som (descriptor so)
+   subLinkTo so' typ idx so
+   return so'
+
+
 -- | Create a shared object manager
 createSharedObjectManager :: ObjectManager -> IO SharedObjectManager
-createSharedObjectManager om = do
-   return (SharedObjectManager om)
+createSharedObjectManager om = atomically $ do
+   SharedObjectManager om <$> newTVar 0
 
--- | Allocate a compatible instance of the shared object, DO NOT atach it
+-- | Allocate a compatible instance of the shared object, DO NOT attach it
 allocateInstance :: SharedObjectManager -> SharedObject -> Memory -> IO Object
 allocateInstance som so mem = allocateFromDescriptor om mem desc
    where
       om = objectManager som
       desc = descriptor so
+
+
+-- | Release an instance of the shared object
+releaseInstance :: SharedObjectManager -> SharedObject -> Object -> IO ()
+releaseInstance som so o = do
+   let om = objectManager som
+   atomically (detachInstance so o)
+   releaseObject om o
 
 
 -- | Allocate a new instance, transfer appropriate data from another one, then
@@ -64,7 +90,7 @@ allocateTransferAttach som so src dstMem = do
    let 
       f s d = do
          transferObject om s d
-         atomically (attachObject so d)
+         atomically (attachInstance so d)
          return d
 
    -- Perform transfer
@@ -74,11 +100,17 @@ allocateTransferAttach som so src dstMem = do
 -- | Ensure that an instance of a shared object is in a given memory. perform a transfer if necessary
 ensureInMemory :: SharedObjectManager -> Memory -> SharedObject -> IO Object
 ensureInMemory som mem so = do
-   Set.elems <$> atomically (memoryObjects mem so) >>= \case
-
+   -- Try to retrieve a direct instance
+   Set.elems <$> atomically (instancesInMemory so mem) >>= \case
       x:_ -> return x
+      [] -> do
+         -- Try to retrieve a linked instance
+         Set.elems <$> atomically (linkedInstancesInMemory so mem) >>= \case
+            x:_ -> return x
+            [] -> do
 
-      [] -> Set.elems <$> atomically (objects so) >>= \case
-         [] -> error "Uninitialized object accessed in read-only mode"
-         src:_ -> allocateTransferAttach som so src mem
-         -- FIXME: select source policy is not clever
+               -- Perform transfer
+               Set.elems <$> atomically (instances so) >>= \case
+                  [] -> error "Uninitialized object accessed in read-only mode"
+                  src:_ -> allocateTransferAttach som so src mem
+                  -- FIXME: select source policy is not clever
