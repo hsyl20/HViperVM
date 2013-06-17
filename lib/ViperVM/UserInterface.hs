@@ -1,6 +1,7 @@
 module ViperVM.UserInterface (
       evalLisp, evalLispModule, evalLispWithContext,
-      initFloatMatrix, printFloatMatrix, initDummyFloatMatrix
+      initFloatMatrix, printFloatMatrix, initDummyFloatMatrix,
+      initFloatMatrixF
    ) where
 
 import ViperVM.Platform.Runtime
@@ -38,6 +39,9 @@ initFloatMatrix rt ds = pokeFloatMatrix rt desc ds
       desc = MatrixDesc Prim.Float w h
       w = fromIntegral (length (head ds))
       h = fromIntegral (length ds)
+
+initFloatMatrixF :: Integral a => Runtime -> (a -> a -> Float) -> a -> a -> IO SharedObject
+initFloatMatrixF rt f w h = initFloatMatrix rt [[f x y | x <- [0..w-1]] | y <- [0..h-1]]
 
 -- | Allocate and initialize a dummy matrix of floats
 initDummyFloatMatrix :: Runtime -> Word64 -> Word64 -> IO SharedObject

@@ -43,7 +43,7 @@ main = do
    rt <- initRuntime pf eagerScheduler
 
    let
-      (w,h) = (32, 32)
+      (w,h) = (32, 32) :: (Int,Int)
       triangular = [ replicate n (0.0 :: Float) ++ repeat (fromIntegral n + 1.0) | n <- [0..]]
       triangular' n = fmap (take n) (take n triangular)
       triMul n = let m = List.transpose (triangular' n) in crossWith (\xs ys -> foldl1 (+) $ zipWith (*) xs ys) m m
@@ -51,10 +51,10 @@ main = do
       crossWith f ys xs = fmap (\x -> fmap (\y -> f x y) ys) xs
 
    putStrLn "Initializing input data"
-   a <- initFloatMatrix rt (replicate h (replicate w (5.0 :: Float)))
-   b <- initFloatMatrix rt (replicate h (replicate w (2.0 :: Float)))
+   a <- initFloatMatrixF rt (\_ _ -> 5.0) w h
+   b <- initFloatMatrixF rt (\_ _ -> 2.0) w h
    c <- initFloatMatrix rt (triMul 32)
-   t <- initFloatMatrix rt (List.transpose (triangular' 32))
+   t <- initFloatMatrixF rt (\x y -> if x <= y then fromIntegral x+1.0 else 0.0) w h
 
    let file = "apps/samples/lisp/Sample.lisp"
    ctx <- readFile =<< getDataFileName file
