@@ -58,6 +58,8 @@ data OpenCLLibrary = OpenCLLibrary {
   rawClEnqueueReadBufferRect :: Maybe(CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint),
   rawClEnqueueWriteBuffer    :: CLCommandQueue -> CLMem -> CLbool -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,
   rawClEnqueueWriteBufferRect :: Maybe(CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint),
+  rawClEnqueueCopyBuffer    :: CLCommandQueue -> CLMem -> CLMem -> CSize -> CSize ->  CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,
+  rawClEnqueueCopyBufferRect :: Maybe(CLCommandQueue -> CLMem -> CLMem -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> CSize -> CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint),
   rawClEnqueueReadImage      :: CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,
   rawClEnqueueWriteImage     :: CLCommandQueue -> CLMem -> CLbool -> Ptr CSize -> Ptr CSize -> CSize -> CSize -> Ptr () -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,
   rawClEnqueueCopyImage      :: CLCommandQueue -> CLMem -> CLMem -> Ptr CSize -> Ptr CSize -> Ptr CSize -> CLuint -> Ptr CLEvent -> Ptr CLEvent -> IO CLint,

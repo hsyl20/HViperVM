@@ -10,6 +10,7 @@ module ViperVM.Backends.OpenCL.CommandQueue(
   -- * Memory Commands
   clEnqueueReadBuffer, clEnqueueWriteBuffer, clEnqueueReadImage, 
   clEnqueueReadBufferRect, clEnqueueWriteBufferRect,
+  clEnqueueCopyBuffer, clEnqueueCopyBufferRect,
   clEnqueueWriteImage, clEnqueueCopyImage, clEnqueueCopyImageToBuffer,
   clEnqueueCopyBufferToImage, clEnqueueMapBuffer, clEnqueueMapImage,
   clEnqueueUnmapMemObject,
@@ -159,6 +160,24 @@ clEnqueueWriteBufferRect lib cq mem blck boff hoff reg brpitch bspitch hrpitch h
             clEnqueue (rawClEnqueueWriteBufferRect' cq mem (fromBool blck) 
                   boff' hoff' reg' (fromIntegral brpitch) (fromIntegral bspitch) (fromIntegral hrpitch) (fromIntegral hspitch) dat) evs
 
+clEnqueueCopyBuffer :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> CLMem -> a -> a -> a -> [CLEvent] -> IO CLEvent
+clEnqueueCopyBuffer lib cq src dst soff doff size = 
+   clEnqueue (rawClEnqueueCopyBuffer lib cq src dst (fromIntegral soff) (fromIntegral doff) (fromIntegral size))
+
+
+clEnqueueCopyBufferRect :: Integral a => OpenCLLibrary -> CLCommandQueue -> CLMem -> CLMem -> 
+                        (a,a,a) -> (a,a,a) -> (a,a,a) -> a -> a -> a -> a -> [CLEvent] -> IO CLEvent
+clEnqueueCopyBufferRect lib cq src dst soff doff reg brpitch bspitch hrpitch hspitch evs = do
+   
+   let rawClEnqueueCopyBufferRect' = fromMaybe (error "CopyBufferRect not supported") (rawClEnqueueCopyBufferRect lib)
+       fromTriple (a,b,c) = [fromIntegral a, fromIntegral b, fromIntegral c]
+
+   withArray (fromTriple soff) $ \soff' ->
+      withArray (fromTriple doff) $ \doff' ->
+         withArray (fromTriple reg)  $ \reg'  ->
+
+            clEnqueue (rawClEnqueueCopyBufferRect' cq src dst 
+                  soff' doff' reg' (fromIntegral brpitch) (fromIntegral bspitch) (fromIntegral hrpitch) (fromIntegral hspitch)) evs
 
 clEnqueueReadImage :: Integral a 
                       => OpenCLLibrary

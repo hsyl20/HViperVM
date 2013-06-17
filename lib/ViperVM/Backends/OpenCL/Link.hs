@@ -115,4 +115,39 @@ linkTransfer link srcBuf srcReg dstBuf dstReg = do
 
             _ -> return RegionTransferError
 
+      -- CL -> CL
+      (CLBuffer sBuf', CLBuffer dBuf') -> do
+
+         let sBuf = CL.bufferPeer sBuf'
+             dBuf = CL.bufferPeer dBuf'
+
+         case (srcReg,dstReg) of
+            -- Region 1D
+            (Region1D soff sz, Region1D doff _) -> do
+               e <- clEnqueueCopyBuffer lib cq sBuf dBuf soff doff sz []
+               void $ clWaitForEvents lib [e]
+               void $ clReleaseEvent lib e
+               return RegionTransferSuccess
+
+            -- Region 2D
+            (Region2D soff srowcount ssize spadding, 
+             Region2D doff drowcount dsize dpadding)
+             | Set.member Transfer2D (linkCapabilities link) -> do
+               let reg = (ssize,srowcount,1)
+                   srowpitch = ssize + spadding
+                   sslicepitch = 0
+                   drowpitch = dsize + dpadding
+                   dslicepitch = 0
+                   sorigin = (soff, 0, 0)
+                   dorigin = (doff, 0, 0)
+               
+               when (srowcount /= drowcount) (error "Regions do not have the same shape")
+
+               e <- clEnqueueCopyBufferRect lib cq sBuf dBuf sorigin dorigin reg srowpitch sslicepitch drowpitch dslicepitch []
+               void $ clWaitForEvents lib [e]
+               void $ clReleaseEvent lib e
+               return RegionTransferSuccess
+
+            _ -> return RegionTransferError
+
       _ -> return RegionTransferError

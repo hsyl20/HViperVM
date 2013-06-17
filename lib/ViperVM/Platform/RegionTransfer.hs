@@ -38,5 +38,6 @@ transfer dt = case dt of
    DirectRegionTransfer link src (Region2D soff rows sz 0) dst (Region2D doff drows dsz 0) ->
       transfer (DirectRegionTransfer link src (Region1D soff (rows*sz)) dst (Region1D doff (drows*dsz)))
 
-   -- OpenCl
-   DirectRegionTransfer (CLLink link) src sreg dst dreg -> CL.linkTransfer link src sreg dst dreg
+   -- OpenCL
+   DirectRegionTransfer (CLLink link) src sreg dst dreg -> 
+      CL.linkTransfer link src sreg dst dreg

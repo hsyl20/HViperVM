@@ -35,7 +35,8 @@ createLinks lib ctx (dev,mem) = do
    caps <- computeLinkCapabilities lib dev
    
    return [Link lib queue PF.HostMemory (PF.CLMemory mem) caps, 
-           Link lib queue (PF.CLMemory mem) PF.HostMemory caps]
+           Link lib queue (PF.CLMemory mem) PF.HostMemory caps,
+           Link lib queue (PF.CLMemory mem) (PF.CLMemory mem) caps]
 
 -- | Create processor
 createProc :: OpenCLLibrary -> Int -> CLContext -> (CLDeviceID, Int) -> IO Processor
