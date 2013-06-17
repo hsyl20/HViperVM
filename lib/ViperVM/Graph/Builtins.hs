@@ -95,6 +95,10 @@ listBuiltins = Map.fromList [
       ([List xs],[_,x]) -> return (List (xs ++ [x]))
       (e,_) -> error ("List.snoc cannot be applied (found " ++ show e ++")")),
 
+   ("List.index", Builtin [True,True] $ \case
+      ([ConstInteger i,List xs],_) -> return (Alias (xs !! fromIntegral i))
+      (e,_) -> error ("List.!! cannot be applied (found " ++ show e ++")")),
+
    ("List.reduce", Builtin [False,True] $ \case
       ([List []],[_,_]) -> error "List.reduce cannot be used with an empty list"
       ([List xs],[f,_]) -> Alias . head <$> g xs
