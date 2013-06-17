@@ -12,6 +12,12 @@ matrixDescDims :: Descriptor -> (Word64,Word64)
 matrixDescDims (MatrixDesc _ w h) = (w,h)
 matrixDescDims _ = error "Not a matrix descriptor"
 
+matrixDescWidth :: Descriptor -> Word64
+matrixDescWidth = fst . matrixDescDims
+
+matrixDescHeight :: Descriptor -> Word64
+matrixDescHeight = snd . matrixDescDims
+
 matrixDescCellType :: Descriptor -> Primitive
 matrixDescCellType (MatrixDesc p _ _) = p
 matrixDescCellType _ = error "Not a matrix descriptor"

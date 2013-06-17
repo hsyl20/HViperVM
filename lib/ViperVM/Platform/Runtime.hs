@@ -5,7 +5,7 @@ module ViperVM.Platform.Runtime (
       peekFloatMatrix, pokeFloatMatrix, pokeDummyFloatMatrix,
       execute, platform, scheduler,
       loadBuiltin, loadBuiltins, MakeBuiltin, readData, dataBuiltin,
-      allocateLinked
+      allocateLinked, unsplit
    ) where
 
 import ViperVM.Platform (Platform)
@@ -152,3 +152,7 @@ readData _ = error "Invalid data parameter"
 
 dataBuiltin :: Typeable a => a -> MakeBuiltin
 dataBuiltin v _ _ _ _ = return (Builtin [] . const . return . Data $ toDyn v)
+
+
+unsplit :: Runtime -> [[SharedObject]] -> IO SharedObject
+unsplit rt = unsplitSharedObject (sharedObjectManager rt)

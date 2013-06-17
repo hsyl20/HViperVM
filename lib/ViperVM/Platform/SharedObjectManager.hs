@@ -5,12 +5,13 @@ module ViperVM.Platform.SharedObjectManager (
    createSharedObjectManager, allocateInstance, releaseInstance,
    allocateSharedObject, allocateLinkedSharedObject,
    allocateTransferAttach, ensureInMemory,
-   getSharedObjectManagerPlatform
+   getSharedObjectManagerPlatform, unsplitSharedObject
 ) where
 
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Link
 import ViperVM.Platform.Object
+import ViperVM.Platform.Objects.Matrix
 import ViperVM.Platform.Memory
 import ViperVM.Platform.SharedObject
 import ViperVM.Platform.ObjectManager
@@ -19,6 +20,7 @@ import ViperVM.Platform.Descriptor
 import Control.Concurrent.STM
 import Control.Applicative ( (<$>) )
 import Control.Monad (foldM)
+import Data.Foldable(forM_)
 import Data.Set as Set
 import Data.Word
 
@@ -87,10 +89,10 @@ allocateTransferAttach som so src dstMem = do
 
    -- Intermediate steps
    steps <- if indirectTransfer
-               then do
-                  ho <- allocateInstance som so HostMemory -- Use host memory as intermediate
-                  return [ho,dst]
-               else return [dst]
+      then do
+         ho <- allocateInstance som so HostMemory -- Use host memory as intermediate
+         return [ho,dst]
+      else return [dst]
 
    let 
       f s d = do
@@ -119,3 +121,38 @@ ensureInMemory som mem so = do
                   [] -> error "Uninitialized object accessed in read-only mode"
                   src:_ -> allocateTransferAttach som so src mem
                   -- FIXME: select source policy is not clever
+
+
+-- | Unsplit a list of lists of matrices
+unsplitSharedObject :: SharedObjectManager -> [[SharedObject]] -> IO SharedObject
+unsplitSharedObject som os = do
+   -- Compute output matrix dimensions
+   let dos = fmap (fmap descriptor) os
+       (row1,col1) = (head dos, fmap head dos)
+       w = matrixDescWidth (head row1)
+       h = matrixDescHeight (head row1)
+       gw = sum (fmap matrixDescWidth row1)
+       gh = sum (fmap matrixDescHeight col1)
+       p = matrixDescCellType (head row1)
+       desc = MatrixDesc p gw gh
+       om = objectManager som
+
+   -- Allocate output shared object
+   so <- atomically (allocateSharedObject som desc)
+
+   -- Allocate instance in host memory (FIXME we could improve this)
+   MatrixObject m <- allocateInstance som so HostMemory
+   let ms = matrixSplit m w h
+
+   let srcDst = zip (concat os) (concat ms)
+
+   -- Perform transfers
+   -- FIXME: transfers are performed sequentially
+   forM_ srcDst $ \(src,dst) -> do
+      Set.elems <$> atomically (allInstances src) >>= \case
+         [] -> error "Uninitialized object accessed in read-only mode"
+         srcInstance:_ -> transferObject om srcInstance (MatrixObject dst)
+   
+   -- Attach and return instance
+   atomically (attachInstance so (MatrixObject m))
+   return so

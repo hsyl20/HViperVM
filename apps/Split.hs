@@ -63,7 +63,8 @@ main = do
          ("potrf", floatMatrixPotrfBuiltin),
          ("t", dataBuiltin t),
          ("t11", dataBuiltin t11),
-         ("split", splitBuiltin rt)
+         ("split", splitBuiltin rt),
+         ("unsplit", unsplitBuiltin rt)
       ]
 
    putStrLn ("Evaluating: " ++ show expr)
@@ -95,3 +96,16 @@ splitBuiltin rt rdData writeData _ _ = do
                      splt (fromIntegral x) (fromIntegral y))))
       _ -> error "Invalid split parameters"
 
+unsplitBuiltin :: Runtime -> MakeBuiltin
+unsplitBuiltin rt rdData writeData _ _ = do
+
+   return $ Builtin [True] $ \case
+      ([List ys],_) -> do
+         -- FIXME: We suppose xs has been computed
+         vs <- forM ys $ \xs -> do
+                  List xs' <- getNodeExprIO xs
+                  forM xs' $ \x ->
+                     rdData <$> getNodeExprIO x
+         d' <- unsplit rt vs
+         return (writeData d')
+      _ -> error "Invalid split parameters"
