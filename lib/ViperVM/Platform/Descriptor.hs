@@ -11,3 +11,7 @@ data Descriptor = VectorDesc Primitive Word64         -- ^ Vector
 matrixDescDims :: Descriptor -> (Word64,Word64)
 matrixDescDims (MatrixDesc _ w h) = (w,h)
 matrixDescDims _ = error "Not a matrix descriptor"
+
+matrixDescCellType :: Descriptor -> Primitive
+matrixDescCellType (MatrixDesc p _ _) = p
+matrixDescCellType _ = error "Not a matrix descriptor"

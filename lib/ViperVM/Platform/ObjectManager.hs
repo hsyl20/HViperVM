@@ -194,7 +194,7 @@ transferMatrix om src dst = do
 
    pres <- TM.prepareRegionTransferIO tm transfr
    when (pres /= TM.PrepareSuccess)
-      (error "Error during matrix transfer preparation")
+      (error $ "Error during matrix transfer preparation: " ++ show pres)
       
    
    res <- TM.performRegionTransfer tm transfr

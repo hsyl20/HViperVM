@@ -14,6 +14,7 @@ import ViperVM.Platform.Object
 import ViperVM.Platform.Memory
 import ViperVM.Platform.SharedObject
 import ViperVM.Platform.ObjectManager
+import ViperVM.Platform.Descriptor
 
 import Control.Concurrent.STM
 import Control.Applicative ( (<$>) )
@@ -40,7 +41,11 @@ allocateSharedObject som desc = do
 -- | Allocate a shared object that is a sub object of the given one
 allocateLinkedSharedObject :: SharedObjectManager -> SharedObject -> LinkType -> LinkIdx -> STM SharedObject
 allocateLinkedSharedObject som so typ idx = do
-   so' <- allocateSharedObject som (descriptor so)
+   
+   let desc = case typ of
+         MatrixSplit w h -> MatrixDesc p w h
+         where p = matrixDescCellType (descriptor so)
+   so' <- allocateSharedObject som desc
    subLinkTo so' typ idx so
    return so'
 
@@ -110,7 +115,7 @@ ensureInMemory som mem so = do
             [] -> do
 
                -- Perform transfer
-               Set.elems <$> atomically (instances so) >>= \case
+               Set.elems <$> atomically (allInstances so) >>= \case
                   [] -> error "Uninitialized object accessed in read-only mode"
                   src:_ -> allocateTransferAttach som so src mem
                   -- FIXME: select source policy is not clever

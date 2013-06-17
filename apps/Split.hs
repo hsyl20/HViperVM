@@ -5,6 +5,7 @@ import ViperVM.Graph.Builtins
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Runtime
 import ViperVM.Platform.SharedObject
+import ViperVM.Graph.Graph
 import ViperVM.Platform.Logger
 
 import ViperVM.Library.FloatMatrixAdd
@@ -18,6 +19,7 @@ import ViperVM.UserInterface
 import ViperVM.Scheduling.Eager
 
 import Control.Monad
+import Control.Applicative ( (<$>) )
 import Data.Map as Map
 import System.Environment
 
@@ -29,7 +31,7 @@ main = do
    -- Parsing command line
    expr <- getArgs >>= \case
       ["-e",s] -> return s
-      [] -> return "(let* ((h (add b b))) (sub a (add h h)))"
+      [] -> return "(List.index 1 (List.index 1 (split 4 4 t)))"
       _ -> error "Invalid parameters"
 
    -- Configuraing platform and runtime
@@ -43,7 +45,7 @@ main = do
    rt <- initRuntime pf eagerScheduler
 
    let 
-      (w,h) = (1024, 1024) :: (Int,Int)
+      (w,h) = (128, 256) :: (Int,Int)
 
    putStrLn "Initializing input data"
    t <- initFloatMatrixF rt (\x y -> if x <= y then fromIntegral x+1.0 else 0.0) w h
@@ -60,7 +62,8 @@ main = do
          ("transpose", floatMatrixTransposeBuiltin),
          ("potrf", floatMatrixPotrfBuiltin),
          ("t", dataBuiltin t),
-         ("t11", dataBuiltin t11)
+         ("t11", dataBuiltin t11),
+         ("split", splitBuiltin rt)
       ]
 
    putStrLn ("Evaluating: " ++ show expr)
@@ -74,3 +77,21 @@ main = do
    void $ releaseMany rt [t,r]
 
    putStrLn "Done."
+
+
+splitBuiltin :: Runtime -> MakeBuiltin
+splitBuiltin rt rdData writeData _ _ = do
+
+   return $ Builtin [True,True,True] $ \case
+      ([ConstInteger w, ConstInteger h, d],_) -> do
+         let m = rdData d
+         let f = MatrixSplit (fromIntegral w) (fromIntegral h)
+         let splt x y = do
+               m' <- allocateLinked rt f (MatrixSplitIdx x y) m
+               newNodeIO (writeData m')
+
+         List <$> (forM [0..h-1] $ \y ->
+                  newNodeIO =<< (List <$> (forM [0..w-1] $ \x ->
+                     splt (fromIntegral x) (fromIntegral y))))
+      _ -> error "Invalid split parameters"
+
