@@ -26,7 +26,6 @@ initSingleScheduler proc som km ch = void $ forkIO (singleThread proc som km ch)
 
 singleThread :: Processor -> SharedObjectManager -> KernelManager -> TChan SchedMsg -> IO ()
 singleThread proc som km ch = forever $ do
-      customLog pf (printf "[Single %s] Waiting..." (show proc))
       msg <- atomically (readTChan ch)
       parseMsg msg
    where
@@ -40,8 +39,6 @@ singleThread proc som km ch = forever $ do
             
             ensureCompiledFor km k proc
 
-
-            customLog pf (printf "[Single %s] Transferring input data" (show proc))
 
             -- Move input data in memory
             let argModes = args `zip` lockModes k
@@ -62,4 +59,3 @@ singleThread proc som km ch = forever $ do
 
             -- Return result
             atomically (writeTVar res SchedSuccess)
-            customLog pf (printf "[Single %s] Result returned" (show proc))

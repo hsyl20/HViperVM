@@ -119,12 +119,10 @@ sendSchedMsg rt msg = do
       writeTChan (schedChan rt) (msg r)
       return r
   
-   putStrLn "Waiting for sched reply"
    r' <- atomically $ do
       r <- readTVar result
       when (r == SchedNoResult) retry
       return r
-   putStrLn "sched reply received"
    return r'
 
 -- | Execute the given kernel

@@ -12,9 +12,9 @@ __kernel void floatMatrixPotrf(const uint n, const uint srcOffset, const uint sr
    int y = get_global_id(1);
    int active = x < n && y < n;
 
-   __local float tmp[32][32];
+   __local float tmp[16][16];
 
-   if (y==0) {
+   if (y==0 && active) {
       tmp[x][y] = sqrt(src(x,y));
       dst(x,y) = tmp[x][y] * (x == 0);
    }
@@ -34,7 +34,7 @@ __kernel void floatMatrixPotrf(const uint n, const uint srcOffset, const uint sr
 
    for(int i=1 ; i<n ; i++) {
 
-      if (x>=i && y==i) {
+      if (x>=i && y==i && active) {
          tmp[x][y] = sqrt(tmp[x][y]);
          dst(x,y) = tmp[x][y] * (x == i);
       }

@@ -17,15 +17,12 @@ __kernel void floatMatrixTrsm(__global float * A, const uint strideA, const uint
    if (gy >= valid)
       return;
 
-   uint i = n;
-
-   do {
-      i -= 1;
-      float xval = gA(i,gy);
-      for (uint j=n-1; j>i; j--) {
-         xval -= gB(i,j) * gX(j,gy);
+   for (long i=n-1; i>=0; i--) {
+      float aval = gA(i,gy);
+      for (long j=i+1; j<n; j++) {
+         aval -= gB(i,j) * gX(j,gy);
       }
-      xval /= gB(i,i);
-      gX(i,gy) = xval;
-   } while (i != 0);
+      aval /= gB(i,i);
+      gX(i,gy) = aval;
+   }
 }

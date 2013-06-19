@@ -92,6 +92,14 @@ listBuiltins = Map.fromList [
       ([ConstInteger n, List xs],_) -> return (List (drop (fromIntegral n) xs))
       (e,_) -> error ("List.drop cannot be applied (found " ++ show e ++")")),
 
+   ("List.take", Builtin [True,True] $ \case
+      ([ConstInteger n, List xs],_) -> return (List (take (fromIntegral n) xs))
+      (e,_) -> error ("List.take cannot be applied (found " ++ show e ++")")),
+
+   ("List.concat", Builtin [True,True] $ \case
+      ([List xs, List ys],_) -> return (List (xs ++ ys))
+      (e,_) -> error ("List.concat cannot be applied (found " ++ show e ++")")),
+
    ("List.null", Builtin [True] $ \case
       ([List xs],_) -> return (ConstBool (Prelude.null xs))
       (e,_) -> error ("List.null can only be applied to a list (found " ++ show e ++")")),

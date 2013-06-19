@@ -26,8 +26,14 @@ configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
       [WordParam width, 
        WordParam height, 
        BufferParam (CLBuffer a), 
+       WordParam lda,
+       WordParam offa,
        BufferParam (CLBuffer b), 
-       BufferParam (CLBuffer c)] = pms
+       WordParam ldb,
+       WordParam offb,
+       BufferParam (CLBuffer c), 
+       WordParam ldc,
+       WordParam offc] = pms
 
       roundTo to v = v + (if ms /= 0 then to - ms else 0)
          where ms = mod v to
@@ -38,9 +44,15 @@ configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
 
       clParams = [clUIntParam width, 
                   clUIntParam height, 
-                  clMemParam a, 
-                  clMemParam b, 
-                  clMemParam c]
+                  clMemParam a,
+                  clUIntParam lda,
+                  clUIntParam offa,
+                  clMemParam b,
+                  clUIntParam ldb,
+                  clUIntParam offb,
+                  clMemParam c,
+                  clUIntParam ldc,
+                  clUIntParam offc]
 
 
 floatMatrixSubObjectKernelCL :: IO ObjectKernel
@@ -55,10 +67,20 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
       [MatrixObject ma, MatrixObject mb, MatrixObject mc] = objs
       pms = [WordParam (fromIntegral width), 
              WordParam (fromIntegral height), 
-             BufferParam a, 
-             BufferParam b, 
-             BufferParam c]
+             BufferParam (matrixBuffer ma),
+             WordParam (fromIntegral lda), 
+             WordParam (fromIntegral $ matrixOffset ma),
+             BufferParam (matrixBuffer mb),
+             WordParam (fromIntegral ldb), 
+             WordParam (fromIntegral $ matrixOffset mb),
+             BufferParam (matrixBuffer mc),
+             WordParam (fromIntegral ldc), 
+             WordParam (fromIntegral $ matrixOffset mc)]
+
       (width, height) = matrixDimensions ma
+      lda = ((matrixWidth ma) * 4 + (matrixPadding ma)) `div` 4
+      ldb = ((matrixWidth mb) * 4 + (matrixPadding mb)) `div` 4
+      ldc = ((matrixWidth mc) * 4 + (matrixPadding mc)) `div` 4
       a = matrixBuffer ma
       b = matrixBuffer mb
       c = matrixBuffer mc

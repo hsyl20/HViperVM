@@ -95,19 +95,6 @@
       (e (+ c d)))
          (+ e e)))
 
-(defun tri (n m)
-   (if (List.null m) 
-      '()
-      (let (
-         (x (List.head m))
-         (xs (List.tail m)))
-            (List.cons
-               (List.drop n x)
-               (tri (+ n 1) xs)))))
-
-(defun triangularize (m)
-   (tri 0 m))
-
 (defun reclet (m n)
    (let* (
       (a (+ m b))
@@ -128,40 +115,51 @@
 (defun zipWith2D (f xs ys)
    (zipWith (zipWith f) xs ys))
 
-;(defun crossWith (f xs ys)
-;   (map (lambda (y)
-;      (map (lambda (x) (f x y))
-;         xs))
-;         ys))
-
 (defun crossWith (f xs ys)
-   (map (crossWith' f xs) ys))
+   (map (lambda (y)
+      (map (lambda (x) (f x y))
+         xs))
+         ys))
 
-(defun flip (f x y)
-   (f y x))
+(defun potrf' (m)
+   (transpose' (potrf'' (transpose' m))))
 
-(defun crossWith' (f xs y)
-   (map (flip f y) xs))
+(defun zipWithTriangular (f n a b)
+   (List.concat 
+      (List.take n a)
+      (zipWith f (List.drop n a) (List.drop n b))))
 
-(defun ap (a b)
-   (a b))
+(defun zipWithTriangular2D (f n a b)
+   (if (empty a)
+      a
+      (List.cons
+         (zipWithTriangular f n (List.head a) (List.head b))
+         (zipWithTriangular2D f (+ n 1) (List.tail a) (List.tail b)))))
 
-(defun cholesky (m)
+(defun empty (m)
+   (or 
+      (List.null m)
+      (List.null (List.head m))))
+
+(defun singleton (m)
+   (and 
+      (List.null (List.tail m))
+      (List.null (List.tail (List.head m)))))
+
+(defun potrf'' (m)
    (let* (
       (a (List.head (List.head m)))
       (b (List.tail (List.head m)))
-      (c (List.tail m))
+      (c (map List.tail (List.tail m)))
+      (d (map List.head (List.tail m)))
       (a' (potrf a))
-      (b' (map (trsm a') b))
-      (diag (zipWith syrk b' (map List.head c)))
-      (cOps (triangularize (crossWith sgemm b' b')))
-      (cOps' (map List.tail cOps))
-      (c' (zipWith2D ap cOps' (map List.tail c)))
-      (c'' ((zipWith List.cons diag (List.snoc c' '()))))
+      (b' (map (lambda (x) (trsm x a')) b))
+      (c' (crossWith sgemm b' b'))
+      (c'' (zipWithTriangular2D sub 0 c c'))
       )
-         (if (List.null m)
-            m
-            (List.cons (List.cons a' b') (cholesky c'')))))
+         (if (singleton m)
+            '('(a'))
+            (List.cons (List.cons a' b') (zipWith List.cons d (potrf'' c''))))))
 
 
 (defun reverse (xs)
@@ -171,32 +169,6 @@
    (if (List.null xs)
       rs
       (reverse' (List.tail xs) (List.cons (List.head xs) rs))))
-
-(defun cholRec (m)
-   (cholRec' m '()))
-
-(defun cholRec' (m rs)
-   (if (List.null m)
-      (reverse rs)
-      (let ((m' (cholStep m)))
-         (cholRec' (List.tail m') (List.cons (List.head m') rs)))))
-
-(defun cholStep (m)
-   (let* (
-      (a (List.head (List.head m)))
-      (b (List.tail (List.head m)))
-      (c (List.tail m))
-      (a' (potrf a))
-      (b' (map (trsm a') b))
-      (diag (zipWith syrk b' (map List.head c)))
-      (cOps (triangularize (crossWith sgemm b' b')))
-      (cOps' (map List.tail cOps))
-      (c' (zipWith2D ap cOps' (map List.tail c)))
-      (c'' ((zipWith List.cons diag (List.snoc c' '()))))
-      )
-         (if (List.null m)
-            m
-            (List.cons (List.cons a' b') c''))))
 
 (defun reduce (f xs)
    (if (List.null (List.tail xs))
@@ -208,12 +180,12 @@
 (defun dotProduct (xs ys)
    (List.reduce add (zipWith mul xs ys)))
 
-(defun transpose (xs)
+(defun transpose' (xs)
    (if (List.null (List.head xs))
       '()
       (List.cons 
          (map List.head xs)
-         (transpose (map List.tail xs)))))
+         (transpose' (map List.tail xs)))))
 
 (defun matmul (xs ys)
-   (crossWith dotProduct xs (transpose ys)))
+   (crossWith dotProduct xs (transpose' ys)))

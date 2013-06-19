@@ -14,6 +14,7 @@ import ViperVM.Library.FloatMatrixSub
 import ViperVM.Library.FloatMatrixMul
 import ViperVM.Library.FloatMatrixTranspose
 import ViperVM.Library.FloatMatrixPotrf
+import ViperVM.Library.FloatMatrixTrsm
 
 import ViperVM.UserInterface
 
@@ -47,11 +48,11 @@ main = do
    rt <- initRuntime pf eagerScheduler
 
    let 
-      (w,h) = (128, 128) :: (Int,Int)
+      (w,h) = (32, 32) :: (Int,Int)
 
    putStrLn "Initializing input data"
-   t <- initFloatMatrixF rt (\x y -> if x <= y then fromIntegral x+1.0 else 0.0) w h
-   a <- initFloatMatrixF rt (\x y -> fromIntegral (x+y :: Int)) w h
+   t <- initFloatMatrixF rt (\x y -> if x <= y then fromIntegral (y+x)+1.0 else 0.0) w h
+   a <- initFloatMatrixF rt (\x y -> fromIntegral (x+y+1 :: Int)) w h
    let
       const2 :: Int -> Int -> Float
       const2 x y = if x == y then 2.0 else 0.0
@@ -66,6 +67,8 @@ main = do
          ("mul", floatMatrixMulBuiltin),
          ("transpose", floatMatrixTransposeBuiltin),
          ("potrf", floatMatrixPotrfBuiltin),
+         ("trsm", floatMatrixTrsmBuiltin),
+         ("sgemm", floatMatrixMulBuiltin),
          ("t", dataBuiltin t),
          ("a", dataBuiltin a),
          ("b", dataBuiltin b),
@@ -78,7 +81,7 @@ main = do
    let builtins = Map.union defaultBuiltins myBuiltins
    r <- evalLispWithContext builtins ctx expr
 
-   putStrLn "================\nResult:"
+   putStrLn ("================\nResult:" ++ show r)
    printFloatMatrix rt r
 
    putStrLn "Done."
