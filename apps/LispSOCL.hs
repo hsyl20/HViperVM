@@ -11,6 +11,7 @@ import ViperVM.Library.FloatMatrixSub
 import ViperVM.Library.FloatMatrixMul
 import ViperVM.Library.FloatMatrixTranspose
 import ViperVM.Library.FloatMatrixPotrf
+import ViperVM.Library.FloatMatrixTrsm
 
 import ViperVM.UserInterface
 
@@ -43,7 +44,7 @@ main = do
    rt <- initRuntime pf eagerScheduler
 
    let
-      (w,h) = (32, 32) :: (Int,Int)
+      (w,h) = (16, 16) :: (Int,Int)
       triangular = [ replicate n (0.0 :: Float) ++ repeat (fromIntegral n + 1.0) | n <- [0..]]
       triangular' n = fmap (take n) (take n triangular)
       triMul n = let m = List.transpose (triangular' n) in crossWith (\xs ys -> foldl1 (+) $ zipWith (*) xs ys) m m
@@ -65,6 +66,7 @@ main = do
          ("mul", floatMatrixMulBuiltin),
          ("transpose", floatMatrixTransposeBuiltin),
          ("potrf", floatMatrixPotrfBuiltin),
+         ("trsm", floatMatrixTrsmBuiltin),
          ("a", dataBuiltin a),
          ("b", dataBuiltin b),
          ("c", dataBuiltin c),

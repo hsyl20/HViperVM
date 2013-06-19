@@ -19,6 +19,7 @@ data-files:
   lib/ViperVM/Library/OpenCL/FloatMatrixMul.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixTranspose.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixPotrf.cl
+  lib/ViperVM/Library/OpenCL/FloatMatrixTrsm.cl
 
 library
   exposed-modules:     
@@ -100,6 +101,7 @@ library
     ViperVM.Library.FloatMatrixMul
     ViperVM.Library.FloatMatrixTranspose
     ViperVM.Library.FloatMatrixPotrf
+    ViperVM.Library.FloatMatrixTrsm
 
     ViperVM.Parsing.Parser
     ViperVM.Parsing.Lisp
