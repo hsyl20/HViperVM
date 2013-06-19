@@ -20,7 +20,7 @@ debug :: Bool
 debug = False
 
 parallel :: Bool
-parallel = False
+parallel = True
 
 future :: IO a -> IO (Event a)
 future f = withNewEvent (\ev -> void (forkIO (setEvent ev =<< f)))

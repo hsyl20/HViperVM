@@ -80,6 +80,8 @@ linkTransfer link srcBuf srcReg dstBuf dstReg = do
                void $ clReleaseEvent lib e
                return RegionTransferSuccess
 
+             | otherwise -> error "2D Transfers not supported"
+
             _ -> return RegionTransferError
 
       -- CL -> Host
@@ -115,6 +117,8 @@ linkTransfer link srcBuf srcReg dstBuf dstReg = do
                void $ clReleaseEvent lib e
                return RegionTransferSuccess
 
+             | otherwise -> error "2D Transfers not supported"
+
             _ -> return RegionTransferError
 
       -- CL -> CL
@@ -149,6 +153,8 @@ linkTransfer link srcBuf srcReg dstBuf dstReg = do
                void $ clWaitForEvents lib [e]
                void $ clReleaseEvent lib e
                return RegionTransferSuccess
+
+             | otherwise -> error "2D Transfers not supported"
 
             _ -> return RegionTransferError
 
