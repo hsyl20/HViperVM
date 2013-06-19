@@ -22,15 +22,15 @@ evalLisp :: Map Name Builtin -> String -> IO SharedObject
 evalLisp builtins expr = readData <$> (eval builtins Map.empty =<< Lisp.readExpr expr)
 
 -- | Parse and evaluate a Lisp module
-evalLispModule :: Map Name Builtin -> String -> IO SharedObject
+evalLispModule :: Map Name Builtin -> String -> IO Expr
 evalLispModule builtins src = evalLispWithContext builtins src "(main)"
 
 -- | Parse and evaluate a Lisp expression with a module context
-evalLispWithContext :: Map Name Builtin -> String -> String -> IO SharedObject
+evalLispWithContext :: Map Name Builtin -> String -> String -> IO Expr
 evalLispWithContext builtins src expr = do
    ctx <- Lisp.readModule src
    e <- Lisp.readExpr expr
-   readData <$> eval builtins ctx e
+   eval builtins ctx e
 
 -- | Allocate and initialize a matrix of floats
 initFloatMatrix :: Runtime -> [[Float]] -> IO SharedObject
@@ -50,7 +50,8 @@ initDummyFloatMatrix rt w h = pokeDummyFloatMatrix rt desc
       desc = MatrixDesc Prim.Float w h
 
 -- | Print a float matrix on the standard output
-printFloatMatrix :: Runtime -> SharedObject -> IO ()
-printFloatMatrix rt so = do
+printFloatMatrix :: Runtime -> Expr -> IO ()
+printFloatMatrix rt expr = do
+   let so = readData expr
    r <- peekFloatMatrix rt so
    traverse_ (putStrLn . show) r

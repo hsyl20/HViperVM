@@ -1,13 +1,10 @@
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Runtime
 import ViperVM.Platform.Logger
-
 import ViperVM.Library.FloatMatrixAdd
-import ViperVM.Library.FloatMatrixSub
-
+import ViperVM.Library.FloatMatrixMul
 import ViperVM.UserInterface
-
-import ViperVM.Scheduling.Single
+import ViperVM.Scheduling.Eager
 
 main :: IO ()
 main = do
@@ -18,8 +15,7 @@ main = do
        }
 
    pf <- initPlatform config
-   --rt <- initRuntime pf eagerScheduler
-   rt <- initRuntime pf (singleScheduler (head (processors pf)))
+   rt <- initRuntime pf eagerScheduler
 
    -- Initialize some data
    a <- initFloatMatrix rt [[1.0, 2.0, 3.0],
@@ -33,8 +29,7 @@ main = do
    -- Register kernels and input data
    builtins <- loadBuiltins rt [
       ("+", floatMatrixAddBuiltin),
-   --   ("*", floatMatrixMulBuiltin),
-      ("*", floatMatrixSubBuiltin),
+      ("*", floatMatrixMulBuiltin),
       ("a", dataBuiltin a),
       ("b", dataBuiltin b)]
 

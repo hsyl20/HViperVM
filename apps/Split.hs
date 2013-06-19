@@ -81,8 +81,6 @@ main = do
    putStrLn "================\nResult:"
    printFloatMatrix rt r
 
-   void $ releaseMany rt [t,r]
-
    putStrLn "Done."
 
 
@@ -125,7 +123,7 @@ unsplitBuiltin rt rdData writeData _ _ = do
                d' <- unsplit rt vs
                return (writeData d')
             else do
-               dseq <- newNodeIO (Symbol "deepSeq")
+               dseq <- newNodeIO (Symbol "deepseq")
                l' <-newNodeIO (App dseq l)
                unsplt <- newNodeIO (Symbol "unsplit")
                return (App unsplt l')

@@ -21,7 +21,7 @@ main = do
                let sz = readData m
                if sz > 100
                   then do
-                     splt <- readExpr "(lambda (x) (unsplit (deepSeq (cholRec (triangularize (split 2 2 x))))))"
+                     splt <- readExpr "(lambda (x) (unsplit (deepseq (cholRec (triangularize (split 2 2 x))))))"
                      return (App splt arg)
                   else do
                      putStrLn ("potrf (" ++ show sz ++ ")")

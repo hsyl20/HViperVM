@@ -119,10 +119,13 @@ sendSchedMsg rt msg = do
       writeTChan (schedChan rt) (msg r)
       return r
   
-   atomically $ do
+   putStrLn "Waiting for sched reply"
+   r' <- atomically $ do
       r <- readTVar result
       when (r == SchedNoResult) retry
       return r
+   putStrLn "sched reply received"
+   return r'
 
 -- | Execute the given kernel
 execute :: Runtime -> ObjectKernel -> [SharedObject] -> IO ()

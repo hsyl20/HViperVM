@@ -13,7 +13,6 @@ import Control.Monad (when,void)
 import Control.Applicative
 import Text.Printf
 import Data.Traversable (traverse)
-import Data.Foldable (traverse_)
 import Data.List (intersperse)
 import ViperVM.Platform.Event
 
@@ -49,8 +48,12 @@ run :: Map Name Builtin -> Map Name Node -> Node -> IO Node
 run builtins initCtx node = do
    when debug (putStrLn ("Red: " ++ showSpine [node]))
 
+   atomically (lock node)
+
    -- Reduce the node
    [res] <- iterateUntilM'' (atomically . isFinal) (step initCtx) [node]
+
+   atomically (unlock node)
 
    when debug (putStrLn (" |=> " ++ showSpine [res]))
 
@@ -73,11 +76,11 @@ run builtins initCtx node = do
                App a1 _ -> return (a1:spine)
 
                -- Force deep evaluation
-               Symbol "deepSeq" -> reduceSpine ctx spine [True] $ \case
-                     -- Apply deepSeq recursively
+               Symbol "deepseq" -> reduceSpine ctx spine [True] $ \case
+                     -- Apply deepseq recursively
                      ([List xs],_) -> List <$> (runParallel builtins ctx =<< traverse (newNodeIO . App a) xs)
                      (_,[n]) -> return (Alias n)
-                     _ -> error "deepSeq error that should never be triggered"
+                     _ -> error "deepseq error that should never be triggered"
 
                Symbol name 
                   | Map.member name ctx -> do
@@ -126,15 +129,7 @@ run builtins initCtx node = do
 getArgs :: Int -> [Node] -> STM [Node]
 getArgs count spine = do
 
-   -- Lock the spine 
-   traverse_ lock spine
-
-   r <- getArgs' count spine
-
-   -- Unlock the spine
-   traverse_ unlock spine
-
-   return r
+   getArgs' count spine
 
    where
       getArgs' 0 _ = return []

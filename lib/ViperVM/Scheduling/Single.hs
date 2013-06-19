@@ -25,7 +25,10 @@ initSingleScheduler proc som km ch = void $ forkIO (singleThread proc som km ch)
 
 
 singleThread :: Processor -> SharedObjectManager -> KernelManager -> TChan SchedMsg -> IO ()
-singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
+singleThread proc som km ch = forever $ do
+      customLog pf (printf "[Single %s] Waiting..." (show proc))
+      msg <- atomically (readTChan ch)
+      parseMsg msg
    where
       om = objectManager som
       mem = head (processorMemories proc)
@@ -59,3 +62,4 @@ singleThread proc som km ch = forever (parseMsg =<< atomically (readTChan ch))
 
             -- Return result
             atomically (writeTVar res SchedSuccess)
+            customLog pf (printf "[Single %s] Result returned" (show proc))

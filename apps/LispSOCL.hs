@@ -76,9 +76,7 @@ main = do
    let builtins = Map.union defaultBuiltins myBuiltins
    r <- evalLispWithContext builtins ctx expr
 
-   putStrLn "================\nResult:"
+   putStrLn ("================\nResult:" ++ show r)
    printFloatMatrix rt r
-
-   void $ releaseMany rt [a,b,c,t,r]
 
    putStrLn "Done."

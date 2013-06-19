@@ -23,7 +23,16 @@ conditionBuiltins = Map.fromList [
    ("if", Builtin [True,False,False] $ \case
       ([ConstBool True],[_,thn,_]) -> return (Alias thn)
       ([ConstBool False],[_,_,els]) -> return (Alias els)
-      (e,_) -> error ("If condition does not evaluate to a boolean: " ++ show e))
+      (e,_) -> error ("If condition does not evaluate to a boolean: " ++ show e)),
+
+   ("or", Builtin [True,False] $ \case
+      ([ConstBool True],_) -> return (ConstBool True)
+      ([ConstBool False],[_,els]) -> return (Alias els)
+      (e,_) -> error ("Or parameter does not evaluate to a boolean: " ++ show e)),
+
+   ("and", Builtin [True,True] $ \case
+      ([ConstBool a, ConstBool b],_) -> return (ConstBool (a && b))
+      (e,_) -> error ("And parameters do not evaluate to booleans: " ++ show e))
    ]
 
 arithmeticBuiltins :: Map String Builtin
