@@ -5,7 +5,7 @@ __kernel void floatMatrixTranspose(uint W, uint H,
    int i = get_global_id(1);
    int j = get_global_id(0);
 
-   if (i < W && j < H) {
+   if (i < H && j < W) {
       B[j*ldb + i + offsetB] = A[i*lda + j + offsetA];
    }
 }

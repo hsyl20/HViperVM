@@ -70,13 +70,13 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
 
       pms = [BufferParam (matrixBuffer ma),
              WordParam (fromIntegral lda), 
-             WordParam (fromIntegral $ matrixOffset ma),
+             WordParam (fromIntegral (matrixOffset ma `div` 4)),
              BufferParam (matrixBuffer mb),
              WordParam (fromIntegral ldb), 
-             WordParam (fromIntegral $ matrixOffset mb),
+             WordParam (fromIntegral (matrixOffset mb `div` 4)),
              BufferParam (matrixBuffer mc),
              WordParam (fromIntegral ldc), 
-             WordParam (fromIntegral $ matrixOffset mc),
+             WordParam (fromIntegral (matrixOffset mc `div` 4)),
              WordParam (fromIntegral n),
              WordParam (fromIntegral valid)]
 

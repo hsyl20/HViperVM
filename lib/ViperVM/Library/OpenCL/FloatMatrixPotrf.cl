@@ -2,11 +2,11 @@
  *  - Single work-group
  *  - Row-major order
  */
-__kernel void floatMatrixPotrf(const uint n, const uint srcOffset, const uint srcWidth, __global float* srcBuf,
-      const uint dstOffset, const uint dstWidth, __global float* dstBuf) {
+__kernel void floatMatrixPotrf(const uint n, const uint srcOffset, const uint srcStride, __global float* srcBuf,
+      const uint dstOffset, const uint dstStride, __global float* dstBuf) {
 
-#define src(X,Y) srcBuf[srcOffset * (srcWidth+1) + X + Y*srcWidth]
-#define dst(X,Y) dstBuf[dstOffset * (dstWidth+1) + X + Y*dstWidth]
+#define src(X,Y) srcBuf[srcOffset + X + Y*srcStride]
+#define dst(X,Y) dstBuf[dstOffset + X + Y*dstStride]
 
    int x = get_global_id(0);
    int y = get_global_id(1);

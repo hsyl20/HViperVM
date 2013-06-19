@@ -69,13 +69,13 @@ paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
              WordParam (fromIntegral height), 
              BufferParam (matrixBuffer ma),
              WordParam (fromIntegral lda), 
-             WordParam (fromIntegral $ matrixOffset ma),
+             WordParam (fromIntegral (matrixOffset ma `div` 4)),
              BufferParam (matrixBuffer mb),
              WordParam (fromIntegral ldb), 
-             WordParam (fromIntegral $ matrixOffset mb),
+             WordParam (fromIntegral (matrixOffset mb `div` 4)),
              BufferParam (matrixBuffer mc),
              WordParam (fromIntegral ldc), 
-             WordParam (fromIntegral $ matrixOffset mc)]
+             WordParam (fromIntegral (matrixOffset mc `div` 4))]
 
       (width, height) = matrixDimensions ma
       lda = ((matrixWidth ma) * 4 + (matrixPadding ma)) `div` 4
