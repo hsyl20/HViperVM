@@ -35,9 +35,9 @@ configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
       roundTo to v = v + (if ms /= 0 then to - ms else 0)
          where ms = mod v to
 
-      gDim = [roundTo 32 width, roundTo 32 height,1]
+      gDim = [roundTo 16 width, roundTo 16 height,1]
 
-      lDim = [32,32,1]
+      lDim = [16,16,1]
 
       clParams = [clUIntParam width, 
                   clUIntParam height, 

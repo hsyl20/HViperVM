@@ -30,8 +30,8 @@ configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
        WordParam dstOffset, 
        WordParam dstWidth, 
        BufferParam (CLBuffer dstBuf)] = pms
-      gDim = [32,32,1]
-      lDim = [32,32,1]
+      gDim = [16,16,1]
+      lDim = [16,16,1]
       clParams = [clUIntParam n, 
                   clUIntParam srcOffset, 
                   clUIntParam srcWidth, 
