@@ -1,31 +1,31 @@
-(defun f (a b c d)
-     "Sum of multiplications"
-     (+ (* a b) (* c d)))
-
-(defun rec (a n)
-     "Recursive function"
-     (if (/= n 0)
-           (+ a (rec a (- n 1)))
-           0))
-
-(defun recter (a n s)
-      "Terminal recursive function"
-      (if (/= n 0)
-         (recter a (- n 1) (+ s a))
-         s))
-
-(defun recf (f init a n)
-     "Recursive higher-order function"
-     (if (/= n 0)
-           (f (recf f init a (- n 1)) a)
-           init))
-
-(defun sum (xs)
-     "Sum numbers in the list"
-     (if (List.null xs)
-           0
-           (+ (List.head xs) (sum (List.tail xs)))))
-
+;(defun f (a b c d)
+;     "Sum of multiplications"
+;     (+ (* a b) (* c d)))
+;
+;(defun rec (a n)
+;     "Recursive function"
+;     (if (/= n 0)
+;           (+ a (rec a (- n 1)))
+;           0))
+;
+;(defun recter (a n s)
+;      "Terminal recursive function"
+;      (if (/= n 0)
+;         (recter a (- n 1) (+ s a))
+;         s))
+;
+;(defun recf (f init a n)
+;     "Recursive higher-order function"
+;     (if (/= n 0)
+;           (f (recf f init a (- n 1)) a)
+;           init))
+;
+;(defun sum (xs)
+;     "Sum numbers in the list"
+;     (if (List.null xs)
+;           0
+;           (+ (List.head xs) (sum (List.tail xs)))))
+;
 (defun map (f xs)
      "Map f on xs"
      (if (List.null xs)
@@ -121,45 +121,89 @@
          xs))
          ys))
 
-(defun potrf' (m)
-   (transpose' (potrf'' (transpose' m))))
-
-(defun zipWithTriangular (f n a b)
-   (List.concat 
-      (List.take n a)
-      (zipWith f (List.drop n a) (List.drop n b))))
-
-(defun zipWithTriangular2D (f n a b)
-   (if (empty a)
-      a
-      (List.cons
-         (zipWithTriangular f n (List.head a) (List.head b))
-         (zipWithTriangular2D f (+ n 1) (List.tail a) (List.tail b)))))
-
-(defun empty (m)
-   (or 
-      (List.null m)
-      (List.null (List.head m))))
-
-(defun singleton (m)
-   (and 
-      (List.null (List.tail m))
-      (List.null (List.tail (List.head m)))))
-
-(defun potrf'' (m)
+(defun cholesky (m)
    (let* (
-      (a (List.head (List.head m)))
-      (b (List.tail (List.head m)))
-      (c (map List.tail (List.tail m)))
-      (d (map List.head (List.tail m)))
-      (a' (potrf a))
-      (b' (map (lambda (x) (trsm x a')) b))
-      (c' (crossWith sgemm b' b'))
-      (c'' (zipWithTriangular2D sub 0 c c'))
-      )
-         (if (singleton m)
-            '('(a'))
-            (List.cons (List.cons a' b') (zipWith List.cons d (potrf'' c''))))))
+      (l (map (map (f l)) mIndexes))
+
+      (mIndexes (zipWith2D (lambda (r idx) (List.cons r idx)) m indexes)))
+
+      l))
+
+(defun mIndexes ()
+   (zipWith2D (lambda (r idx) (List.cons r idx)) m indexes))
+
+(defun chol ()
+   (map (map (f chol)) mIndexes))
+
+(defun m ()
+   (split 16 16 (mul t (transpose t))))
+
+(defun f (l xs) 
+   (let (
+      (v (index 0 xs))
+      (x (index 1 xs))
+      (y (index 2 xs)))
+         (f' (g x y v l) x y l)))
+
+
+(defun f' (v x y l)
+   (if (> x y) v
+      (if (== x y) (potrf v)
+         (trsm (cell x x l) v))))
+
+(defun g (x y v l)
+   (if (== x 0) v
+      (sub v (h x y l))))
+
+
+(defun h (x y l)
+   (dotProduct
+      (leftOf x y l)
+      (map transpose (leftOf x x l))))
+
+(defun leftOf (x y l)
+   (take x (index y l)))
+
+(defun cell (x y l)
+   (index x (index y l)))
+
+(defun vecIndexes (n)
+   (List.cons n (vecIndexes (+ n 1))))
+
+(defun indexes ()
+   (crossWith (lambda (x y) '(x y)) (vecIndexes 0) (vecIndexes 0)))
+
+(defun drop (n xs)
+   (if (== 0 n) xs (drop (- n 1) (List.tail xs))))
+
+(defun take (n xs)
+   (take' n xs '()))
+   
+(defun take' (n xs ys)
+   (if (== 0 n)
+      (reverse ys)
+      (take' (- n 1) (List.tail xs) (List.cons (List.head xs) ys))))
+
+(defun concat (xs ys)
+   (concat' (reverse xs) ys))
+
+(defun concat' (xs ys)
+   (if (List.null xs) ys
+      (concat' (List.tail xs) (List.cons (List.head xs) ys))))
+
+(defun index (n xs)
+   (List.head (drop n xs)))
+
+(defun reduce (f xs)
+   (if (List.null xs) error
+      (List.head (reduce' f xs))))
+
+(defun reduce' (k xs)
+   (if (or (List.null xs) (List.null (List.tail xs)))
+      xs
+      (reduce' k ((List.cons
+         (f (List.head xs) (index 1 xs))
+         (reduce' k (drop 2 xs)))))))
 
 
 (defun reverse (xs)
@@ -178,7 +222,7 @@
          (List.tail (List.tail xs))))))
 
 (defun dotProduct (xs ys)
-   (List.reduce add (zipWith mul xs ys)))
+   (reduce add (zipWith mul xs ys)))
 
 (defun transpose' (xs)
    (if (List.null (List.head xs))
