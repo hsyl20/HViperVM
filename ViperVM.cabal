@@ -151,51 +151,6 @@ executable PlatformInfo
     base,
     ViperVM
 
-executable BufferManagerTest
-  main-is: BufferManagerTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    ViperVM
-
-executable RegionLockManagerTest
-  main-is: RegionLockManagerTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    stm,
-    ViperVM
-
-executable RegionTransferManagerTest
-  main-is: RegionTransferManagerTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    ViperVM
-
-executable GraphReduce
-  main-is: GraphReducer.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    ViperVM
-
-executable LispParser
-  main-is: LispParser.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    random,
-    ViperVM
-
 executable LispSOCL
   main-is: LispSOCL.hs
   hs-source-dirs: apps
@@ -222,35 +177,5 @@ executable Bench
   build-depends: 
     base,
     containers,
+    monad-loops,
     ViperVM
-
-executable LispTest
-  main-is: LispTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    ViperVM
-
-executable GranularityAdaptation
-  main-is: GranularityAdaptation.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    random,
-    ViperVM
-
-executable ParseTest
-  main-is: ParseTest.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall
-  build-depends: 
-    base,
-    ViperVM
-  other-modules:
-    Paths_ViperVM
-
-
