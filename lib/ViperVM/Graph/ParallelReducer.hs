@@ -78,8 +78,10 @@ run builtins initCtx node = do
                -- Force deep evaluation
                Symbol "deepseq" -> reduceSpine ctx spine [True] $ \case
                      -- Apply deepseq recursively
-                     ([List xs],_) -> List <$> (runParallel builtins ctx =<< traverse (newNodeIO . App a) xs)
-                     (_,[n]) -> return (Alias n)
+                     ([ListCons x xs],_) -> do
+                        [x',xs'] <- runParallel builtins ctx =<< traverse (newNodeIO . App a) [x,xs]
+                        return (ListCons x' xs')
+                     ([e],_) -> return e
                      _ -> error "deepseq error that should never be triggered"
 
                Symbol name 
@@ -164,7 +166,8 @@ isDataNode node = getNodeExpr node >>= \case
    Data _         -> return True
    ConstInteger _ -> return True
    ConstBool _    -> return True
-   List _         -> return True
+   ListCons _ _   -> return True
+   ListNil        -> return True
    _              -> return False
 
 -- | Indicate if a spine is reduced to a final value

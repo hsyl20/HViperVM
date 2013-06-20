@@ -21,8 +21,8 @@ import ViperVM.UserInterface
 import ViperVM.Scheduling.Eager
 
 import Control.Monad
-import Control.Monad.Loops
-import Control.Applicative ( (<$>) )
+import Control.Applicative ( (<$>), (<*>) )
+import Data.Traversable(traverse)
 import Data.Map as Map
 import System.Environment
 
@@ -48,7 +48,7 @@ main = do
    rt <- initRuntime pf eagerScheduler
 
    let 
-      (w,h) = (32, 32) :: (Int,Int)
+      (w,h) = (48, 48) :: (Int,Int)
 
    putStrLn "Initializing input data"
    t <- initFloatMatrixF rt (\x y -> if x <= y then fromIntegral (y+x)+1.0 else 0.0) w h
@@ -94,37 +94,51 @@ splitBuiltin rt rdData writeData _ _ = do
       ([ConstInteger w', ConstInteger h', d],_) -> do
          let
             m = rdData d
-            f = MatrixSplit w h
+            filtr = MatrixSplit w h
             (gw,gh) = matrixDescDims (descriptor m)
             (w,h) = (fromIntegral w', fromIntegral h')
             hn = (gw + (w-1)) `div` w
             vn = (gh + (h-1)) `div` h
             splt x y = do
-               m' <- allocateLinked rt f (MatrixSplitIdx x y) m
-               newNodeIO (writeData m')
+               writeData <$> allocateLinked rt filtr (MatrixSplitIdx x y) m
+            f' xs x = ListCons <$> newNodeIO x <*> newNodeIO xs
+            makeList xs f = foldM (\ys y -> ListCons <$> (newNodeIO =<< f y) <*> newNodeIO ys) ListNil xs
 
-         List <$> (forM [0..vn-1] $ \y ->
-                  newNodeIO =<< (List <$> (forM [0..hn-1] $ \x ->
-                     splt (fromIntegral x) (fromIntegral y))))
+         makeList (reverse [0..vn-1]) $ \y -> do
+            makeList (reverse [0..hn-1]) $ \x -> do
+               splt (fromIntegral x) (fromIntegral y)
       _ -> error "Invalid split parameters"
 
 unsplitBuiltin :: Runtime -> MakeBuiltin
 unsplitBuiltin rt rdData writeData _ _ = do
 
    return $ Builtin [True] $ \case
-      ([List ys],[l]) -> do
+      ([e],[l]) -> do
          let 
-            isList (List _) = True
+            isList (ListCons _ _) = True
+            isList ListNil = True
             isList _ = False
-         chk <- allM (\x -> isList <$> getNodeExprIO x) ys
-         if chk 
+
+            chk (ListCons x xs) = do
+               x' <- isList <$> getNodeExprIO x
+               xs' <- chk =<< getNodeExprIO xs
+               return (x' && xs')
+            chk ListNil = return True
+            chk _ = return False
+
+            extract :: Expr -> IO [Expr]
+            extract (ListCons x xs) = do
+               x' <- getNodeExprIO x
+               xs' <- extract =<< getNodeExprIO xs
+               return (x':xs')
+            extract ListNil = return []
+            extract _ = error "should not happen"
+
+         c <- chk e
+         if c 
             then do
-               vs <- forM ys $ \xs -> do
-                        List xs' <- getNodeExprIO xs
-                        forM xs' $ \x ->
-                           rdData <$> getNodeExprIO x
-               d' <- unsplit rt vs
-               return (writeData d')
+               e' <- fmap (fmap rdData) <$> (traverse extract =<< extract e)
+               writeData <$> unsplit rt e'
             else do
                dseq <- newNodeIO (Symbol "deepseq")
                l' <-newNodeIO (App dseq l)

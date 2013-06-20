@@ -10,7 +10,7 @@ module ViperVM.Graph.Graph (
 
 import Control.Concurrent.STM
 import Control.Applicative
-import Data.Traversable (forM, traverse)
+import Data.Traversable (traverse)
 import Data.Foldable (traverse_)
 import Data.List (intersperse)
 import Data.Map as Map
@@ -27,7 +27,8 @@ data Expr = Symbol Name                               -- ^ A symbol (function na
           | Lambda [Name] Node                        -- ^ A lambda abstraction
           | ConstInteger Integer                      -- ^ An integer constant
           | ConstBool Bool                            -- ^ A boolean constant
-          | List [Node]                               -- ^ A list instance
+          | ListCons Node Node                        -- ^ List CONS
+          | ListNil                                   -- ^ Empty list
           | Data Dynamic                              -- ^ An opaque reference to a data
           | Alias Node                                -- ^ An indirection to another node
           | Let Bool (Map Name Node) Node             -- ^ A let-expression (first arg is true if recursive let)
@@ -43,7 +44,8 @@ instance Show Expr where
    show (Lambda names body) = if Prelude.null names then show body else "(λ. " ++ concat (intersperse " " names) ++ " -> " ++ show body ++ ")"
    show (ConstInteger i) = show i
    show (ConstBool i) = show i
-   show (List xs) = "[" ++ concat (intersperse ", " (fmap show xs)) ++ "]"
+   show (ListCons x xs) = show x ++ " : " ++ show xs
+   show ListNil = "[]"
    show (Alias n) = show n
    show (Let False bindings body) = "(let " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
    show (Let True bindings body) = "(let* " ++ show (Map.toList bindings) ++ " " ++ show body ++ ")"
@@ -111,10 +113,12 @@ instantiate' ctx node = getNodeExpr node >>= \case
    ConstBool _    -> return (False,node)
    Data _         -> return (False,node)
    Alias e        -> instantiate' ctx e
-   List xs        -> do
-         xs' <- forM xs (instantiate' ctx)
-         if any id (fmap fst xs')
-            then (True,) <$> newNode (List (fmap snd xs'))
+   ListNil        -> return (False,node)
+   ListCons x xs        -> do
+         xs' <- instantiate' ctx xs
+         x' <- instantiate' ctx x
+         if or [fst x',fst xs']
+            then (True,) <$> newNode (ListCons (snd x') (snd xs'))
             else return (False,node)
 
    Lambda names body -> do

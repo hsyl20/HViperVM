@@ -7,7 +7,7 @@ import ViperVM.Graph.Graph (newNodeIO, Node)
 import qualified ViperVM.Graph.Graph as G
 
 import Control.Monad (void, forM, foldM)
-import Control.Applicative ( (<$>), (<*))
+import Control.Applicative ( (<$>), (<*), (*>), (<*>))
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Map as Map
 
@@ -73,7 +73,7 @@ parseExpr = parseAtom
                return x
 
 parseModule :: Parser [LispVal]
-parseModule = many (parseExpr <* skipMany spaces) <* eof
+parseModule = skipMany spaces *> many (parseExpr <* skipMany spaces) <* eof
 
 -- | Parse a Lisp expression
 readExpr :: String -> IO Node
@@ -118,8 +118,10 @@ makeExpr ctx (List [Atom "let",List bindings,body]) = do
    newNodeIO (G.Let False bindings' body')
 
 makeExpr ctx (List [Atom "let*",List bindings,body]) = do
-   bindings' <- Map.fromList <$> forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx e)
-   body' <- makeExpr ctx body
+   let names = fmap (\(List [Atom name,_]) -> name) bindings
+       ctx' = Map.filterWithKey (\k _ -> elem k names) ctx
+   bindings' <- Map.fromList <$> forM bindings (\(List [Atom name, e]) -> (name,) <$> makeExpr ctx' e)
+   body' <- makeExpr ctx' body
    newNodeIO (G.Let True bindings' body')
 
 makeExpr ctx (List [Atom "lambda",List vars,body]) = do
@@ -137,5 +139,7 @@ makeExpr _ (List []) = error "Empty lists are not supported"
 makeExpr _ (String _) = error "Strings are not supported"
 makeExpr _ (Number i) = newNodeIO (G.ConstInteger i)
 makeExpr _ (Bool b) = newNodeIO (G.ConstBool b)
-makeExpr ctx (Quote (List x)) = newNodeIO =<< (G.List <$> forM x (makeExpr ctx))
+makeExpr ctx (Quote (List ys)) = newNodeIO =<< foldM f G.ListNil (reverse ys)
+   where
+      f xs x = G.ListCons <$> makeExpr ctx x <*> newNodeIO xs
 makeExpr _ (Quote a) = error ("Thou shalt not quote " ++ show a)

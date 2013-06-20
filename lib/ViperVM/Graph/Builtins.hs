@@ -80,56 +80,22 @@ listBuiltins :: Map String Builtin
 listBuiltins = Map.fromList [
 
    ("List.head", Builtin [True] $ \case
-      ([List []],_) -> error ("List.head applied to an empty list")
-      ([List (x:_)],_) -> return (Alias x)
+      ([ListNil],_) -> error ("List.head applied to an empty list")
+      ([ListCons x _ ],_) -> return (Alias x)
       (e,_) -> error ("List.head can only be applied to a list (found " ++ show e ++")")),
 
    ("List.tail", Builtin [True] $ \case
-      ([List (_:xs)],_) -> return (List xs)
+      ([ListCons x xs],_) -> return (Alias xs)
       (e,_) -> error ("List.tail can only be applied to a list (found " ++ show e ++")")),
 
-   ("List.drop", Builtin [True,True] $ \case
-      ([ConstInteger n, List xs],_) -> return (List (drop (fromIntegral n) xs))
-      (e,_) -> error ("List.drop cannot be applied (found " ++ show e ++")")),
-
-   ("List.take", Builtin [True,True] $ \case
-      ([ConstInteger n, List xs],_) -> return (List (take (fromIntegral n) xs))
-      (e,_) -> error ("List.take cannot be applied (found " ++ show e ++")")),
-
-   ("List.concat", Builtin [True,True] $ \case
-      ([List xs, List ys],_) -> return (List (xs ++ ys))
-      (e,_) -> error ("List.concat cannot be applied (found " ++ show e ++")")),
-
    ("List.null", Builtin [True] $ \case
-      ([List xs],_) -> return (ConstBool (Prelude.null xs))
+      ([ListNil],_) -> return (ConstBool True)
+      ([ListCons _ _],_) -> return (ConstBool False)
       (e,_) -> error ("List.null can only be applied to a list (found " ++ show e ++")")),
 
-   ("List.cons", Builtin [False,True] $ \case
-      ([List xs],[x,_]) -> return (List (x:xs))
-      (e,_) -> error ("List.cons can only be applied to a list (found " ++ show e ++")")),
-
-   ("List.snoc", Builtin [True,False] $ \case
-      ([List xs],[_,x]) -> return (List (xs ++ [x]))
-      (e,_) -> error ("List.snoc cannot be applied (found " ++ show e ++")")),
-
-   ("List.index", Builtin [True,True] $ \case
-      ([ConstInteger i,List xs],_) -> return (Alias (xs !! fromIntegral i))
-      (e,_) -> error ("List.!! cannot be applied (found " ++ show e ++")")),
-
-   ("List.reduce", Builtin [False,True] $ \case
-      ([List []],[_,_]) -> error "List.reduce cannot be used with an empty list"
-      ([List xs],[f,_]) -> Alias . head <$> g xs
-         where
-            g :: [Node] -> IO [Node]
-            g [] = return []
-            g [a] = return [a]
-            g (a:b:rs) = do
-               fa <- newNodeIO (App f a)
-               fab <- newNodeIO (App fa b)
-               rs' <- g rs
-               g (fab:rs')
-
-      (e,_) -> error ("List.reduce cannot be applied (found " ++ show e ++")"))
+   ("List.cons", Builtin [False,False] $ \case
+      (_,[x,xs]) -> return (ListCons x xs)
+      (_,_) -> error ("List.cons can only be applied to a list"))
 
    ]
 
