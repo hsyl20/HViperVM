@@ -152,7 +152,6 @@ unsplitSharedObject som os = do
       Set.elems <$> atomically (allInstances src) >>= \case
          [] -> error "Uninitialized object accessed in read-only mode"
          srcInstance:_ -> do
-            putStrLn (show srcInstance)
             transferObject om srcInstance (MatrixObject dst)
    
    -- Attach and return instance
