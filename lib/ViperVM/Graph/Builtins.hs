@@ -3,7 +3,6 @@ module ViperVM.Graph.Builtins where
 
 import ViperVM.Graph.Graph
 import Data.Map as Map
-import Control.Applicative ( (<$>) )
 
 data Builtin = Builtin {
    evals :: [Bool],
@@ -85,7 +84,7 @@ listBuiltins = Map.fromList [
       (e,_) -> error ("List.head can only be applied to a list (found " ++ show e ++")")),
 
    ("List.tail", Builtin [True] $ \case
-      ([ListCons x xs],_) -> return (Alias xs)
+      ([ListCons _ xs],_) -> return (Alias xs)
       (e,_) -> error ("List.tail can only be applied to a list (found " ++ show e ++")")),
 
    ("List.null", Builtin [True] $ \case

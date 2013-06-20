@@ -44,7 +44,7 @@ main = do
    --myLogger <- threadSafe ((stdOutLogger <=< clocked) . filterLevel LogDebug)
    let config = Configuration {
       libraryOpenCL = "/usr/lib/libOpenCL.so",
-      logger = myLogger
+      logger = nullLogger
    }
 
    putStrLn "Initializing platform and runtime..."

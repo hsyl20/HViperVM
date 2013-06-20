@@ -101,7 +101,6 @@ splitBuiltin rt rdData writeData _ _ = do
             vn = (gh + (h-1)) `div` h
             splt x y = do
                writeData <$> allocateLinked rt filtr (MatrixSplitIdx x y) m
-            f' xs x = ListCons <$> newNodeIO x <*> newNodeIO xs
             makeList xs f = foldM (\ys y -> ListCons <$> (newNodeIO =<< f y) <*> newNodeIO ys) ListNil xs
 
          makeList (reverse [0..vn-1]) $ \y -> do
