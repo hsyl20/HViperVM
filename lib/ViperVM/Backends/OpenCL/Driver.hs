@@ -4,13 +4,13 @@ module ViperVM.Backends.OpenCL.Driver (
 
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Traversable (traverse)
+import Data.Traversable (traverse, forM)
 import Control.Applicative ( (<$>) )
-import Text.Printf
 
 import ViperVM.Platform.Configuration
 import ViperVM.Platform.LinkCapabilities
 import qualified ViperVM.Platform.Memory as PF
+import qualified ViperVM.Backends.Host.Memory as Host
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Query
 import ViperVM.Backends.OpenCL.Context
@@ -27,45 +27,48 @@ computeLinkCapabilities lib dev = do
 
 
 -- | Create links for a given device
-createLinks :: OpenCLLibrary -> CLContext -> (CLDeviceID,Memory) -> IO [Link]
-createLinks lib ctx (dev,mem) = do
+createLinks :: OpenCLLibrary -> CLContext -> [Host.Memory] -> (CLDeviceID,Memory) -> IO [Link]
+createLinks lib ctx hostMems (dev,mem) = do
    let props = [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE] -- FIXME: Ensure that out-of-order mode is supported
 
    queue <- clCreateCommandQueue lib ctx dev props
    caps <- computeLinkCapabilities lib dev
    
-   return [Link lib queue PF.HostMemory (PF.CLMemory mem) caps, 
-           Link lib queue (PF.CLMemory mem) PF.HostMemory caps,
-           Link lib queue (PF.CLMemory mem) (PF.CLMemory mem) caps]
+
+   let
+      m = PF.CLMemory mem
+      lks = concatMap (\hm -> [
+               Link lib queue (PF.HostMemory hm) m caps,
+               Link lib queue m (PF.HostMemory hm) caps]) hostMems
+
+   return (Link lib queue m m caps : lks)
 
 -- | Create processor
-createProc :: OpenCLLibrary -> Int -> CLContext -> (CLDeviceID, Int) -> IO Processor
-createProc lib pfIdx ctx (dev,devIdx) = do
-   let props = [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE] -- FIXME: Ensure that out-of-order mode is supported
-   queue <- clCreateCommandQueue lib ctx dev props
-   return (Processor lib ctx queue dev (printf "OpenCL %d %d" pfIdx devIdx))
+createProc :: OpenCLLibrary -> Int -> CLContext -> (CLDeviceID, Memory, Int) -> IO Processor
+createProc lib pfIdx ctx (dev,mem,devIdx) = do
+   initProc lib ctx dev mem (pfIdx,devIdx)
 
 -- | Initialize an OpenCL platform
-initOpenCLPlatform :: OpenCLLibrary -> (CLPlatformID,Int) -> IO ([Memory],[Link],[Processor])
-initOpenCLPlatform lib (platform,pfIdx) = do
+initOpenCLPlatform :: OpenCLLibrary -> [Host.Memory] -> (CLPlatformID,Int) -> IO ([Memory],[Link],[Processor])
+initOpenCLPlatform lib hostMems (platform,pfIdx) = do
    devices <- clGetDeviceIDs lib CL_DEVICE_TYPE_ALL platform
    context <- clCreateContext lib [CL_CONTEXT_PLATFORM platform] devices putStrLn
-   procs <- traverse (createProc lib pfIdx context) (devices `zip` [0..])
+   memories  <- forM devices (initMemory lib context)
 
-   let mems  = fmap (Memory lib context) devices
+   procs <- traverse (createProc lib pfIdx context) (zip3 devices memories [0..])
 
-   links <- concat <$> traverse (createLinks lib context) (devices `zip` mems)
+   links <- concat <$> traverse (createLinks lib context hostMems) (devices `zip` memories)
 
-   return (mems, links, procs)
+   return (memories, links, procs)
    
 
 -- | Initialize the OpenCL platform
-initOpenCL :: Configuration -> IO ([Memory],[Link],[Processor])
-initOpenCL config = do
+initOpenCL :: Configuration -> [Host.Memory] -> IO ([Memory],[Link],[Processor])
+initOpenCL config hostMems = do
    -- Load OpenCL library
    lib <- loadOpenCL (libraryOpenCL config)
    platforms <- clGetPlatformIDs lib
 
-   mlps <- traverse (initOpenCLPlatform lib) (platforms `zip` [0..])
+   mlps <- traverse (initOpenCLPlatform lib hostMems) (platforms `zip` [0..])
 
    return (foldr (\(a,b,c) (a',b',c') -> (a++a',b++b',c++c')) ([],[],[]) mlps)

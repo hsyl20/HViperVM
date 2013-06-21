@@ -26,7 +26,8 @@ import ViperVM.Platform.KernelManager
 import ViperVM.Platform.RegionTransfer
 import ViperVM.Platform.Descriptor
 import ViperVM.Platform.TransferResult
-import ViperVM.Backends.Host.Buffer as Host
+
+import qualified ViperVM.Backends.Host.Buffer as Host
 
 import Control.Monad (when)
 import Control.Concurrent.STM
@@ -204,8 +205,10 @@ transferMatrix om src dst = do
 
 pokeHostFloatMatrix :: ObjectManager -> Object -> [[Float]] -> IO ()
 pokeHostFloatMatrix _ obj@(MatrixObject m) ds = do
-   when (objectMemory obj /= HostMemory) 
-      (error "Cannot initialize a matrix that is not stored in host memory")
+
+   case objectMemory obj of
+      HostMemory _ -> return ()
+      _ -> error "Cannot initialize a matrix that is not stored in host memory"
 
    when (matrixCellType m /= Prim.Float) 
       (error "Cannot initialize the matrix: invalid cell type")
@@ -225,8 +228,9 @@ pokeHostFloatMatrix _ _ _ = error "Cannot poke the given object"
 peekHostFloatMatrix :: ObjectManager -> Object -> IO [[Float]]
 peekHostFloatMatrix _ obj@(MatrixObject m) = do
 
-   when (objectMemory obj /= HostMemory) 
-      (error "Cannot initialize a matrix that is not stored in host memory")
+   case objectMemory obj of
+      HostMemory _ -> return ()
+      _ -> error "Cannot initialize a matrix that is not stored in host memory"
 
    when (matrixCellType m /= Prim.Float) 
       (error "Cannot initialize the matrix: invalid cell type")

@@ -30,7 +30,7 @@ singleThread proc som km ch = forever $ do
       parseMsg msg
    where
       om = objectManager som
-      mem = head (processorMemories proc)
+      mem = head (procMemories proc)
       pf = getSharedObjectManagerPlatform som
 
       parseMsg :: SchedMsg -> IO ()

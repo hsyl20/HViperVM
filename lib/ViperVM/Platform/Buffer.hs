@@ -5,9 +5,9 @@
 -- Buffers are memory spaces that have been allocated in a memory
 --
 module ViperVM.Platform.Buffer (
-        Buffer(..),
-        bufferSize, bufferMemory, 
-        allocate, release
+   Buffer(..),
+   bufferSize, bufferMemory, 
+   allocate, release
 ) where
 
 import ViperVM.Platform.Memory
@@ -36,14 +36,12 @@ bufferSize (HostBuffer b) = Host.bufferSize b
 -- | Return memory into which the buffer is allocated
 bufferMemory :: Buffer -> Memory
 bufferMemory (CLBuffer b) = CLMemory (CL.bufferMemory b)
-bufferMemory (HostBuffer {}) = HostMemory
+bufferMemory (HostBuffer b) = HostMemory (Host.bufferMemory b)
 
 -- | Ttry to allocate a buffer in a memory
 allocate :: Memory -> Word64 -> IO (Maybe Buffer)
-allocate (CLMemory mem) sz = fmap CLBuffer <$> CL.bufferAllocate mem sz
-allocate HostMemory sz = fmap HostBuffer <$> Host.bufferAllocate HostMemory sz
-
-
+allocate (CLMemory m) sz = fmap CLBuffer <$> CL.bufferAllocate m sz
+allocate (HostMemory m) sz = fmap HostBuffer <$> Host.bufferAllocate m sz
 
 -- | Release a buffer
 release :: Buffer -> IO ()

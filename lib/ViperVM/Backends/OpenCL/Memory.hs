@@ -1,34 +1,37 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module ViperVM.Backends.OpenCL.Memory(
-   Memory(..), 
-   memoryGlobalSize, memoryName,
-  -- * Memory Functions
-  clCreateBuffer, clRetainMemObject, clReleaseMemObject, clGetMemType, 
-  clGetMemFlags, clGetMemSize, clGetMemHostPtr, clGetMemMapCount, 
-  clGetMemReferenceCount, clGetMemContext, clCreateFromGLBuffer,
-  -- * Image Functions
-  clCreateImage2D, clCreateImage3D, clCreateFromGLTexture2D,
-  clGetSupportedImageFormats, clGetImageFormat, clGetImageElementSize, 
-  clGetImageRowPitch, clGetImageSlicePitch, clGetImageWidth, clGetImageHeight, 
-  clGetImageDepth,
-  -- * Sampler Functions
-  clCreateSampler, clRetainSampler, clReleaseSampler, clGetSamplerReferenceCount, 
-  clGetSamplerContext, clGetSamplerAddressingMode, clGetSamplerFilterMode, 
-  clGetSamplerNormalizedCoords
-  ) where
+   Memory, initMemory,
+   memoryLibrary, memoryDevice, memoryContext,
+   memorySize, memoryName,
+   -- * Memory Functions
+   clCreateBuffer, clRetainMemObject, clReleaseMemObject, clGetMemType, 
+   clGetMemFlags, clGetMemSize, clGetMemHostPtr, clGetMemMapCount, 
+   clGetMemReferenceCount, clGetMemContext, clCreateFromGLBuffer,
+   -- * Image Functions
+   clCreateImage2D, clCreateImage3D, clCreateFromGLTexture2D,
+   clGetSupportedImageFormats, clGetImageFormat, clGetImageElementSize, 
+   clGetImageRowPitch, clGetImageSlicePitch, clGetImageWidth, clGetImageHeight, 
+   clGetImageDepth,
+   -- * Sampler Functions
+   clCreateSampler, clRetainSampler, clReleaseSampler, clGetSamplerReferenceCount, 
+   clGetSamplerContext, clGetSamplerAddressingMode, clGetSamplerFilterMode, 
+   clGetSamplerNormalizedCoords
+) where
 
--- -----------------------------------------------------------------------------
 import Foreign
 import Foreign.C.Types
 import ViperVM.Backends.OpenCL.Types
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Query
+import Control.Applicative ( (<$>) )
 
 
 data Memory = Memory {
    memoryLibrary :: OpenCLLibrary,
    memoryContext :: CLContext,
-   memoryDevice  :: CLDeviceID
+   memoryDevice  :: CLDeviceID,
+   memorySize    :: Word64,
+   memoryName    :: String
 }
 
 instance Eq Memory where
@@ -38,18 +41,14 @@ instance Ord Memory where
    compare a b = compare (memoryDevice a) (memoryDevice b)
 
 instance Show Memory where
-   show m = "(" ++ show (memoryDevice m) ++ ")"
+   show m = "OpenCL Memory " ++ show (memoryDevice m)
 
 
-memoryGlobalSize :: Memory -> IO Word64
-memoryGlobalSize m = clGetDeviceGlobalMemSize (memoryLibrary m) (memoryDevice m)
-
-memoryName :: Memory -> IO String
-memoryName m = clGetDeviceName (memoryLibrary m) (memoryDevice m)
-
-
-
-
+initMemory :: OpenCLLibrary -> CLContext -> CLDeviceID -> IO Memory
+initMemory lib ctx dev = do
+   size <- fromIntegral <$> clGetDeviceGlobalMemSize lib dev
+   name <- clGetDeviceName lib dev
+   return (Memory lib ctx dev size name)
 
 
 clCreateBuffer :: Integral a => OpenCLLibrary -> CLContext -> [CLMemFlag] -> (a, Ptr ()) -> IO CLMem

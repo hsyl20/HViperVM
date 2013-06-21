@@ -3,13 +3,16 @@ module ViperVM.Backends.Host.Driver (
 ) where
 
 import ViperVM.Platform.Configuration
-import ViperVM.Platform.LinkCapabilities
-import qualified Data.Set as Set
+import qualified ViperVM.Platform.Memory as PF
+
 import ViperVM.Backends.Host.Link
+import ViperVM.Backends.Host.Memory
 
-initHost :: Configuration -> IO [Link]
+-- | Initialize host driver
+initHost :: Configuration -> IO ([Memory], [Link])
 initHost _ = do
-   let caps = Set.fromList [Transfer2D]
-       link = Link caps
 
-   return [link]
+   m <- initMemory
+   let l = initLink (PF.HostMemory m)
+
+   return ([m],[l])

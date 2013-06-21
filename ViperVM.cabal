@@ -25,6 +25,7 @@ library
   exposed-modules:     
     ViperVM
 
+    ViperVM.Backends.Host.Memory
     ViperVM.Backends.Host.Buffer
     ViperVM.Backends.Host.Link
     ViperVM.Backends.Host.Driver
@@ -123,6 +124,9 @@ library
     stm ==2.4.*,
     monad-loops,
     parsec,
+    text,
+    bytestring,
+    split,
     vector,
     clock
 

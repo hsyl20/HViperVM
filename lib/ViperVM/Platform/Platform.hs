@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Platform (
    Platform, Configuration(..),
-   initPlatform, platformInfo,
+   initPlatform, platformInfo, hostMemories,
    memories, links, processors, configuration,
    customLog, errorLog, debugLog
 ) where
@@ -14,8 +14,7 @@ import ViperVM.Platform.Processor
 import ViperVM.Platform.Logger
 import ViperVM.Platform.Configuration
 
-import Data.Traversable
-import Control.Applicative
+import Text.Printf
 
 -- | A computing platform
 data Platform = Platform {
@@ -30,25 +29,33 @@ initPlatform :: Configuration -> IO Platform
 initPlatform config = do
 
    -- Initialize Host driver
-   hostLinks <- initHost config
+   (hostMems,hostLinks) <- initHost config
 
    -- Initialize OpenCL driver
-   (clMems,clLinks,clProcs) <- initOpenCL config
+   (clMems,clLinks,clProcs) <- initOpenCL config hostMems
 
-   let mems = HostMemory : fmap CLMemory clMems 
-       lnks = fmap HostLink hostLinks ++ fmap CLLink clLinks
+   let mems = fmap HostMemory hostMems ++ fmap CLMemory clMems 
+       lnks = fmap HostLink hostLinks  ++ fmap CLLink clLinks
        procs = fmap CLProcessor clProcs
 
    return $ Platform mems lnks procs config
 
 -- | Retrieve platform information string
-platformInfo :: Platform -> IO String
-platformInfo pf = do
-  procs <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse procInfo (processors pf)
-  mems <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse memoryInfo (memories pf)
-  lks <- concatMap (\x -> "  - " ++ x ++ "\n") <$> traverse linkInfo (links pf)
-  return ("Processors:\n" ++ procs ++ "Memories:\n" ++ mems ++ "Links:\n" ++ lks)
+platformInfo :: Platform -> String
+platformInfo pf = printf "Processors:\n%sMemories\n%sLinks\n%s" procs mems lks
+   where
+     procs = f $ fmap procInfo (processors pf)
+     mems = f $ fmap memoryInfo (memories pf)
+     lks = f $ fmap linkInfo (links pf)
+     f :: [String] -> String
+     f = concatMap (\x -> printf "  - %s\n" x)
 
+-- |  Retrieve host memories
+hostMemories :: Platform -> [Memory]
+hostMemories pf = filter f (memories pf)
+   where
+      f (HostMemory _) = True
+      f _ = False
 
 -- | Put custom message in log
 customLog :: Platform -> String -> IO ()

@@ -8,7 +8,7 @@ module ViperVM.Platform.Runtime (
       allocateLinked, unsplit
    ) where
 
-import ViperVM.Platform (Platform)
+import ViperVM.Platform (Platform,hostMemories)
 import ViperVM.Platform.Memory
 import ViperVM.Graph.Graph
 import ViperVM.Graph.Builtins
@@ -85,7 +85,8 @@ pokeFloatMatrix' rt desc ds = do
 
    so <- allocate rt desc
    
-   Just o <- allocateMatrixObject om HostMemory prim w h 0
+   let hostMem = head . hostMemories $ platform rt
+   Just o <- allocateMatrixObject om hostMem prim w h 0
 
    case ds of
       Just ds' -> pokeHostFloatMatrix om o ds'
@@ -107,7 +108,8 @@ peekFloatMatrix rt so = do
       som = sharedObjectManager rt
       om = objectManager rt
 
-   obj <- ensureInMemory som HostMemory so
+   let hostMem = head . hostMemories $ platform rt
+   obj <- ensureInMemory som hostMem so
    peekHostFloatMatrix om obj
 
 

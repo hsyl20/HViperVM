@@ -1,5 +1,5 @@
 module ViperVM.Platform.Processor (
-   Processor(..), procInfo, processorMemories,
+   Processor(..), procInfo, procMemories,
    procName, procVendor, procID, procSupports
 ) where
 
@@ -7,7 +7,6 @@ import ViperVM.Platform.Memory
 import ViperVM.Platform.ProcessorCapabilities
 import qualified ViperVM.Backends.OpenCL.Processor as CL
 
-import Control.Applicative ( (<$>), (<*>) )
 import Text.Printf
 
 -- | A processing unit
@@ -23,11 +22,11 @@ instance Show Processor where
    show (CLProcessor p) = show p
 
 -- | Return processor name
-procName :: Processor -> IO String
+procName :: Processor -> String
 procName (CLProcessor p) = CL.procName p
 
 -- | Return processor vendor
-procVendor :: Processor -> IO String
+procVendor :: Processor -> String
 procVendor (CLProcessor p) = CL.procVendor p
 
 -- | Return processor ID
@@ -35,12 +34,17 @@ procID :: Processor -> String
 procID (CLProcessor p) = CL.procID p
 
 -- | Get processor information string
-procInfo :: Processor -> IO String
-procInfo proc = printf "%s %s (%s)" (procID proc) <$> procName proc <*> procVendor proc
+procInfo :: Processor -> String
+procInfo proc = printf "%s %s (%s)" (procID proc) (procName proc) (procVendor proc)
 
 -- | Retrieve memories attached to a given processor
-processorMemories :: Processor -> [Memory]
-processorMemories (CLProcessor p) = fmap CLMemory (CL.procMemories p)
+procMemories :: Processor -> [Memory]
+procMemories (CLProcessor p) = fmap CLMemory (CL.procMemories p)
 
+-- | Retrieve processor capabilities
+procCapabilities :: Processor -> [ProcessorCapability]
+procCapabilities (CLProcessor p) = CL.procCapabilities p
+
+-- | Indicates if a processor supports a given capability
 procSupports :: Processor -> ProcessorCapability -> Bool
-procSupports (CLProcessor p) = CL.procSupports p
+procSupports p cap = cap `elem` procCapabilities p

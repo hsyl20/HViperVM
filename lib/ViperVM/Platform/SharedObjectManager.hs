@@ -87,10 +87,13 @@ allocateTransferAttach som so src dstMem = do
    -- Allocate destination
    dst <- allocateInstance som so dstMem
 
+
    -- Intermediate steps
    steps <- if indirectTransfer
       then do
-         ho <- allocateInstance som so HostMemory -- Use host memory as intermediate
+         -- Use host memory as intermediate
+         let hostMem = head . hostMemories $ getSharedObjectManagerPlatform som
+         ho <- allocateInstance som so hostMem 
          return [ho,dst]
       else return [dst]
 
@@ -141,7 +144,8 @@ unsplitSharedObject som os = do
    so <- atomically (allocateSharedObject som desc)
 
    -- Allocate instance in host memory (FIXME we could improve this)
-   MatrixObject m <- allocateInstance som so HostMemory
+   let hostMem = head . hostMemories $ getSharedObjectManagerPlatform som
+   MatrixObject m <- allocateInstance som so hostMem
    let ms = matrixSplit m w h
 
    let srcDst = zip (concat os) (concat ms)

@@ -37,11 +37,12 @@ module ViperVM.Backends.OpenCL.Query(
 
 -- -----------------------------------------------------------------------------
 import Foreign( Ptr, nullPtr, castPtr, alloca, allocaArray, peek, peekArray )
-import Foreign.C.String( CString, peekCString )
+import Foreign.C.String( CString, peekCString, peekCStringLen)
 import Foreign.C.Types( CSize )
 import Foreign.Storable( sizeOf )
 import Control.Applicative ( (<$>) )
 import Data.Maybe (isNothing)
+import Data.List.Split
 import Text.ParserCombinators.Parsec hiding (spaces)
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Types( 
@@ -116,7 +117,7 @@ getDeviceInfoString lib infoid device = do
   n <- getDeviceInfoSize lib device infoid
   allocaArray (fromIntegral n) $ \(buff :: CString) -> do
     whenSuccess (rawClGetDeviceInfo lib device infoid n (castPtr buff) nullPtr)
-      $ peekCString buff
+      $ peekCStringLen (buff, fromIntegral n)
   
 getDeviceInfoUint :: OpenCLLibrary -> CLDeviceInfo_ -> CLDeviceID -> IO CLuint
 getDeviceInfoUint lib infoid device = alloca $ \(dat :: Ptr CLuint) -> do
@@ -449,8 +450,9 @@ clGetDeviceExecutionCapabilities lib device = do
   return . bitmaskToExecCapability $ flags
 
 -- | This function execute OpenCL clGetDeviceInfo with 'CL_DEVICE_EXTENSIONS'.
-clGetDeviceExtensions :: OpenCLLibrary -> CLDeviceID -> IO String
-clGetDeviceExtensions lib = (getDeviceInfoString lib) . getCLValue $ CL_DEVICE_EXTENSIONS
+clGetDeviceExtensions :: OpenCLLibrary -> CLDeviceID -> IO [String]
+clGetDeviceExtensions lib dev =
+   splitOn " " <$> getDeviceInfoString lib (getCLValue CL_DEVICE_EXTENSIONS) dev
 
 -- | Size of global memory cache in bytes.
 --

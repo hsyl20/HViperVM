@@ -2,28 +2,35 @@ module ViperVM.Platform.Memory (
    Memory(..), memoryName, memoryInfo
 ) where
 
+import qualified ViperVM.Backends.Host.Memory as Host
 import qualified ViperVM.Backends.OpenCL.Memory as CL
 import Text.Printf
+import Data.Word
 
 -- | A memory node
-data Memory = HostMemory
+data Memory = HostMemory Host.Memory
             | CLMemory CL.Memory
             deriving (Eq,Ord,Show)
 
 data Unit = Base | Kilo | Mega | Giga | Tera | Peta deriving (Show)
 
 -- | Retrieve memory information string
-memoryInfo :: Memory -> IO String
-memoryInfo HostMemory = return "[Host] Host Memory"
-memoryInfo (CLMemory m) = do
-  sz <- CL.memoryGlobalSize m
-  devName <- CL.memoryName m
-  return $ printf "[OpenCL] Memory %sBytes (%s)" (prettyShowSize (fromIntegral sz) Base) devName
+memoryInfo :: Memory -> String
+memoryInfo m = printf "%s - %s" (memoryName m) (prettyMemorySize m)
 
 -- | Retrieve memory name
-memoryName :: Memory -> IO String
-memoryName HostMemory = return "Host Memory"
+memoryName :: Memory -> String
+memoryName (HostMemory m) = Host.memoryName m
 memoryName (CLMemory m) = CL.memoryName m
+
+-- | Retrieve memory size
+memorySize :: Memory -> Word64
+memorySize (HostMemory m) = Host.memorySize m
+memorySize (CLMemory m) = CL.memorySize m
+
+-- | Pretty print memory size
+prettyMemorySize :: Memory -> String
+prettyMemorySize m = prettyShowSize (fromIntegral (memorySize m)) Base
 
 -- | Pretty print a size
 prettyShowSize :: Double -> Unit -> String

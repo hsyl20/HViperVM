@@ -14,4 +14,4 @@ main = do
   platform <- initPlatform config
 
   putStrLn "Querying platform infos..."
-  putStr =<< platformInfo platform
+  putStrLn (platformInfo platform)
