@@ -50,7 +50,7 @@ platformInfo pf = printf "Processors:\n%sMemories\n%sLinks\n%s" procs mems lks
      lks = f $ fmap linkInfo (links pf)
 
      f :: [String] -> String
-     f = intercalate "\n" . fmap (\x -> printf "  - %s\n" x)
+     f = intercalate "\n" . fmap (\x -> printf "  - %s" x)
 
 -- |  Retrieve host memories
 hostMemories :: Platform -> [Memory]
