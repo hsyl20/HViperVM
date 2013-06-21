@@ -7,6 +7,7 @@ import ViperVM.Platform.Memory
 import ViperVM.Platform.ProcessorCapabilities
 import qualified ViperVM.Backends.OpenCL.Processor as CL
 
+import Data.Set (Set, member)
 import Text.Printf
 
 -- | A processing unit
@@ -42,9 +43,9 @@ procMemories :: Processor -> [Memory]
 procMemories (CLProcessor p) = fmap CLMemory (CL.procMemories p)
 
 -- | Retrieve processor capabilities
-procCapabilities :: Processor -> [ProcessorCapability]
+procCapabilities :: Processor -> Set ProcessorCapability
 procCapabilities (CLProcessor p) = CL.procCapabilities p
 
 -- | Indicates if a processor supports a given capability
 procSupports :: Processor -> ProcessorCapability -> Bool
-procSupports p cap = cap `elem` procCapabilities p
+procSupports p cap = cap `member` procCapabilities p

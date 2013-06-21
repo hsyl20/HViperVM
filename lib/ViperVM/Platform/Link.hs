@@ -50,6 +50,7 @@ linkTarget (HostLink l) = Host.linkTarget l
 linksBetween :: Memory -> Memory -> [Link] -> [Link]
 linksBetween m1 m2 = filter ((==) (m1,m2) . linkEndpoints)
 
+-- | Retrieve link capabilities
 linkCapabilities :: Link -> Set LinkCapability
 linkCapabilities (CLLink l) = CL.linkCapabilities l
 linkCapabilities (HostLink l) = Host.linkCapabilities l

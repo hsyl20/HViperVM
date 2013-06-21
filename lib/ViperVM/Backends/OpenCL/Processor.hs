@@ -12,6 +12,7 @@ import ViperVM.Backends.OpenCL.Memory
 import ViperVM.Backends.OpenCL.CommandQueue
 import ViperVM.Platform.ProcessorCapabilities
 
+import Data.Set (Set,fromList)
 import Text.Printf
 
 data Processor = Processor {
@@ -23,7 +24,7 @@ data Processor = Processor {
    procName    :: String,
    procVendor  :: String,
    procMemories :: [Memory],
-   procCapabilities :: [ProcessorCapability]
+   procCapabilities :: Set ProcessorCapability
 }
 
 instance Eq Processor where
@@ -35,6 +36,7 @@ instance Ord Processor where
 instance Show Processor where
   show p = "{" ++ procID p ++ "}"
 
+-- | Initialize an OpenCL processor
 initProc :: OpenCLLibrary -> CLContext -> CLDeviceID -> Memory -> (Int,Int) -> IO Processor
 initProc lib ctx dev mem (pfIdx,devIdx) = do
    -- FIXME: Ensure that out-of-order mode is supported
@@ -58,10 +60,11 @@ initProc lib ctx dev mem (pfIdx,devIdx) = do
       procCapabilities = caps
    }
 
-retrieveCapabilities :: OpenCLLibrary -> CLDeviceID -> IO [ProcessorCapability]
+-- | Retrieve capabilities of an OpenCL processor
+retrieveCapabilities :: OpenCLLibrary -> CLDeviceID -> IO (Set ProcessorCapability)
 retrieveCapabilities lib dev = do
    extensions <- clGetDeviceExtensions lib dev
-   return $
+   return . fromList $
       if "cl_khr_fp64" `elem` extensions 
          then [DoubleFloatingPoint]
          else []
