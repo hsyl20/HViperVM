@@ -43,7 +43,7 @@ initPlatform config = do
 
 -- | Retrieve platform information string
 platformInfo :: Platform -> String
-platformInfo pf = printf "Processors:\n%sMemories\n%sLinks\n%s" procs mems lks
+platformInfo pf = printf "Processors:\n%s\nMemories\n%s\nLinks\n%s" procs mems lks
    where
      procs = f $ fmap procInfo (processors pf)
      mems = f $ fmap memoryInfo (memories pf)
