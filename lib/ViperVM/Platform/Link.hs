@@ -22,18 +22,16 @@ instance Show Link where
   show (CLLink l) = show l
   show (HostLink l) = show l
 
+
 -- | Retrieve link information string
 linkInfo :: Link -> String
-linkInfo l@(CLLink {}) = linkInfo' "OpenCL" l
-linkInfo l@(HostLink {}) = linkInfo' "Host" l
-
-linkInfo' :: String -> Link -> String
-linkInfo' s l = printf "[%s] Link between:\n      - %s\n      - %s" s name1 name2
+linkInfo l = if linkSource l == linkTarget l 
+      then printf "Loopback link in %s" name1
+      else printf "Link between %s and %s" name1 name2
    where
       name1 = memoryName (linkSource l)
       name2 = memoryName (linkTarget l)
-
-
+      
 -- | Get memories at each end of a link
 linkEndpoints :: Link -> (Memory,Memory)
 linkEndpoints = linkSource &&& linkTarget
