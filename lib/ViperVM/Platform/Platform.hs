@@ -14,6 +14,7 @@ import ViperVM.Platform.Processor
 import ViperVM.Platform.Logger
 import ViperVM.Platform.Configuration
 
+import Data.List
 import Text.Printf
 
 -- | A computing platform
@@ -47,8 +48,9 @@ platformInfo pf = printf "Processors:\n%sMemories\n%sLinks\n%s" procs mems lks
      procs = f $ fmap procInfo (processors pf)
      mems = f $ fmap memoryInfo (memories pf)
      lks = f $ fmap linkInfo (links pf)
+
      f :: [String] -> String
-     f = concatMap (\x -> printf "  - %s\n" x)
+     f = intercalate "\n" . fmap (printf "  - %s")
 
 -- |  Retrieve host memories
 hostMemories :: Platform -> [Memory]
