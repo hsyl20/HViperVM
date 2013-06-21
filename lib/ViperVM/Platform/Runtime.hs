@@ -1,15 +1,14 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Runtime (
-      Runtime,
-      initRuntime, allocate, release, releaseMany,
-      peekFloatMatrix, pokeFloatMatrix, pokeDummyFloatMatrix,
-      execute, platform, scheduler,
-      loadBuiltin, loadBuiltins, MakeBuiltin, readData, dataBuiltin,
-      allocateLinked, unsplit
-   ) where
+   Runtime,
+   initRuntime, allocate, release, releaseMany,
+   peekFloatMatrix, pokeFloatMatrix, pokeDummyFloatMatrix,
+   execute, platform, scheduler,
+   loadBuiltin, loadBuiltins, MakeBuiltin, readData, dataBuiltin,
+   allocateLinked, unsplit
+) where
 
 import ViperVM.Platform (Platform,hostMemories)
-import ViperVM.Platform.Memory
 import ViperVM.Graph.Graph
 import ViperVM.Graph.Builtins
 import ViperVM.Platform.Scheduler
