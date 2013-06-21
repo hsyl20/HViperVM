@@ -23,14 +23,12 @@ data-files:
 
 library
   exposed-modules:     
-    ViperVM
 
     ViperVM.Backends.Host.Memory
     ViperVM.Backends.Host.Buffer
     ViperVM.Backends.Host.Link
     ViperVM.Backends.Host.Driver
 
-    ViperVM.Backends.OpenCL
     ViperVM.Backends.OpenCL.Driver
     ViperVM.Backends.OpenCL.Buffer
     ViperVM.Backends.OpenCL.Processor
