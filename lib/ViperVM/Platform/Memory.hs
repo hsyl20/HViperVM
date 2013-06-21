@@ -12,7 +12,15 @@ data Memory = HostMemory Host.Memory
             | CLMemory CL.Memory
             deriving (Eq,Ord,Show)
 
-data Unit = Base | Kilo | Mega | Giga | Tera | Peta deriving (Show)
+data Unit = Base | Kilo | Mega | Giga | Tera | Peta 
+
+instance Show Unit where
+   show Base = "bytes"
+   show Kilo = "kB"
+   show Mega = "MB"
+   show Giga = "GB"
+   show Tera = "TB"
+   show Peta = "PB"
 
 -- | Retrieve memory information string
 memoryInfo :: Memory -> String
