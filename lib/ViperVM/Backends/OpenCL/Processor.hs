@@ -46,16 +46,14 @@ initProc lib ctx dev mem (pfIdx,devIdx) = do
    let pid = printf "OpenCL %d %d" pfIdx devIdx
    caps <- retrieveCapabilities lib dev
 
-   let trim = dropWhile (\x -> x == ' ' || x == '\t')
-
    return $ Processor {
       procLibrary = lib,
       procContext = ctx,
       procDevice = dev,
       procQueue = cq,
       procID = pid,
-      procName = trim name,
-      procVendor = trim vendor,
+      procName = name,
+      procVendor = vendor,
       procMemories = [mem],
       procCapabilities = caps
    }

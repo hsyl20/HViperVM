@@ -53,7 +53,9 @@ import ViperVM.Backends.OpenCL.Types(
   getCLValue, getEnumCL, bitmaskToDeviceTypes, bitmaskToCommandQueueProperties, 
   whenSuccess, wrapCheckSuccess, bitmaskToFPConfig, bitmaskToExecCapability )
 
--- -----------------------------------------------------------------------------
+
+trim :: String -> String
+trim = dropWhile (\x -> x == ' ' || x == '\t')
 
 getNumPlatforms :: OpenCLLibrary -> IO CLuint
 getNumPlatforms lib = alloca $ \(num_platforms :: Ptr CLuint) -> do 
@@ -680,7 +682,7 @@ clGetDeviceMinDataTypeAlignSize lib = (getDeviceInfoUint lib) . getCLValue $ CL_
 --
 -- This function execute OpenCL clGetDeviceInfo with 'CL_DEVICE_NAME'.
 clGetDeviceName :: OpenCLLibrary -> CLDeviceID -> IO String
-clGetDeviceName lib = (getDeviceInfoString lib) . getCLValue $ CL_DEVICE_NAME
+clGetDeviceName lib dev = trim <$> getDeviceInfoString lib (getCLValue CL_DEVICE_NAME) dev
 
 -- | The platform associated with this device.
 --
@@ -805,7 +807,7 @@ clGetDeviceType lib device = do
 --
 -- This function execute OpenCL clGetDeviceInfo with 'CL_DEVICE_VENDOR'.
 clGetDeviceVendor :: OpenCLLibrary -> CLDeviceID -> IO String
-clGetDeviceVendor lib = (getDeviceInfoString lib) . getCLValue $ CL_DEVICE_VENDOR
+clGetDeviceVendor lib dev = trim <$> getDeviceInfoString lib (getCLValue CL_DEVICE_VENDOR) dev
 
 -- | A unique device vendor identifier. An example of a unique device identifier 
 -- could be the PCIe ID.
