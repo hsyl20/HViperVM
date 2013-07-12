@@ -50,23 +50,27 @@ library
     ViperVM.Platform.Peer.MemoryPeer
     ViperVM.Platform.Peer.ProcPeer
     ViperVM.Platform.Peer.PlatformPeer
+    ViperVM.Platform.Peer.ProgramPeer
+    ViperVM.Platform.Peer.KernelPeer
+
     ViperVM.Platform.LinkCapabilities
     ViperVM.Platform.ProcessorCapabilities
-
     ViperVM.Platform.Memory
     ViperVM.Platform.Link
     ViperVM.Platform.Proc
     ViperVM.Platform.Platform
     ViperVM.Platform.Configuration
+    ViperVM.Platform.Kernel
+    ViperVM.Platform.Compilation
+    ViperVM.Platform.Source
+    ViperVM.Platform.Program
     ViperVM.Platform
 
---    ViperVM.Platform.Compilation
 --    ViperVM.Platform.BufferManager
 --    ViperVM.Platform.KernelParameter
 --    ViperVM.Platform.TransferResult
 --    ViperVM.Platform.Descriptor
 --    ViperVM.Platform.Scheduler
---    ViperVM.Platform.Kernel
 --    ViperVM.Platform.KernelConstraint
 --    ViperVM.Platform.KernelExecutionResult
 --    ViperVM.Platform.KernelManager

@@ -2,7 +2,8 @@ module ViperVM.Backends.OpenCL.Processor (
    Processor, initProc,
    procLibrary, procContext, procDevice,
    procQueue, procID, procName, procVendor,
-   procCapabilities, procMemories
+   procCapabilities, procMemories,
+   programCompile
 ) where
 
 import ViperVM.Backends.OpenCL.Types
@@ -11,6 +12,7 @@ import ViperVM.Backends.OpenCL.Query
 import ViperVM.Backends.OpenCL.CommandQueue
 import ViperVM.Backends.OpenCL.Memory
 import ViperVM.Platform.ProcessorCapabilities
+import ViperVM.Platform.Compilation
 
 import Data.Set (Set,fromList)
 import Text.Printf
@@ -71,3 +73,9 @@ retrieveCapabilities lib dev = do
 -- | Retrieve attached memory
 procMemories :: Processor -> IO [Memory]
 procMemories p = return <$> initMemory (procLibrary p) (procContext p) (procDevice p)
+
+
+-- | Compile a program
+programCompile :: CLProgram -> [Processor] -> IO [CompilationResult]
+programCompile p procs = undefined
+
