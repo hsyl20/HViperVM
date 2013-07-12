@@ -43,67 +43,69 @@ library
     ViperVM.Backends.OpenCL.Query
     ViperVM.Backends.OpenCL.Types
 
-    ViperVM.Platform
-    ViperVM.Platform.Buffer
-    ViperVM.Platform.Configuration
-    ViperVM.Platform.BufferManager
-    ViperVM.Platform.LinkCapabilities
-    ViperVM.Platform.KernelParameter
-    ViperVM.Platform.TransferResult
-    ViperVM.Platform.Descriptor
-    ViperVM.Platform.Scheduler
-    ViperVM.Platform.Kernel
-    ViperVM.Platform.KernelConstraint
-    ViperVM.Platform.KernelExecutionResult
-    ViperVM.Platform.KernelManager
+--    ViperVM.Platform
+--    ViperVM.Platform.Configuration
+--    ViperVM.Platform.Compilation
+--    ViperVM.Platform.BufferManager
+--    ViperVM.Platform.LinkCapabilities
+--    ViperVM.Platform.KernelParameter
+--    ViperVM.Platform.TransferResult
+--    ViperVM.Platform.Descriptor
+--    ViperVM.Platform.Scheduler
+--    ViperVM.Platform.Kernel
+--    ViperVM.Platform.KernelConstraint
+--    ViperVM.Platform.KernelExecutionResult
+--    ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
-    ViperVM.Platform.LockMode
+    ViperVM.Platform.LinkPeer
+--    ViperVM.Platform.LockMode
     ViperVM.Platform.Memory
-    ViperVM.Platform.Object
-    ViperVM.Platform.ObjectKernel
-    ViperVM.Platform.ObjectManager
-    ViperVM.Platform.Platform
-    ViperVM.Platform.Primitive
-    ViperVM.Platform.Processor
-    ViperVM.Platform.ProcessorCapabilities
-    ViperVM.Platform.Region
-    ViperVM.Platform.RegionLockManager
-    ViperVM.Platform.RegionTransfer
-    ViperVM.Platform.RegionTransferManager
-    ViperVM.Platform.Runtime
-    ViperVM.Platform.Logger
-    ViperVM.Platform.SharedObject
-    ViperVM.Platform.SharedObjectManager
-    ViperVM.Platform.Event
-    ViperVM.Platform.Objects.Vector
-    ViperVM.Platform.Objects.Matrix
+    ViperVM.Platform.MemoryPeer
+--    ViperVM.Platform.Object
+--    ViperVM.Platform.ObjectKernel
+--    ViperVM.Platform.ObjectManager
+--    ViperVM.Platform.Platform
+--    ViperVM.Platform.Primitive
+--    ViperVM.Platform.Processor
+--    ViperVM.Platform.ProcessorCapabilities
+--    ViperVM.Platform.Region
+--    ViperVM.Platform.RegionLockManager
+--    ViperVM.Platform.RegionTransfer
+--    ViperVM.Platform.RegionTransferManager
+--    ViperVM.Platform.Runtime
+--    ViperVM.Platform.Logger
+--    ViperVM.Platform.SharedObject
+--    ViperVM.Platform.SharedObjectManager
+--    ViperVM.Platform.Event
+--    ViperVM.Platform.Objects.Vector
+--    ViperVM.Platform.Objects.Matrix
 
 
-    ViperVM.Scheduling.Single
-    ViperVM.Scheduling.RoundRobin
-    ViperVM.Scheduling.Eager
-
-    ViperVM.UserInterface
-
-    ViperVM.Graph.Graph
-    ViperVM.Graph.ParallelReducer
-    ViperVM.Graph.Builtins
-
+--    ViperVM.Scheduling.Single
+--    ViperVM.Scheduling.RoundRobin
+--    ViperVM.Scheduling.Eager
+--
+--    ViperVM.UserInterface
+--
+--    ViperVM.Graph.Graph
+--    ViperVM.Graph.ParallelReducer
+--    ViperVM.Graph.Builtins
+--
     ViperVM.STM.Common
     ViperVM.STM.TSet
     ViperVM.STM.TList
     ViperVM.STM.TMap
     ViperVM.STM.TIntSet
-
-    ViperVM.Library.FloatMatrixAdd
-    ViperVM.Library.FloatMatrixSub
-    ViperVM.Library.FloatMatrixMul
-    ViperVM.Library.FloatMatrixTranspose
-    ViperVM.Library.FloatMatrixPotrf
-    ViperVM.Library.FloatMatrixTrsm
-
-    ViperVM.Parsing.Parser
-    ViperVM.Parsing.Lisp
+--
+--    ViperVM.Library.FloatMatrixAdd
+--    ViperVM.Library.FloatMatrixSub
+--    ViperVM.Library.FloatMatrixMul
+--    ViperVM.Library.FloatMatrixTranspose
+--    ViperVM.Library.FloatMatrixPotrf
+--    ViperVM.Library.FloatMatrixTrsm
+--
+--    ViperVM.Parsing.Parser
+--    ViperVM.Parsing.Lisp
 
   other-modules:
     Paths_ViperVM

@@ -5,7 +5,7 @@ module ViperVM.Platform.Objects.Matrix (
    matrixSubMatrix, matrixSubMatrixTrim, matrixSplit
 ) where
 
-import ViperVM.Platform.Buffer
+import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.Primitive
 

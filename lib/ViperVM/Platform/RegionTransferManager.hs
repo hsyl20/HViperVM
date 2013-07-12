@@ -6,7 +6,7 @@ module ViperVM.Platform.RegionTransferManager (
 ) where
 
 import ViperVM.Platform.Platform
-import ViperVM.Platform.Buffer
+import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.RegionLockManager
 import ViperVM.Platform.RegionTransfer

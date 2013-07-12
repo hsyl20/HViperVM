@@ -3,7 +3,7 @@ module ViperVM.Platform.Objects.Vector (
    createVector, vectorBuffer, vectorRegion, vectorCellType, vectorSize,
 ) where
 
-import ViperVM.Platform.Buffer
+import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.Primitive
 

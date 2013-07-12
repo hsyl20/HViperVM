@@ -17,8 +17,8 @@ data Buffer = Buffer {
    bufferMemory :: Memory
 } deriving (Eq,Ord)
 
-bufferAllocate :: Memory -> Word64 -> IO (Maybe Buffer)
-bufferAllocate m sz = do
+bufferAllocate :: Word64 -> Memory -> IO (Maybe Buffer)
+bufferAllocate sz m = do
    ptr <- mallocBytes (fromIntegral sz)
    return $ if ptr == nullPtr 
       then Nothing 

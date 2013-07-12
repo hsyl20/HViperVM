@@ -6,10 +6,13 @@ module ViperVM.Platform.Platform (
    customLog, errorLog, debugLog
 ) where
 
-import ViperVM.Backends.Host.Driver
-import ViperVM.Backends.OpenCL.Driver
+import qualified ViperVM.Backends.Host.Driver as Host
+import qualified ViperVM.Backends.OpenCL.Driver as CL
+
 import ViperVM.Platform.Memory
+import ViperVM.Platform.MemoryPeer
 import ViperVM.Platform.Link
+import ViperVM.Platform.LinkPeer
 import ViperVM.Platform.Processor
 import ViperVM.Platform.Logger
 import ViperVM.Platform.Configuration
@@ -30,16 +33,29 @@ initPlatform :: Configuration -> IO Platform
 initPlatform config = do
 
    -- Initialize Host driver
-   (hostMems,hostLinks) <- initHost config
+   (hostMems,hostLinks) <- Host.initHost config
+
+   let hostMemsPeer = fmap HostMemory hostMems
+       hostLinksPeer = fmap HostLink hostLinks
 
    -- Initialize OpenCL driver
    (clMems,clLinks,clProcs) <- initOpenCL config hostMems
 
-   let mems = fmap HostMemory hostMems ++ fmap CLMemory clMems 
-       lnks = fmap HostLink hostLinks  ++ fmap CLLink clLinks
-       procs = fmap CLProcessor clProcs
+   let clMemsPeer = fmap CLMemory clMems
+       clLinksPeer = fmap CLLink clLinks
+       clProcsPeer = fmap CLProcessor clProcs
 
-   return $ Platform mems lnks procs config
+   -- Wrap entities
+   let memsPeer = hostMemsPeer ++ clMemsPeer
+       linksPeer = hostLinksPeer ++ clLinksPeer
+       procsPeer = clProcsPeer
+
+   mems <- forM (memsPeers `zip` [0..]) (uncurry wrapMemory)
+   links <- forM linksPeers (wrapLink mems)
+   let 
+       procs = fmap (flip CLProcessor clMems) clProcs
+
+   return $ Platform mems links procs config
 
 -- | Retrieve platform information string
 platformInfo :: Platform -> String
@@ -56,7 +72,7 @@ platformInfo pf = printf "Processors:\n%s\nMemories\n%s\nLinks\n%s" procs mems l
 hostMemories :: Platform -> [Memory]
 hostMemories pf = filter f (memories pf)
    where
-      f (HostMemory _) = True
+      f (HostMemory {}) = True
       f _ = False
 
 -- | Put custom message in log

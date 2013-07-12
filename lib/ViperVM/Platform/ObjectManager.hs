@@ -11,7 +11,6 @@ module ViperVM.Platform.ObjectManager (
 
 import ViperVM.STM.TSet as TSet
 import ViperVM.STM.TMap as TMap
-import ViperVM.Platform.Buffer
 import ViperVM.Platform.Object
 import ViperVM.Platform.Objects.Vector
 import ViperVM.Platform.Objects.Matrix
@@ -207,14 +206,14 @@ pokeHostFloatMatrix :: ObjectManager -> Object -> [[Float]] -> IO ()
 pokeHostFloatMatrix _ obj@(MatrixObject m) ds = do
 
    case objectMemory obj of
-      HostMemory _ -> return ()
+      HostMemory {} -> return ()
       _ -> error "Cannot initialize a matrix that is not stored in host memory"
 
    when (matrixCellType m /= Prim.Float) 
       (error "Cannot initialize the matrix: invalid cell type")
 
    let rowSize = matrixWidth m * Prim.sizeOf (matrixCellType m) + matrixPadding m
-       HostBuffer buf = matrixBuffer m
+       buf = hostBuffer (matrixBuffer m)
        startPtr = Host.bufferPtr buf `plusPtr` (fromIntegral $ matrixOffset m)
 
    forM_ (ds `zip` [0..]) $ \(xs,i) -> do
@@ -229,14 +228,14 @@ peekHostFloatMatrix :: ObjectManager -> Object -> IO [[Float]]
 peekHostFloatMatrix _ obj@(MatrixObject m) = do
 
    case objectMemory obj of
-      HostMemory _ -> return ()
+      HostMemory {} -> return ()
       _ -> error "Cannot initialize a matrix that is not stored in host memory"
 
    when (matrixCellType m /= Prim.Float) 
       (error "Cannot initialize the matrix: invalid cell type")
 
    let rowSize = matrixWidth m * Prim.sizeOf (matrixCellType m) + matrixPadding m
-       HostBuffer buf = matrixBuffer m
+       buf = hostBuffer (matrixBuffer m)
        startPtr = Host.bufferPtr buf `plusPtr` (fromIntegral $ matrixOffset m)
        height = matrixHeight m
        width = fromIntegral (matrixWidth m)

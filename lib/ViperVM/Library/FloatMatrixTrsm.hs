@@ -23,13 +23,13 @@ floatMatrixTrsmKernelCL = do
 configFromParamsCL :: [KernelParameter] -> CL.KernelConfiguration
 configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
    where
-      [BufferParam (CLBuffer a), 
+      [BufferParam a, 
        WordParam lda,
        WordParam offa,
-       BufferParam (CLBuffer b), 
+       BufferParam b, 
        WordParam ldb,
        WordParam offb,
-       BufferParam (CLBuffer c), 
+       BufferParam c, 
        WordParam ldc,
        WordParam offc,
        WordParam n,
@@ -42,13 +42,13 @@ configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
 
       lDim = [1,128,1]
 
-      clParams = [clMemParam a,
+      clParams = [clMemParam (clBuffer a),
                   clUIntParam lda,
                   clUIntParam offa,
-                  clMemParam b,
+                  clMemParam (clBuffer b),
                   clUIntParam ldb,
                   clUIntParam offb,
-                  clMemParam c,
+                  clMemParam (clBuffer c),
                   clUIntParam ldc,
                   clUIntParam offc,
                   clUIntParam n,

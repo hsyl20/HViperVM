@@ -3,7 +3,6 @@ module ViperVM.Backends.Host.Driver (
 ) where
 
 import ViperVM.Platform.Configuration
-import qualified ViperVM.Platform.Memory as PF
 
 import ViperVM.Backends.Host.Link
 import ViperVM.Backends.Host.Memory
@@ -13,6 +12,6 @@ initHost :: Configuration -> IO ([Memory], [Link])
 initHost _ = do
 
    m <- initMemory
-   let l = initLink (PF.HostMemory m)
+   let l = initLink m
 
    return ([m],[l])

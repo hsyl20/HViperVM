@@ -1,27 +1,42 @@
 module ViperVM.Platform.Link (
-   Link(..), linkInfo, linkEndpoints, linksBetween,
-   linkCapabilities
+   Link(..), wrapLink,
+   linkInfo, linkEndpoints, linksBetween,
+   linkCapabilities, linkTransfer
 ) where
 
-import qualified ViperVM.Backends.OpenCL.Link as CL
-import qualified ViperVM.Backends.Host.Link as Host
+import qualified ViperVM.Platform.LinkPeer as Peer
 import ViperVM.Platform.Memory
+import ViperVM.Platform.Region
 import ViperVM.Platform.LinkCapabilities
+
 import Text.Printf
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Control.Arrow
 
 -- | A link between two memories
-data Link = 
-     CLLink CL.Link
-   | HostLink Host.Link
-     deriving (Eq,Ord)
-
+data Link = Link {
+   linkPeer :: Peer.LinkPeer,
+   linkSource :: Memory,
+   linkTarget :: Memory
+}
 
 instance Show Link where
-  show (CLLink l) = show l
-  show (HostLink l) = show l
+  show l = "Link " ++ show (linkId l)
 
+-- | Link identifier
+linkId :: Link -> (Int,Int)
+linkId l = (memoryId (linkSource l), memoryId (linkTarget l))
+
+-- | Wrap a peer link
+wrapLink :: [Memory] -> Peer.LinkPeer -> IO Link
+wrapLink mems l = return (Link l src dst)
+   where
+      srcPeer = Peer.linkSource l
+      dstPeer = Peer.linkTarget l
+      mems' = fmap (\m -> (memoryPeer m, m)) mems
+      Just src = lookup srcPeer mems'
+      Just dst = lookup dstPeer mems'
 
 -- | Retrieve link information string
 linkInfo :: Link -> String
@@ -36,21 +51,29 @@ linkInfo l = if linkSource l == linkTarget l
 linkEndpoints :: Link -> (Memory,Memory)
 linkEndpoints = linkSource &&& linkTarget
 
--- | Get link source memory
-linkSource :: Link -> Memory
-linkSource (CLLink l) = CL.linkSource l
-linkSource (HostLink l) = Host.linkSource l
-
--- | Get link target memory
-linkTarget :: Link -> Memory
-linkTarget (CLLink l) = CL.linkTarget l
-linkTarget (HostLink l) = Host.linkTarget l
-
 -- | Get links between a source and a destination from a list of links
 linksBetween :: Memory -> Memory -> [Link] -> [Link]
 linksBetween m1 m2 = filter ((==) (m1,m2) . linkEndpoints)
 
 -- | Retrieve link capabilities
 linkCapabilities :: Link -> Set LinkCapability
-linkCapabilities (CLLink l) = CL.linkCapabilities l
-linkCapabilities (HostLink l) = Host.linkCapabilities l
+linkCapabilities = Peer.linkCapabilities . linkPeer
+
+-- | Perform a synchronous transfer on a link
+linkTransfer :: Link -> Buffer -> Region -> Buffer -> Region -> IO ()
+linkTransfer link src sreg dst dreg = do
+   let 
+      linkP = linkPeer link
+      srcP = bufferPeer src
+      dstP = bufferPeer dst
+
+   case (sreg,dreg) of
+      
+      (Region1D {}, Region1D {}) -> Peer.link1DTransfer linkP srcP sreg dstP dreg
+
+      (Region2D {}, Region2D {})
+         | Set.member Transfer2D (linkCapabilities link) -> Peer.link2DTransfer linkP srcP sreg dstP dreg
+         | otherwise -> error "2D transfers not supported by this link" -- TODO: fallback to several 1D transfers
+
+      _ -> error "Invalid transfer"
+

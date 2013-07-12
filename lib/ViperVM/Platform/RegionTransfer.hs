@@ -6,7 +6,7 @@ import ViperVM.Platform.Region
 import qualified ViperVM.Backends.Host.Link as Host
 import qualified ViperVM.Backends.OpenCL.Link as CL
 import ViperVM.Platform.Link
-import ViperVM.Platform.Buffer
+import ViperVM.Platform.Memory
 import ViperVM.Platform.TransferResult
 
 data RegionTransferStep = RegionTransferStep Link Buffer Region

@@ -11,7 +11,7 @@ import ViperVM.Platform.Kernel
 import ViperVM.Platform.KernelManager
 import ViperVM.Platform.Processor
 import ViperVM.Platform.Object
-import ViperVM.Platform.Buffer
+import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.ObjectManager
 import ViperVM.Platform.LockMode

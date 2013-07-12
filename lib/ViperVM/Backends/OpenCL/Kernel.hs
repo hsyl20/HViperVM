@@ -1,8 +1,8 @@
 {-# LANGUAGE RecordWildCards, LambdaCase #-}
 module ViperVM.Backends.OpenCL.Kernel (
-   Kernel(..), KernelConfiguration(..),
-   initKernel, initKernelFromFile, kernelCompiledFor,
-   kernelCompile, kernelExecute, kernelEnsureCompiledFor, kernelIsCompiledFor,
+   Kernel(..), KernelConfiguration(..), CompiledKernel,
+   initKernel, initKernelFromFile,
+   kernelCompile, kernelExecute,
    clMemParam, clIntParam, clUIntParam, clULongParam
 ) where
 
@@ -16,19 +16,15 @@ import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Platform.KernelConstraint
 import ViperVM.Platform.KernelExecutionResult
 import ViperVM.Platform.KernelParameter
-import qualified ViperVM.STM.TMap as TMap
-import ViperVM.STM.TMap (TMap)
 
 import Control.Concurrent
-import Control.Concurrent.STM
 import Control.Arrow
-import Control.Applicative ( (<$>) )
 import Data.List (sortBy, groupBy )
 import Data.Traversable (forM)
 import Data.Word
-import Control.Monad (forM_,void)
 import qualified Data.Map as Map
-import Text.Printf
+import Data.Map (Map)
+import Control.Monad (forM_,void)
 
 data Kernel = Kernel {
    kernelName :: String,
@@ -36,7 +32,6 @@ data Kernel = Kernel {
    kernelOptions :: String,
    kernelSource :: String,
    kernelConfigure :: [KernelParameter] -> KernelConfiguration,
-   kernelCompilations :: TMap Processor CompilationResult,
    kernelMutex :: MVar ()
 }
 
@@ -64,9 +59,10 @@ data CLKernelParameter =
    | CLBoolParam CLbool
      deriving (Show)
 
-data CompilationResult = CompilationSuccess CLKernel
-                       | CompilationFailure String
-
+data CompiledKernel = CompiledKernel {
+   sourceKernel :: Kernel,
+   openclKernel :: CLKernel
+}
 
 initKernelFromFile :: FilePath -> String -> [KernelConstraint] -> String -> ([KernelParameter] -> KernelConfiguration) -> IO Kernel
 initKernelFromFile path name consts opts conf = do
@@ -75,7 +71,6 @@ initKernelFromFile path name consts opts conf = do
 
 initKernel :: String -> String -> [KernelConstraint] -> String -> ([KernelParameter] -> KernelConfiguration) -> IO Kernel
 initKernel src name consts opts conf = do
-   compiled <- atomically TMap.empty
    mtex <- newEmptyMVar
    return $ Kernel {
       kernelName = name,
@@ -83,18 +78,8 @@ initKernel src name consts opts conf = do
       kernelOptions = opts,
       kernelConfigure = conf,
       kernelSource = src,
-      kernelCompilations = compiled,
       kernelMutex = mtex
    }
-
--- | Processors for which the kernel is compiled
-kernelCompiledFor :: Kernel -> IO [Processor]
-kernelCompiledFor k = do
-   Map.keys . Map.filter f <$> atomically (readTVar (kernelCompilations k))
-   where
-      f = \case
-         CompilationSuccess _ -> True
-         _ -> False
 
 clMemParam :: Buffer -> CLKernelParameter
 clMemParam b = CLMemParam (bufferPeer b)
@@ -117,13 +102,13 @@ setCLKernelArg lib kernel idx (CLBoolParam i) = clSetKernelArgSto lib kernel idx
 
 
 -- | Try to compile kernel for the given processors
-kernelCompile :: Kernel -> [Processor] -> IO ()
-kernelCompile (Kernel {..}) procs = do
+kernelCompile :: Kernel -> [Processor] -> IO (Map Processor (Either String CompiledKernel))
+kernelCompile k@(Kernel {..}) procs = do
 
    -- Group devices that are in the same context to compile in one pass
    let groups = groupBy eqProc $ sortBy compareProc procs
 
-   forM_ groups $ \procs' -> do
+   res <- forM groups $ \procs' -> do
       let 
          devs = fmap procDevice procs'
          lib = procLibrary (head procs')
@@ -133,17 +118,20 @@ kernelCompile (Kernel {..}) procs = do
       _ <- clBuildProgram lib prog devs kernelOptions
       buildStatus <- forM devs (clGetProgramBuildStatus lib prog)
       
-      forM_ (procs' `zip` buildStatus) $ \case 
+      res <- forM (procs' `zip` buildStatus) $ \case 
          (proc,CL_BUILD_SUCCESS) -> do
             kernel <- clCreateKernel lib prog kernelName
-            atomically (TMap.insert_ kernelCompilations proc (CompilationSuccess kernel))
+            return (proc, Right (CompiledKernel k kernel))
             
          (proc,CL_BUILD_ERROR) -> do
             buildLog <- clGetProgramBuildLog lib prog (procDevice proc)
-            atomically (TMap.insert_ kernelCompilations proc (CompilationFailure buildLog))
+            return (proc, Left buildLog)
 
          (_,err) -> error ("Unexpected build status: " ++ show err)
+
+      return (Map.fromList res)
       
+   return (Map.unions res)
 
    where
       procKey = procLibrary &&& procContext
@@ -152,15 +140,15 @@ kernelCompile (Kernel {..}) procs = do
       eqProc a b = procKey a == procKey b
 
 -- | Execute a kernel on a given processor synchronously
-kernelExecute :: Processor -> Kernel -> [KernelParameter] -> IO ExecutionResult
-kernelExecute proc ker params = do
+kernelExecute :: Processor -> CompiledKernel -> [KernelParameter] -> IO ExecutionResult
+kernelExecute proc ck params = do
 
    let lib = procLibrary proc
        cq  = procQueue proc
        config = kernelConfigure ker params
        mutex = kernelMutex ker
-
-   CompilationSuccess peer <- atomically (kernelCompilations ker TMap.! proc)
+       ker = sourceKernel ck
+       peer = openclKernel ck
 
    putMVar mutex () -- OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
 
@@ -174,24 +162,3 @@ kernelExecute proc ker params = do
    void $ clWaitForEvents lib [ev]
 
    return ExecuteSuccess
-
-kernelIsCompiledFor :: Kernel -> Processor -> IO Bool
-kernelIsCompiledFor k proc = 
-   atomically (TMap.lookup proc (kernelCompilations k)) >>= \case
-      Just (CompilationSuccess _) -> return True
-      _ -> return False
-
-
-kernelEnsureCompiledFor :: Kernel -> Processor -> IO ()
-kernelEnsureCompiledFor k proc = do
-
-   atomically (TMap.lookup proc (kernelCompilations k)) >>= \case
-
-      Just (CompilationFailure buildLog) -> 
-         error (printf "Kernel %s cannot be compiled for processor %s:\n%s" (show k) (show proc) buildLog)
-
-      Nothing -> do
-         _ <- kernelCompile k [proc]
-         kernelEnsureCompiledFor k proc
-
-      Just (CompilationSuccess _) -> return ()

@@ -4,7 +4,6 @@ module ViperVM.Platform.Object (
    Object(..), objectMemory
 ) where
 
-import ViperVM.Platform.Buffer
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Objects.Vector
 import ViperVM.Platform.Objects.Matrix

@@ -3,7 +3,7 @@ module ViperVM.Platform.KernelParameter (
 ) where
 
 import Data.Word
-import ViperVM.Platform.Buffer
+import ViperVM.Platform.Memory
 
 data KernelParameter = 
      IntParam Int

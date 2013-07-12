@@ -10,7 +10,7 @@ module ViperVM.Platform.KernelManager (
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Processor
 import ViperVM.Platform.Kernel
-import ViperVM.Platform.Buffer
+import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.KernelParameter
 import ViperVM.Platform.KernelExecutionResult

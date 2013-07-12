@@ -21,8 +21,8 @@ bufferName :: Buffer -> String
 bufferName _ = "OpenCL Buffer"
 
 -- | Try to allocate a buffer in a memory
-bufferAllocate :: Memory -> Word64 -> IO (Maybe Buffer)
-bufferAllocate mem sz = do
+bufferAllocate :: Word64 -> Memory -> IO (Maybe Buffer)
+bufferAllocate sz mem = do
 
    let 
       lib = memoryLibrary mem

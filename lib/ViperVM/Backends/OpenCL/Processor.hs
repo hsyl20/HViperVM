@@ -2,13 +2,12 @@ module ViperVM.Backends.OpenCL.Processor (
    Processor, initProc,
    procLibrary, procContext, procDevice,
    procQueue, procID, procName, procVendor,
-   procMemories, procCapabilities
+   procCapabilities
 ) where
 
 import ViperVM.Backends.OpenCL.Types
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Query
-import ViperVM.Backends.OpenCL.Memory
 import ViperVM.Backends.OpenCL.CommandQueue
 import ViperVM.Platform.ProcessorCapabilities
 
@@ -23,7 +22,6 @@ data Processor = Processor {
    procID      :: String,
    procName    :: String,
    procVendor  :: String,
-   procMemories :: [Memory],
    procCapabilities :: Set ProcessorCapability
 }
 
@@ -37,8 +35,8 @@ instance Show Processor where
   show p = "{" ++ procID p ++ "}"
 
 -- | Initialize an OpenCL processor
-initProc :: OpenCLLibrary -> CLContext -> CLDeviceID -> Memory -> (Int,Int) -> IO Processor
-initProc lib ctx dev mem (pfIdx,devIdx) = do
+initProc :: OpenCLLibrary -> CLContext -> CLDeviceID -> (Int,Int) -> IO Processor
+initProc lib ctx dev (pfIdx,devIdx) = do
    -- FIXME: Ensure that out-of-order mode is supported
    let props = [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE] 
 
@@ -56,7 +54,6 @@ initProc lib ctx dev mem (pfIdx,devIdx) = do
       procID = pid,
       procName = name,
       procVendor = vendor,
-      procMemories = [mem],
       procCapabilities = caps
    }
 

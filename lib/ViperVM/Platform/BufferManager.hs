@@ -7,7 +7,6 @@ module ViperVM.Platform.BufferManager (
 ) where
 
 import ViperVM.Platform.Memory
-import ViperVM.Platform.Buffer as Buffer
 import ViperVM.Platform.Platform
 
 import ViperVM.STM.TSet as TSet
@@ -49,7 +48,7 @@ releaseBufferManager _ = return ()
 -- | Allocate a buffer in a memory
 allocateBuffer :: BufferManager -> Memory -> Word64 -> IO (Maybe Buffer)
 allocateBuffer mm mem sz = do
-   buf <- Buffer.allocate mem sz
+   buf <- bufferAllocate sz mem
    forM_ buf insertBuffer
    return buf
    where
@@ -64,7 +63,7 @@ releaseBuffer mm b = do
    let m = bufferMemory b
        bufs = buffers mm ! m
    atomically $ TSet.delete b bufs
-   Buffer.release b
+   bufferRelease b
 
 -- | Retrieved allocated buffers in a memory
 getMemoryBuffers :: BufferManager -> Memory -> STM (Set Buffer)

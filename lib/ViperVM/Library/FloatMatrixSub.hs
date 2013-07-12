@@ -25,13 +25,13 @@ configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
    where
       [WordParam width, 
        WordParam height, 
-       BufferParam (CLBuffer a), 
+       BufferParam a,
        WordParam lda,
        WordParam offa,
-       BufferParam (CLBuffer b), 
+       BufferParam b,
        WordParam ldb,
        WordParam offb,
-       BufferParam (CLBuffer c), 
+       BufferParam c,
        WordParam ldc,
        WordParam offc] = pms
 
@@ -44,13 +44,13 @@ configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
 
       clParams = [clUIntParam width, 
                   clUIntParam height, 
-                  clMemParam a,
+                  clMemParam (clBuffer a),
                   clUIntParam lda,
                   clUIntParam offa,
-                  clMemParam b,
+                  clMemParam (clBuffer b),
                   clUIntParam ldb,
                   clUIntParam offb,
-                  clMemParam c,
+                  clMemParam (clBuffer c),
                   clUIntParam ldc,
                   clUIntParam offc]
 

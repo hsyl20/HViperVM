@@ -4,7 +4,6 @@ module ViperVM.Platform (
    module X
 ) where
 
-import ViperVM.Platform.Buffer as X
 import ViperVM.Platform.Kernel as X
 import ViperVM.Platform.Link as X
 import ViperVM.Platform.Memory as X

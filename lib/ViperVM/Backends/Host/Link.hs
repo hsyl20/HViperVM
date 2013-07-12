@@ -3,12 +3,11 @@ module ViperVM.Backends.Host.Link (
    linkTransfer
 ) where
 
-import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
-import ViperVM.Platform.TransferResult
 import ViperVM.Platform.LinkCapabilities
-import ViperVM.Platform.Buffer
 import qualified ViperVM.Backends.Host.Buffer as Host
+import qualified ViperVM.Backends.Host.Memory as Host
+import qualified ViperVM.Platform.MemoryPeer as Peer
 
 import Data.Foldable (forM_)
 import Foreign.Ptr
@@ -18,25 +17,31 @@ import Text.Printf
 import Data.Int
 import Foreign.Marshal.Utils
 
-data Link = Link {
-   linkSource :: Memory,
-   linkTarget :: Memory,
-   linkCapabilities :: Set LinkCapability
-} deriving (Eq,Ord)
+data Link = Link (Set LinkCapability) Host.Memory
+            deriving (Eq,Ord)
 
 instance Show Link where
   show _ = printf "Host loopback link"
 
 -- | Initialize host link
-initLink :: Memory -> Link
-initLink m = Link m m (Set.fromList [Transfer2D])
+initLink :: Host.Memory -> Link
+initLink m = Link (Set.fromList [Transfer2D]) m
 
-linkTransfer :: Link -> Buffer -> Region -> Buffer -> Region -> IO RegionTransferResult
-linkTransfer _ (HostBuffer srcBuf) srcReg (HostBuffer dstBuf) dstReg = do
+linkCapabilities :: Link -> Set LinkCapability
+linkCapabilities (Link caps _) = caps
+
+linkSource :: Link -> Peer.MemoryPeer
+linkSource (Link _ m) = Peer.HostMemory m
+
+linkTarget :: Link -> Peer.MemoryPeer
+linkTarget (Link _ m) = Peer.HostMemory m
+
+linkTransfer :: Link -> Host.Buffer -> Region -> Host.Buffer -> Region -> IO()
+linkTransfer _ src srcReg dst dstReg = do
    
    let 
-      sptr = castPtr (Host.bufferPtr srcBuf) :: Ptr Int8
-      dptr = castPtr (Host.bufferPtr dstBuf) :: Ptr Int8
+      sptr = castPtr (Host.bufferPtr src) :: Ptr Int8
+      dptr = castPtr (Host.bufferPtr dst) :: Ptr Int8
 
    case (srcReg, dstReg) of
 
@@ -47,7 +52,6 @@ linkTransfer _ (HostBuffer srcBuf) srcReg (HostBuffer dstBuf) dstReg = do
             dptr' = dptr `plusPtr` (fromIntegral doff)
          
          copyBytes dptr' sptr' (fromIntegral sz)
-         return RegionTransferSuccess
 
 
       -- Region 2D
@@ -65,8 +69,4 @@ linkTransfer _ (HostBuffer srcBuf) srcReg (HostBuffer dstBuf) dstReg = do
                dptr'' = dptr' `plusPtr` (fromIntegral $ i*dpad)
             copyBytes dptr'' sptr'' (fromIntegral ssize)
 
-         return RegionTransferSuccess
-
-      _ -> return RegionTransferError
-
-linkTransfer _ _ _ _ _ = return RegionTransferError
+      _ -> error "Invalid transfer"

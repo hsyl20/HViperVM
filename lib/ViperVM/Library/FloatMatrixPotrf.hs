@@ -26,19 +26,19 @@ configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
       [WordParam n, 
        WordParam srcOffset, 
        WordParam srcWidth, 
-       BufferParam (CLBuffer srcBuf),
+       BufferParam a,
        WordParam dstOffset, 
        WordParam dstWidth, 
-       BufferParam (CLBuffer dstBuf)] = pms
+       BufferParam b] = pms
       gDim = [16,16,1]
       lDim = [16,16,1]
       clParams = [clUIntParam n, 
                   clUIntParam srcOffset, 
                   clUIntParam srcWidth, 
-                  clMemParam srcBuf,
+                  clMemParam (clBuffer a),
                   clUIntParam dstOffset, 
                   clUIntParam dstWidth, 
-                  clMemParam dstBuf]
+                  clMemParam (clBuffer b)]
 
 
 floatMatrixPotrfObjectKernelCL :: IO ObjectKernel

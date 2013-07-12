@@ -5,7 +5,6 @@ module ViperVM.Platform.RegionLockManager (
 ) where
 
 import ViperVM.Platform.Platform
-import ViperVM.Platform.Buffer
 import ViperVM.Platform.Memory
 import qualified ViperVM.Platform.BufferManager as BM
 import ViperVM.Platform.Region
