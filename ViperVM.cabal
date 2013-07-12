@@ -48,12 +48,20 @@ library
 
     ViperVM.Platform.Peer.LinkPeer
     ViperVM.Platform.Peer.MemoryPeer
+    ViperVM.Platform.Peer.ProcPeer
+    ViperVM.Platform.Peer.PlatformPeer
+    ViperVM.Platform.LinkCapabilities
+    ViperVM.Platform.ProcessorCapabilities
 
---    ViperVM.Platform
---    ViperVM.Platform.Configuration
+    ViperVM.Platform.Memory
+    ViperVM.Platform.Link
+    ViperVM.Platform.Proc
+    ViperVM.Platform.Platform
+    ViperVM.Platform.Configuration
+    ViperVM.Platform
+
 --    ViperVM.Platform.Compilation
 --    ViperVM.Platform.BufferManager
---    ViperVM.Platform.LinkCapabilities
 --    ViperVM.Platform.KernelParameter
 --    ViperVM.Platform.TransferResult
 --    ViperVM.Platform.Descriptor
@@ -62,16 +70,11 @@ library
 --    ViperVM.Platform.KernelConstraint
 --    ViperVM.Platform.KernelExecutionResult
 --    ViperVM.Platform.KernelManager
-    ViperVM.Platform.Link
 --    ViperVM.Platform.LockMode
-    ViperVM.Platform.Memory
 --    ViperVM.Platform.Object
 --    ViperVM.Platform.ObjectKernel
 --    ViperVM.Platform.ObjectManager
---    ViperVM.Platform.Platform
 --    ViperVM.Platform.Primitive
---    ViperVM.Platform.Processor
---    ViperVM.Platform.ProcessorCapabilities
 --    ViperVM.Platform.RegionLockManager
 --    ViperVM.Platform.RegionTransfer
 --    ViperVM.Platform.RegionTransferManager
@@ -157,31 +160,31 @@ executable PlatformInfo
     base,
     ViperVM
 
-executable LispSOCL
-  main-is: LispSOCL.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    ViperVM
-
-executable Split
-  main-is: Split.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded
-  build-depends: 
-    base,
-    containers,
-    monad-loops,
-    ViperVM
-
-executable Bench
-  main-is: Bench.hs
-  hs-source-dirs: apps
-  ghc-options: -Wall -threaded -O2
-  build-depends: 
-    base,
-    containers,
-    monad-loops,
-    ViperVM
+--executable LispSOCL
+--  main-is: LispSOCL.hs
+--  hs-source-dirs: apps
+--  ghc-options: -Wall -threaded
+--  build-depends: 
+--    base,
+--    containers,
+--    ViperVM
+--
+--executable Split
+--  main-is: Split.hs
+--  hs-source-dirs: apps
+--  ghc-options: -Wall -threaded
+--  build-depends: 
+--    base,
+--    containers,
+--    monad-loops,
+--    ViperVM
+--
+--executable Bench
+--  main-is: Bench.hs
+--  hs-source-dirs: apps
+--  ghc-options: -Wall -threaded -O2
+--  build-depends: 
+--    base,
+--    containers,
+--    monad-loops,
+--    ViperVM

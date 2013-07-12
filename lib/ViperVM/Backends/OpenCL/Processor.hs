@@ -2,17 +2,19 @@ module ViperVM.Backends.OpenCL.Processor (
    Processor, initProc,
    procLibrary, procContext, procDevice,
    procQueue, procID, procName, procVendor,
-   procCapabilities
+   procCapabilities, procMemories
 ) where
 
 import ViperVM.Backends.OpenCL.Types
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Query
 import ViperVM.Backends.OpenCL.CommandQueue
+import ViperVM.Backends.OpenCL.Memory
 import ViperVM.Platform.ProcessorCapabilities
 
 import Data.Set (Set,fromList)
 import Text.Printf
+import Control.Applicative ( (<$>) )
 
 data Processor = Processor {
    procLibrary :: OpenCLLibrary,
@@ -65,3 +67,7 @@ retrieveCapabilities lib dev = do
       if "cl_khr_fp64" `elem` extensions 
          then [DoubleFloatingPoint]
          else []
+
+-- | Retrieve attached memory
+procMemories :: Processor -> IO [Memory]
+procMemories p = return <$> initMemory (procLibrary p) (procContext p) (procDevice p)

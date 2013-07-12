@@ -52,7 +52,7 @@ memorySize = Peer.memorySize . memoryPeer
 
 -- | Retrieve memory information string
 memoryInfo :: Memory -> String
-memoryInfo m = printf "%s - %s" (memoryName m) (prettyMemorySize m)
+memoryInfo m = printf "[Mem %d] %s - %s" (memoryId m) (memoryName m) (prettyMemorySize m)
 
 -- | Pretty print memory size
 prettyMemorySize :: Memory -> String

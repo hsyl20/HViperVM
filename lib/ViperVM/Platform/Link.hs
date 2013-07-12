@@ -41,8 +41,8 @@ wrapLink mems l = return (Link l src dst)
 -- | Retrieve link information string
 linkInfo :: Link -> String
 linkInfo l = if linkSource l == linkTarget l 
-      then printf "Loopback link in %s" name1
-      else printf "Link between %s and %s" name1 name2
+      then printf "[Link %s] Loopback link in %s" (show (linkId l)) name1
+      else printf "[Link %s] Link between %s and %s" (show (linkId l)) name1 name2
    where
       name1 = memoryName (linkSource l)
       name2 = memoryName (linkTarget l)
