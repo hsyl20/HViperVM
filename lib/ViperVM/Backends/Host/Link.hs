@@ -3,7 +3,7 @@ module ViperVM.Backends.Host.Link (
    linkTransfer
 ) where
 
-import ViperVM.Platform.Region
+import ViperVM.Common.Region
 import ViperVM.Platform.LinkCapabilities
 import qualified ViperVM.Backends.Host.Buffer as Host
 import qualified ViperVM.Backends.Host.Memory as Host

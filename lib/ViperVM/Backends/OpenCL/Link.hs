@@ -11,7 +11,7 @@ import ViperVM.Backends.OpenCL.Types
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Event
 import ViperVM.Backends.OpenCL.CommandQueue
-import ViperVM.Platform.Region
+import ViperVM.Common.Region
 
 import qualified ViperVM.Platform.Peer.MemoryPeer as Peer
 

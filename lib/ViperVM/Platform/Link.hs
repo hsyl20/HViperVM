@@ -6,8 +6,8 @@ module ViperVM.Platform.Link (
 
 import qualified ViperVM.Platform.Peer.LinkPeer as Peer
 import ViperVM.Platform.Memory
-import ViperVM.Platform.Region
 import ViperVM.Platform.LinkCapabilities
+import ViperVM.Common.Region
 
 import Text.Printf
 import Data.Set (Set)

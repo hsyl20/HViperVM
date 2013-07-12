@@ -1,7 +1,7 @@
 -- | A region is the shape of a set of memory cells in a buffer with an offset
-module ViperVM.Platform.Region (
-        Region(..), getRegionOffset,
-        regionsWithSameShape, overlapsAny, overlaps
+module ViperVM.Common.Region (
+   Region(..), getRegionOffset,
+   regionsWithSameShape, overlapsAny, overlaps
 ) where
 
 import Data.Word

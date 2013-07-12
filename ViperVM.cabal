@@ -24,6 +24,9 @@ data-files:
 library
   exposed-modules:     
 
+    ViperVM.Common.Logger
+    ViperVM.Common.Region
+
     ViperVM.Backends.Host.Memory
     ViperVM.Backends.Host.Buffer
     ViperVM.Backends.Host.Link
@@ -69,12 +72,10 @@ library
 --    ViperVM.Platform.Primitive
 --    ViperVM.Platform.Processor
 --    ViperVM.Platform.ProcessorCapabilities
---    ViperVM.Platform.Region
 --    ViperVM.Platform.RegionLockManager
 --    ViperVM.Platform.RegionTransfer
 --    ViperVM.Platform.RegionTransferManager
 --    ViperVM.Platform.Runtime
---    ViperVM.Platform.Logger
 --    ViperVM.Platform.SharedObject
 --    ViperVM.Platform.SharedObjectManager
 --    ViperVM.Platform.Event

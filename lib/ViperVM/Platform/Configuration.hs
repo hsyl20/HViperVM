@@ -1,6 +1,6 @@
 module ViperVM.Platform.Configuration where
 
-import ViperVM.Platform.Logger
+import ViperVM.Common.Logger
 
 -- | Platform configuration
 data Configuration = Configuration {

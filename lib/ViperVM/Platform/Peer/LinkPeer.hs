@@ -7,8 +7,8 @@ import qualified ViperVM.Backends.OpenCL.Link as CL
 import qualified ViperVM.Backends.Host.Link as Host
 
 import ViperVM.Platform.Peer.MemoryPeer
-import ViperVM.Platform.Region
 import ViperVM.Platform.LinkCapabilities
+import ViperVM.Common.Region
 
 import Control.Monad (when)
 import Data.Set (Set)
