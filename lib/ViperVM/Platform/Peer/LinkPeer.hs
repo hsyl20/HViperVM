@@ -1,4 +1,4 @@
-module ViperVM.Platform.LinkPeer (
+module ViperVM.Platform.Peer.LinkPeer (
    LinkPeer(..), link1DTransfer, link2DTransfer,
    linkCapabilities, linkSource, linkTarget
 ) where
@@ -6,7 +6,7 @@ module ViperVM.Platform.LinkPeer (
 import qualified ViperVM.Backends.OpenCL.Link as CL
 import qualified ViperVM.Backends.Host.Link as Host
 
-import ViperVM.Platform.MemoryPeer
+import ViperVM.Platform.Peer.MemoryPeer
 import ViperVM.Platform.Region
 import ViperVM.Platform.LinkCapabilities
 

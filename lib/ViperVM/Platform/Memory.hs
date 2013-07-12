@@ -5,7 +5,7 @@ module ViperVM.Platform.Memory (
    bufferAllocate, bufferRelease
 ) where
 
-import qualified ViperVM.Platform.MemoryPeer as Peer
+import qualified ViperVM.Platform.Peer.MemoryPeer as Peer
 
 import ViperVM.STM.TSet
 import qualified ViperVM.STM.TSet as TSet

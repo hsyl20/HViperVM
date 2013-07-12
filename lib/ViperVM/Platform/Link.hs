@@ -4,7 +4,7 @@ module ViperVM.Platform.Link (
    linkCapabilities, linkTransfer
 ) where
 
-import qualified ViperVM.Platform.LinkPeer as Peer
+import qualified ViperVM.Platform.Peer.LinkPeer as Peer
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Region
 import ViperVM.Platform.LinkCapabilities

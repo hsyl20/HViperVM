@@ -12,3 +12,15 @@ performing memory management (allocation, release, transfer) appropriately.
 See examples in "apps/" to have an idea of what ViperVM is capable of. This
 software is still in its infancy. Read CHANGES to have a summary of what is
 introduced in each release.
+
+
+Code structure:
+
+   - ViperVM.Backends.XXX
+      Code to handle a specific kind of devices (OpenCL, CUDA, Host...)
+
+   - ViperVM.Platform.Peer.XXX
+      Code multiplexing entities of the different backends
+
+   - ViperVM.Platform.XXX
+      Abstract platform

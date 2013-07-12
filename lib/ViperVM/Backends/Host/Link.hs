@@ -7,7 +7,7 @@ import ViperVM.Platform.Region
 import ViperVM.Platform.LinkCapabilities
 import qualified ViperVM.Backends.Host.Buffer as Host
 import qualified ViperVM.Backends.Host.Memory as Host
-import qualified ViperVM.Platform.MemoryPeer as Peer
+import qualified ViperVM.Platform.Peer.MemoryPeer as Peer
 
 import Data.Foldable (forM_)
 import Foreign.Ptr

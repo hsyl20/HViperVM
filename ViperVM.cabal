@@ -43,6 +43,9 @@ library
     ViperVM.Backends.OpenCL.Query
     ViperVM.Backends.OpenCL.Types
 
+    ViperVM.Platform.Peer.LinkPeer
+    ViperVM.Platform.Peer.MemoryPeer
+
 --    ViperVM.Platform
 --    ViperVM.Platform.Configuration
 --    ViperVM.Platform.Compilation
@@ -57,10 +60,8 @@ library
 --    ViperVM.Platform.KernelExecutionResult
 --    ViperVM.Platform.KernelManager
     ViperVM.Platform.Link
-    ViperVM.Platform.LinkPeer
 --    ViperVM.Platform.LockMode
     ViperVM.Platform.Memory
-    ViperVM.Platform.MemoryPeer
 --    ViperVM.Platform.Object
 --    ViperVM.Platform.ObjectKernel
 --    ViperVM.Platform.ObjectManager

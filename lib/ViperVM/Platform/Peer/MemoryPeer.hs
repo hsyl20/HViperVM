@@ -1,4 +1,4 @@
-module ViperVM.Platform.MemoryPeer (
+module ViperVM.Platform.Peer.MemoryPeer (
    MemoryPeer(..), memoryPeerApply,
    memoryName, memorySize,
    BufferPeer(..), bufferPeerApply,
