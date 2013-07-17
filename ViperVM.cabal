@@ -64,15 +64,15 @@ library
     ViperVM.Platform.Compilation
     ViperVM.Platform.Source
     ViperVM.Platform.Program
+    ViperVM.Platform.KernelParameter
+    ViperVM.Platform.KernelConstraint
+    ViperVM.Platform.KernelExecutionResult
     ViperVM.Platform
 
 --    ViperVM.Platform.BufferManager
---    ViperVM.Platform.KernelParameter
 --    ViperVM.Platform.TransferResult
 --    ViperVM.Platform.Descriptor
 --    ViperVM.Platform.Scheduler
---    ViperVM.Platform.KernelConstraint
---    ViperVM.Platform.KernelExecutionResult
 --    ViperVM.Platform.KernelManager
 --    ViperVM.Platform.LockMode
 --    ViperVM.Platform.Object
