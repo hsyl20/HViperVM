@@ -164,6 +164,14 @@ executable PlatformInfo
     base,
     ViperVM
 
+executable PlatformTest
+  main-is: PlatformTest.hs
+  hs-source-dirs: apps
+  ghc-options: -Wall
+  build-depends: 
+    base,
+    ViperVM
+
 --executable LispSOCL
 --  main-is: LispSOCL.hs
 --  hs-source-dirs: apps
