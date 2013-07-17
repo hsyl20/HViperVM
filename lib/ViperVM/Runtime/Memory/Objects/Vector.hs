@@ -1,20 +1,20 @@
-module ViperVM.Platform.Objects.Vector (
+module ViperVM.Runtime.Memory.Objects.Vector (
    Vector,
    createVector, vectorBuffer, vectorRegion, vectorCellType, vectorSize,
 ) where
 
 import ViperVM.Platform.Memory
-import ViperVM.Platform.Region
 import ViperVM.Platform.Primitive
+import ViperVM.Common.Region
 
 import Data.Word
 
 -- | Vector object
 data Vector = Vector {
-      vectorBuffer :: Buffer,
-      vectorRegion :: Region,
-      vectorCellType :: Primitive
-   } deriving (Show,Eq,Ord)
+   vectorBuffer :: Buffer,
+   vectorRegion :: Region,
+   vectorCellType :: Primitive
+} deriving (Show,Eq,Ord)
 
 -- | Create a vector
 createVector :: Buffer -> Region -> Primitive -> Vector

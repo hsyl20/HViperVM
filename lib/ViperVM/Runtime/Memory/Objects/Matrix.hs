@@ -1,4 +1,4 @@
-module ViperVM.Platform.Objects.Matrix (
+module ViperVM.Runtime.Memory.Objects.Matrix (
    Matrix,
    createMatrix, matrixBuffer, matrixRegion, matrixCellType,
    matrixWidth, matrixHeight, matrixDimensions, matrixPadding, matrixOffset,
@@ -6,17 +6,17 @@ module ViperVM.Platform.Objects.Matrix (
 ) where
 
 import ViperVM.Platform.Memory
-import ViperVM.Platform.Region
 import ViperVM.Platform.Primitive
+import ViperVM.Common.Region
 
 import Data.Word
 
 -- | Matrix object
 data Matrix = Matrix {
-      matrixBuffer :: Buffer,
-      matrixRegion :: Region,
-      matrixCellType :: Primitive
-   } deriving (Show,Eq,Ord)
+   matrixBuffer :: Buffer,
+   matrixRegion :: Region,
+   matrixCellType :: Primitive
+} deriving (Show,Eq,Ord)
 
 -- | Create a matrix 
 createMatrix :: Buffer -> Region -> Primitive -> Matrix

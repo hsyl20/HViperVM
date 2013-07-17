@@ -67,7 +67,12 @@ library
     ViperVM.Platform.KernelParameter
     ViperVM.Platform.KernelConstraint
     ViperVM.Platform.KernelExecutionResult
+    ViperVM.Platform.Primitive
     ViperVM.Platform
+
+    ViperVM.Runtime.Memory.Objects.Vector
+    ViperVM.Runtime.Memory.Objects.Matrix
+    ViperVM.Runtime.Memory.Object
 
 --    ViperVM.Platform.BufferManager
 --    ViperVM.Platform.TransferResult
@@ -78,7 +83,6 @@ library
 --    ViperVM.Platform.Object
 --    ViperVM.Platform.ObjectKernel
 --    ViperVM.Platform.ObjectManager
---    ViperVM.Platform.Primitive
 --    ViperVM.Platform.RegionLockManager
 --    ViperVM.Platform.RegionTransfer
 --    ViperVM.Platform.RegionTransferManager
@@ -86,8 +90,6 @@ library
 --    ViperVM.Platform.SharedObject
 --    ViperVM.Platform.SharedObjectManager
 --    ViperVM.Platform.Event
---    ViperVM.Platform.Objects.Vector
---    ViperVM.Platform.Objects.Matrix
 
 
 --    ViperVM.Scheduling.Single
