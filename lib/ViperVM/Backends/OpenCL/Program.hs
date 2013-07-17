@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module ViperVM.Backends.OpenCL.Program(  
   -- * Types
-  CLProgram, CLBuildStatus(..), CLKernel,
+  Program(..), CLProgram, CLBuildStatus(..), CLKernel,
   -- * Program Functions
   clCreateProgramWithSource, clCreateProgramWithBinary, clRetainProgram, 
   clReleaseProgram, clUnloadCompiler, clBuildProgram, 
@@ -29,6 +29,18 @@ import ViperVM.Backends.OpenCL.Types(
   CLProgramInfo_, CLBuildStatus(..), CLBuildStatus_, 
   CLKernelInfo_, wrapCheckSuccess, 
   whenSuccess, wrapPError, wrapGetInfo, getCLValue, getEnumCL )
+
+data Program = Program {
+   programCLPeer :: CLProgram,
+   programLib :: OpenCLLibrary
+}
+
+instance Eq Program where
+   (==) p1 p2 = programCLPeer p1 == programCLPeer p2
+
+instance Ord Program where
+   compare p1 p2 = compare (programCLPeer p1) (programCLPeer p2)
+
 
 clCreateProgramWithSource :: OpenCLLibrary -> CLContext -> String -> IO CLProgram
 clCreateProgramWithSource lib ctx source =

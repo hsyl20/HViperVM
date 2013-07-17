@@ -37,4 +37,4 @@ canExecute p k  = supportConstraints (kernelConstraints k) p
 
 -- | Execute a kernel on a given processor synchronously
 execute :: Proc -> Kernel -> [KernelParameter] -> IO ExecutionResult
-execute p k params = undefined --CL.kernelExecute p k params
+execute p k params = Peer.kernelExecute (kernelPeer k) params (procPeer p)
