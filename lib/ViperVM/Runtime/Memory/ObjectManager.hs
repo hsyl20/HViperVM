@@ -9,7 +9,6 @@ module ViperVM.Platform.ObjectManager (
       getObjectManagerPlatform
    ) where
 
-import ViperVM.STM.TSet as TSet
 import ViperVM.STM.TMap as TMap
 import ViperVM.Platform.Object
 import ViperVM.Platform.Objects.Vector
@@ -250,15 +249,3 @@ peekHostFloatMatrix _ _ = error "Cannot peek the given object"
 
 
 
--- | Allocate a compatible instance of the shared object, DO NOT atach it
-allocateFromDescriptor :: ObjectManager -> Memory -> Descriptor -> IO Object
-allocateFromDescriptor om mem (MatrixDesc prim w h) = do
-   let padding = (w * Prim.sizeOf prim) `mod` 4
-   allocateMatrix om mem prim w h padding >>= \case
-      Nothing -> error "Unable to allocate matrix"
-      Just m -> return (MatrixObject m)
-
-allocateFromDescriptor om mem (VectorDesc prim sz) = do
-   allocateVector om mem prim sz >>= \case
-      Nothing -> error "Unable to allocate vector"
-      Just v -> return (VectorObject v)
