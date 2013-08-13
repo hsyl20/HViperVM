@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module ViperVM.Runtime.Memory.Object (
+module ViperVM.VirtualPlatform.Object (
    Object(..), ObjectPeer(..), initObject, directTransfer,
    initSubObject,
    lockObject, unlockObject,
@@ -9,8 +9,8 @@ module ViperVM.Runtime.Memory.Object (
 
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Link
-import ViperVM.Runtime.Memory.Objects.Vector
-import ViperVM.Runtime.Memory.Objects.Matrix
+import ViperVM.VirtualPlatform.Objects.Vector
+import ViperVM.VirtualPlatform.Objects.Matrix
 
 import Control.Concurrent.STM
 import Data.Typeable

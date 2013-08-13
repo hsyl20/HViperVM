@@ -1,9 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
-module ViperVM.Runtime.Memory.Descriptor where
+module ViperVM.VirtualPlatform.Descriptor where
 
-import ViperVM.Runtime.Memory.Object
-import ViperVM.Runtime.Memory.Objects.Vector
-import ViperVM.Runtime.Memory.Objects.Matrix
+import ViperVM.VirtualPlatform.Object
+import ViperVM.VirtualPlatform.Objects.Vector
+import ViperVM.VirtualPlatform.Objects.Matrix
 import ViperVM.Platform.Primitive
 import ViperVM.Platform.Memory
 import Data.Word

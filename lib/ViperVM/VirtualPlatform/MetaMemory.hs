@@ -1,11 +1,11 @@
-module ViperVM.Runtime.Memory.MetaMemory (
+module ViperVM.VirtualPlatform.MetaMemory (
    MetaMemory, initMetaMemory,
    allocateMetaObject
 ) where
 
 import ViperVM.Platform.Platform
-import ViperVM.Runtime.Memory.MetaObject as MO
-import ViperVM.Runtime.Memory.Descriptor
+import ViperVM.VirtualPlatform.MetaObject as MO
+import ViperVM.VirtualPlatform.Descriptor
 import ViperVM.STM.TSet as TSet
 
 import Control.Concurrent.STM

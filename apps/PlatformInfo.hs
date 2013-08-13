@@ -1,6 +1,7 @@
 -- This program displays information about the platform
 
-import ViperVM.Platform
+import ViperVM.Platform.Configuration
+import ViperVM.Platform.Platform
 import ViperVM.Common.Logger
 
 main :: IO ()

@@ -1,4 +1,4 @@
-module ViperVM.Runtime.Memory.Objects.Vector (
+module ViperVM.VirtualPlatform.Objects.Vector (
    Vector, vectorAllocate, vectorRelease, vectorTransfer,
    createVector, vectorBuffer, vectorRegion, vectorCellType, vectorSize,
 ) where

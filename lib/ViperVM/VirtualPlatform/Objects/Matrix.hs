@@ -1,4 +1,4 @@
-module ViperVM.Runtime.Memory.Objects.Matrix (
+module ViperVM.VirtualPlatform.Objects.Matrix (
    Matrix, matrixAllocate, matrixRelease, matrixTransfer,
    createMatrix, matrixBuffer, matrixRegion, matrixCellType,
    matrixWidth, matrixHeight, matrixDimensions, matrixPadding, matrixOffset,

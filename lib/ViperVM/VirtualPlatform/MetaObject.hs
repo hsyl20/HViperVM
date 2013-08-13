@@ -1,12 +1,12 @@
 {-# LANGUAGE DeriveDataTypeable, LambdaCase #-}
-module ViperVM.Runtime.Memory.MetaObject (
+module ViperVM.VirtualPlatform.MetaObject (
    MetaObject(..), allInstances, 
    allocate, attachInstance, detachInstance, exchangeInstance,
    instanceMemories, instancesInMemory, allocateInstance
 ) where
 
-import ViperVM.Runtime.Memory.Object
-import ViperVM.Runtime.Memory.Descriptor
+import ViperVM.VirtualPlatform.Object
+import ViperVM.VirtualPlatform.Descriptor
 import ViperVM.STM.TSet as TSet
 import ViperVM.Platform.Memory
 

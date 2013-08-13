@@ -1,4 +1,4 @@
-module ViperVM.Runtime.Memory.CompositeObject where
+module ViperVM.VirtualPlatform.CompositeObject where
 
 import ViperVM.Runtime.Memory.Descriptor
 import ViperVM.Runtime.Memory.MetaObject

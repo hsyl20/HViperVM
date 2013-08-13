@@ -1,4 +1,4 @@
-module ViperVM.Runtime.Memory.Transfer where
+module ViperVM.VirtualPlatform.Transfer where
 
 -- | Allocate a new instance, transfer appropriate data from another one, then
 -- associate the new instance

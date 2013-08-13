@@ -62,34 +62,23 @@ library
     ViperVM.Platform.Configuration
     ViperVM.Platform.Kernel
     ViperVM.Platform.Compilation
-    ViperVM.Platform.Source
     ViperVM.Platform.Program
     ViperVM.Platform.KernelParameter
     ViperVM.Platform.KernelConstraint
     ViperVM.Platform.KernelExecutionResult
     ViperVM.Platform.Primitive
-    ViperVM.Platform
 
-    ViperVM.Runtime.Memory.Objects.Vector
-    ViperVM.Runtime.Memory.Objects.Matrix
-    ViperVM.Runtime.Memory.Object
+    ViperVM.VirtualPlatform.Objects.Vector
+    ViperVM.VirtualPlatform.Objects.Matrix
+    ViperVM.VirtualPlatform.Object
 
-    ViperVM.Runtime.Memory.Descriptor
-    ViperVM.Runtime.Memory.MetaObject
-    ViperVM.Runtime.Memory.MetaMemory
+    ViperVM.VirtualPlatform.Descriptor
+    ViperVM.VirtualPlatform.MetaObject
+    ViperVM.VirtualPlatform.MetaMemory
 
-    ViperVM.Runtime.Memory.MetaObjects.Matrix
+    ViperVM.VirtualPlatform.MetaObjects.Matrix
 
---    ViperVM.Platform.TransferResult
---    ViperVM.Platform.Scheduler
---    ViperVM.Platform.KernelManager
---    ViperVM.Platform.LockMode
---    ViperVM.Platform.Object
---    ViperVM.Platform.ObjectKernel
---    ViperVM.Platform.RegionTransfer
---    ViperVM.Platform.RegionTransferManager
---    ViperVM.Platform.Runtime
---    ViperVM.Platform.Event
+--    ViperVM.Runtime.Runtime
 
 
 --    ViperVM.Scheduling.Single

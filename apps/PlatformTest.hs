@@ -1,6 +1,8 @@
 -- This program displays information about the platform
 
-import ViperVM.Platform
+import ViperVM.Platform.Configuration
+import ViperVM.Platform.Memory
+import ViperVM.Platform.Platform
 import ViperVM.Common.Logger
 
 import Data.Traversable (forM)
