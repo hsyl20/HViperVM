@@ -1,10 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.ObjectKernel (
-      KernelObjectConfig(..), ObjectKernel(..),
-      executeObjectKernel, peerKernel,
-      compileObjectKernel, lockModes,
-      ensureCompiledFor
-   ) where
+   KernelObjectConfig(..), ObjectKernel(..),
+   executeObjectKernel, peerKernel,
+   compileObjectKernel, lockModes,
+   ensureCompiledFor
+) where
 
 import ViperVM.Platform.Platform
 import ViperVM.Platform.Kernel

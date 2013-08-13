@@ -73,18 +73,19 @@ library
     ViperVM.Runtime.Memory.Objects.Vector
     ViperVM.Runtime.Memory.Objects.Matrix
     ViperVM.Runtime.Memory.Object
-    ViperVM.Runtime.Memory.VirtualObject
-    ViperVM.Runtime.Memory.VirtualMemory
 
---    ViperVM.Platform.BufferManager
+    ViperVM.Runtime.Memory.Descriptor
+    ViperVM.Runtime.Memory.MetaObject
+    ViperVM.Runtime.Memory.MetaMemory
+
+    ViperVM.Runtime.Memory.MetaObjects.Matrix
+
 --    ViperVM.Platform.TransferResult
 --    ViperVM.Platform.Scheduler
 --    ViperVM.Platform.KernelManager
 --    ViperVM.Platform.LockMode
 --    ViperVM.Platform.Object
 --    ViperVM.Platform.ObjectKernel
---    ViperVM.Platform.ObjectManager
---    ViperVM.Platform.RegionLockManager
 --    ViperVM.Platform.RegionTransfer
 --    ViperVM.Platform.RegionTransferManager
 --    ViperVM.Platform.Runtime

@@ -1,14 +1,24 @@
 module ViperVM.Runtime.Memory.Objects.Matrix (
-   Matrix,
+   Matrix, matrixAllocate, matrixRelease, matrixTransfer,
    createMatrix, matrixBuffer, matrixRegion, matrixCellType,
    matrixWidth, matrixHeight, matrixDimensions, matrixPadding, matrixOffset,
-   matrixSubMatrix, matrixSubMatrixTrim, matrixSplit
+   matrixSubMatrix, matrixSubMatrixTrim, matrixSplit,
+   pokeHostFloatMatrix, peekHostFloatMatrix
 ) where
 
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Primitive
+import ViperVM.Platform.Link
 import ViperVM.Common.Region
+import ViperVM.Platform.Primitive as Prim
+import ViperVM.Platform.Peer.MemoryPeer (BufferPeer(..))
+import qualified ViperVM.Backends.Host.Buffer as Host
 
+import Foreign.Marshal.Array
+import Foreign.Ptr
+import Control.Monad (liftM, when, unless)
+import Data.Traversable (forM)
+import Data.Foldable (forM_)
 import Data.Word
 
 -- | Matrix object
@@ -75,3 +85,67 @@ matrixSubMatrixTrim m x y w h = matrixSubMatrix m x y w' h'
       (gw,gh) = matrixDimensions m
       w' = if x+w > gw then gw-x else w
       h' = if y+h > gh then gh-y else h
+
+-- | Try to allocate a matrix object
+matrixAllocate :: Memory -> Primitive -> Word64 -> Word64 -> Word64 -> IO (Maybe Matrix)
+matrixAllocate mem p width height padding = do
+   let 
+      rowSize = width * (sizeOf p)
+      bSize = (rowSize+padding) * height
+      reg = Region2D 0 height rowSize padding
+      makeMat buf = createMatrix buf reg p
+
+   liftM (fmap makeMat) (bufferAllocate bSize mem)
+
+
+-- | Release a matrix
+matrixRelease :: Matrix -> IO ()
+matrixRelease m = bufferRelease (matrixBuffer m)
+
+-- | Initialize an host matrix
+pokeHostFloatMatrix :: Matrix -> [[Float]] -> IO ()
+pokeHostFloatMatrix m ds = do
+
+   unless (isHostMemory . bufferMemory $ matrixBuffer m)
+      (error "Cannot initialize a matrix that is not stored in host memory")
+
+   when (matrixCellType m /= Prim.Float) 
+      (error "Cannot initialize the matrix: invalid cell type")
+
+   let rowSize = matrixWidth m * Prim.sizeOf (matrixCellType m) + matrixPadding m
+       HostBuffer buf = bufferPeer (matrixBuffer m)
+       startPtr = Host.bufferPtr buf `plusPtr` (fromIntegral $ matrixOffset m)
+
+   forM_ (ds `zip` [0..]) $ \(xs,i) -> do
+      let ptr = startPtr `plusPtr` (fromIntegral $ i*rowSize)
+      pokeArray (castPtr ptr) xs
+         
+
+-- | Read the content of an host matrix
+peekHostFloatMatrix :: Matrix -> IO [[Float]]
+peekHostFloatMatrix m = do
+
+   unless (isHostMemory . bufferMemory $ matrixBuffer m)
+      (error "Cannot initialize a matrix that is not stored in host memory")
+
+   when (matrixCellType m /= Prim.Float) 
+      (error "Cannot initialize the matrix: invalid cell type")
+
+   let rowSize = matrixWidth m * Prim.sizeOf (matrixCellType m) + matrixPadding m
+       HostBuffer buf = bufferPeer (matrixBuffer m)
+       startPtr = Host.bufferPtr buf `plusPtr` (fromIntegral $ matrixOffset m)
+       height = matrixHeight m
+       width = fromIntegral (matrixWidth m)
+
+   forM [0..height-1] $ \i -> do
+      let ptr = startPtr `plusPtr` (fromIntegral $ i*rowSize)
+      peekArray width (castPtr ptr)
+
+-- | Transfer a matrix
+matrixTransfer :: Link -> Matrix -> Matrix -> IO ()
+matrixTransfer link src dst = linkTransfer link srcBuffer srcRegion dstBuffer dstRegion
+   where
+      srcBuffer = matrixBuffer src
+      dstBuffer = matrixBuffer dst
+      srcRegion = matrixRegion src
+      dstRegion = matrixRegion dst

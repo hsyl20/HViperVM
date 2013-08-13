@@ -1,7 +1,8 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module ViperVM.Platform.Memory (
    Memory(..), memoryName, memoryInfo, wrapMemory,
-   Buffer(..), bufferSize,
+   isHostMemory,
+   Buffer(..), bufferSize, 
    bufferAllocate, bufferRelease
 ) where
 
@@ -37,6 +38,12 @@ instance Eq Memory where
 
 instance Ord Memory where
    compare m1 m2 = compare (memoryId m1) (memoryId m2)
+
+-- | Indicate if it is a host memory
+isHostMemory :: Memory -> Bool
+isHostMemory m = case memoryPeer m of
+   Peer.HostMemory {} -> True
+   _ -> False
 
 -- | Wrap a peer memory
 wrapMemory :: Peer.MemoryPeer -> Int -> IO Memory
@@ -112,7 +119,7 @@ wrapBuffer bId peer mem = Buffer bId peer mem
 -- | Return the size of the allocated buffer
 bufferSize :: Buffer -> Word64
 bufferSize = Peer.bufferSize . bufferPeer
-              
+
 -- | Try to allocate a buffer in a memory
 bufferAllocate :: Word64 -> Memory -> IO (Maybe Buffer)
 bufferAllocate sz m = do
@@ -134,7 +141,6 @@ bufferAllocate sz m = do
       TSet.insert buf (memoryBuffers m)
 
       return buf
-
 
 
 -- | Release a buffer

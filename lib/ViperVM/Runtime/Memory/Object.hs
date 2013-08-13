@@ -1,57 +1,87 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module ViperVM.Runtime.Memory.Object (
-   Object(..), Descriptor(..), objectMemory, checkObject,
-   matrixDescDims, matrixDescWidth, matrixDescHeight
+   Object(..), ObjectPeer(..), initObject, directTransfer,
+   initSubObject,
+   lockObject, unlockObject,
+   lockObjectIO, unlockObjectIO
 ) where
 
 import ViperVM.Platform.Memory
-import ViperVM.Platform.Primitive
+import ViperVM.Platform.Link
 import ViperVM.Runtime.Memory.Objects.Vector
 import ViperVM.Runtime.Memory.Objects.Matrix
 
+import Control.Concurrent.STM
 import Data.Typeable
-import Data.Word
+import Control.Applicative ( (<$>) )
+import Control.Monad (when)
 
--- | Descriptor of an object
-data Descriptor = 
-     VectorDesc Primitive Word64         -- ^ Vector
-   | MatrixDesc Primitive Word64 Word64  -- ^ Matrix
-   deriving (Eq,Ord,Show)
-
--- | An object
-data Object = 
+data ObjectPeer = 
      VectorObject Vector   -- ^ Vector object
    | MatrixObject Matrix   -- ^ Matrix object
-   deriving (Show,Eq,Ord,Typeable)
+   deriving (Show,Eq,Ord)
 
 
-matrixDescDims :: Descriptor -> (Word64,Word64)
-matrixDescDims (MatrixDesc _ w h) = (w,h)
-matrixDescDims _ = error "Not a matrix descriptor"
-
-matrixDescWidth :: Descriptor -> Word64
-matrixDescWidth = fst . matrixDescDims
-
-matrixDescHeight :: Descriptor -> Word64
-matrixDescHeight = snd . matrixDescDims
-
-matrixDescCellType :: Descriptor -> Primitive
-matrixDescCellType (MatrixDesc p _ _) = p
-matrixDescCellType _ = error "Not a matrix descriptor"
-
--- | Return the memory into which the object is stored
-objectMemory :: Object -> Memory
-objectMemory (VectorObject o) = bufferMemory (vectorBuffer o)
-objectMemory (MatrixObject o) = bufferMemory (matrixBuffer o)
+-- | An object in a memory
+data Object = Object {
+   objectPeer :: ObjectPeer,
+   objectMemory :: Memory,
+   locking :: TVar Bool
+} deriving (Typeable)
 
 
-checkObject :: Descriptor -> Object -> Bool
+instance Eq Object where
+   (==) a b = objectPeer a == objectPeer b
 
-checkObject (VectorDesc p sz) (VectorObject v) =
-   vectorCellType v == p && vectorSize v == sz
+instance Ord Object where
+   compare a b = compare (objectPeer a) (objectPeer b)
 
-checkObject (MatrixDesc p w h) (MatrixObject m) =
-   matrixCellType m == p && matrixWidth m == w && matrixHeight m == h
+instance Show Object where
+   show = show . objectPeer
 
-checkObject _ _ = False
+initObject :: ObjectPeer -> Memory -> IO Object
+initObject peer mem = Object peer mem <$> newTVarIO False
+
+initSubObject :: (ObjectPeer -> ObjectPeer) -> Object -> Object
+initSubObject f obj = Object peer mem lck
+   where
+      peer = f (objectPeer obj)
+      mem = objectMemory obj
+      lck = locking obj
+
+lockObject :: Object -> STM ()
+lockObject obj = do
+   v <- readTVar (locking obj)
+   when v retry
+   writeTVar (locking obj) True
+
+unlockObject :: Object -> STM ()
+unlockObject obj = do
+   writeTVar (locking obj) False
+
+lockObjectIO :: Object -> IO ()
+lockObjectIO = atomically . lockObject
+
+unlockObjectIO :: Object -> IO ()
+unlockObjectIO = atomically . unlockObject
+
+
+-- | Perform a transfer
+directTransfer :: Link -> Object -> Object -> IO ()
+directTransfer link src dst = do
+   let srcP = objectPeer src
+       dstP = objectPeer dst
+
+   atomically $ do
+      lockObject src
+      lockObject dst
+
+   case (srcP,dstP) of
+      (VectorObject v1, VectorObject v2) -> vectorTransfer link v1 v2
+      (MatrixObject m1, MatrixObject m2) -> matrixTransfer link m1 m2
+      _ -> error "Invalid transfer"
+
+   atomically $ do
+      unlockObject src
+      unlockObject dst
