@@ -68,15 +68,16 @@ library
     ViperVM.Platform.KernelExecutionResult
     ViperVM.Platform.Primitive
 
-    ViperVM.VirtualPlatform.Objects.Vector
-    ViperVM.VirtualPlatform.Objects.Matrix
-    ViperVM.VirtualPlatform.Object
-
     ViperVM.VirtualPlatform.Descriptor
-    ViperVM.VirtualPlatform.MetaObject
+    ViperVM.VirtualPlatform.MetaKernel
     ViperVM.VirtualPlatform.MetaMemory
-
+    ViperVM.VirtualPlatform.MetaObject
     ViperVM.VirtualPlatform.MetaObjects.Matrix
+    ViperVM.VirtualPlatform.Object
+    ViperVM.VirtualPlatform.Objects.Matrix
+    ViperVM.VirtualPlatform.Objects.Vector
+    ViperVM.VirtualPlatform.Task
+
 
 --    ViperVM.Runtime.Runtime
 

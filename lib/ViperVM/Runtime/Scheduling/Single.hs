@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Scheduling.Single (
-      singleScheduler, initSingleScheduler
-   ) where
+   singleScheduler, initSingleScheduler
+) where
 
 import ViperVM.Platform
 import ViperVM.Platform.SharedObject

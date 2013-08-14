@@ -20,6 +20,7 @@ data MetaMemory = MetaMemory {
 initMetaMemory :: Platform -> IO MetaMemory
 initMetaMemory pf = MetaMemory pf <$> atomically TSet.empty
 
+-- | Allocate an object in the virtual memory
 allocateMetaObject :: MetaMemory -> Descriptor -> IO MetaObject
 allocateMetaObject mm desc = do
    mo <- MO.allocate desc
