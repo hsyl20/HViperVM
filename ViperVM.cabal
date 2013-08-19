@@ -103,9 +103,9 @@ library
 --    ViperVM.Library.FloatMatrixTranspose
 --    ViperVM.Library.FloatMatrixPotrf
 --    ViperVM.Library.FloatMatrixTrsm
---
---    ViperVM.Parsing.Parser
---    ViperVM.Parsing.Lisp
+
+    ViperVM.Parsing.Parser
+    ViperVM.Parsing.Lisp
 
   other-modules:
     Paths_ViperVM
