@@ -1,3 +1,4 @@
+-- | Backend specific glue for platform
 module ViperVM.Platform.Peer.PlatformPeer (
    PlatformPeer(..),initPlatform
 ) where

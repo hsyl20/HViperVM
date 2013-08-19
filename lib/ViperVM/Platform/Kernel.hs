@@ -6,7 +6,6 @@ module ViperVM.Platform.Kernel where
 import ViperVM.Platform.Proc
 import ViperVM.Platform.KernelParameter
 import ViperVM.Platform.KernelConstraint
-import ViperVM.Platform.KernelExecutionResult
 import ViperVM.Platform.ProcessorCapabilities
 
 import qualified ViperVM.Platform.Peer.KernelPeer as Peer
@@ -14,7 +13,7 @@ import qualified ViperVM.Platform.Peer.KernelPeer as Peer
 -- | A kernel
 data Kernel = Kernel {
    kernelPeer :: Peer.KernelPeer
-}
+} deriving (Ord,Eq)
 
 instance Show Kernel where
    show k = show (kernelPeer k)
@@ -36,5 +35,5 @@ canExecute :: Proc -> Kernel -> Bool
 canExecute p k  = supportConstraints (kernelConstraints k) p
 
 -- | Execute a kernel on a given processor synchronously
-execute :: Proc -> Kernel -> [KernelParameter] -> IO ExecutionResult
+execute :: Proc -> Kernel -> [KernelParameter] -> IO ()
 execute p k params = Peer.kernelExecute (kernelPeer k) params (procPeer p)

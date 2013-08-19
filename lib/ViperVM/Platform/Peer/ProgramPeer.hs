@@ -1,3 +1,4 @@
+-- | Backend specific glue for programs
 module ViperVM.Platform.Peer.ProgramPeer (
    ProgramPeer(..), programCompile
 ) where

@@ -1,3 +1,4 @@
+-- | Backend specific glue for processors
 module ViperVM.Platform.Peer.ProcPeer (
   ProcPeer(..), procPeerApply,
   procName, procVendor, procCapabilities,

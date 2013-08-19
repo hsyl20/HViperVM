@@ -1,3 +1,4 @@
+-- | Backend specific glue for links
 module ViperVM.Platform.Peer.LinkPeer (
    LinkPeer(..), link1DTransfer, link2DTransfer,
    linkCapabilities, linkSource, linkTarget

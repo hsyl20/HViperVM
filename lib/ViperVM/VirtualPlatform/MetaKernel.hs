@@ -3,6 +3,8 @@ module ViperVM.VirtualPlatform.MetaKernel (
 ) where
 
 import ViperVM.Platform.Kernel
+import ViperVM.Platform.KernelParameter
+import ViperVM.VirtualPlatform.Object
 
 import Data.Set as Set
 
@@ -11,7 +13,8 @@ import Data.Set as Set
 data MetaKernel = MetaKernel {
    name :: String,
    kernels :: Set Kernel,
-   proto :: [Arg]
+   proto :: [Arg],
+   paramsFromObjects :: [Object] -> [KernelParameter]
 }
 
 -- | Parameter access modes

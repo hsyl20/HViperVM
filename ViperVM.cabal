@@ -65,7 +65,6 @@ library
     ViperVM.Platform.Program
     ViperVM.Platform.KernelParameter
     ViperVM.Platform.KernelConstraint
-    ViperVM.Platform.KernelExecutionResult
     ViperVM.Platform.Primitive
 
     ViperVM.VirtualPlatform.Descriptor

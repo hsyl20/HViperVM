@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards, LambdaCase #-}
 module ViperVM.Backends.OpenCL.Kernel (
    Kernel(..), KernelConfiguration(..),
-   initKernel, kernelExecute,
+   initKernel, kernelExecute, CLKernelParameter(..),
    clMemParam, clIntParam, clUIntParam, clULongParam
 ) where
 
@@ -13,8 +13,6 @@ import ViperVM.Backends.OpenCL.CommandQueue
 import ViperVM.Backends.OpenCL.Program
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Platform.KernelConstraint
-import ViperVM.Platform.KernelExecutionResult
-import ViperVM.Platform.KernelParameter
 
 import Control.Concurrent
 import Data.Word
@@ -24,7 +22,7 @@ import Control.Monad (forM_,void)
 data Kernel = Kernel {
    kernelName :: String,
    kernelConstraints :: [KernelConstraint],
-   kernelConfigure :: [KernelParameter] -> KernelConfiguration,
+   kernelConfigure :: [CLKernelParameter] -> KernelConfiguration,
    kernelMutex :: MVar (),
    kernelProgram :: Program,
    kernelCLPeer :: CLKernel
@@ -56,7 +54,7 @@ data CLKernelParameter =
    | CLBoolParam CLbool
      deriving (Show)
 
-initKernel :: Program -> String -> [KernelConstraint] -> ([KernelParameter] -> KernelConfiguration) -> IO Kernel
+initKernel :: Program -> String -> [KernelConstraint] -> ([CLKernelParameter] -> KernelConfiguration) -> IO Kernel
 initKernel prog name consts conf = do
    mtex <- newEmptyMVar
    peer <- clCreateKernel (programLib prog) (programCLPeer prog) name 
@@ -90,7 +88,7 @@ setCLKernelArg lib kernel idx (CLBoolParam i) = clSetKernelArgSto lib kernel idx
 
 
 -- | Execute a kernel on a given processor synchronously
-kernelExecute :: Processor -> Kernel -> [KernelParameter] -> IO ExecutionResult
+kernelExecute :: Processor -> Kernel -> [CLKernelParameter] -> IO ()
 kernelExecute proc ker params = do
 
    let lib = procLibrary proc
@@ -109,5 +107,3 @@ kernelExecute proc ker params = do
    void $ takeMVar mutex -- Do not forget to release the mutex
 
    void $ clWaitForEvents lib [ev]
-
-   return ExecuteSuccess

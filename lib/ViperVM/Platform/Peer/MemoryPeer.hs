@@ -1,3 +1,4 @@
+-- | Backend specific glue for memories and buffers
 module ViperVM.Platform.Peer.MemoryPeer (
    MemoryPeer(..), memoryPeerApply,
    memoryName, memorySize,
