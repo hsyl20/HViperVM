@@ -9,12 +9,11 @@ import ViperVM.Graph.Builtins
 import Data.Map as Map
 import Control.Concurrent
 import Control.Concurrent.STM
-import Control.Monad (when,void)
+import Control.Monad (when)
 import Control.Applicative
 import Text.Printf
 import Data.Traversable (traverse)
 import Data.List (intersperse)
-import ViperVM.Platform.Event
 
 debug :: Bool
 debug = False
@@ -22,8 +21,13 @@ debug = False
 parallel :: Bool
 parallel = True
 
-future :: IO a -> IO (Event a)
-future f = withNewEvent (\ev -> void (forkIO (setEvent ev =<< f)))
+future :: IO a -> IO (MVar a)
+future f = do
+   v <- newEmptyMVar
+   _ <- forkIO $ do
+      r <- f
+      putMVar v r
+   return v
    
 
 -- | Evaluate a node and return its expression
@@ -40,7 +44,7 @@ runParallel builtins ctx nodes@(x:xs)= do
          -- Spare one thread: the current one evaluates the first node
          events <- traverse (future . run builtins ctx) xs
          x' <- run builtins ctx x
-         xs' <- traverse waitEvent events
+         xs' <- traverse readMVar events
          return (x':xs')
 
 -- | Reduce a node

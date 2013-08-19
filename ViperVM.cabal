@@ -86,11 +86,11 @@ library
 --    ViperVM.Scheduling.Eager
 --
 --    ViperVM.UserInterface
---
---    ViperVM.Graph.Graph
---    ViperVM.Graph.ParallelReducer
---    ViperVM.Graph.Builtins
---
+
+    ViperVM.Graph.Graph
+    ViperVM.Graph.ParallelReducer
+    ViperVM.Graph.Builtins
+
     ViperVM.STM.Common
     ViperVM.STM.TSet
     ViperVM.STM.TList
