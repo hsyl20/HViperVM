@@ -6,8 +6,6 @@ import ViperVM.Platform.Kernel
 import ViperVM.Platform.KernelParameter
 import ViperVM.VirtualPlatform.Object
 
-import Data.Set as Set
-
 -- | A meta kernel
 -- Set of kernels performing the same operation
 data MetaKernel = MetaKernel {

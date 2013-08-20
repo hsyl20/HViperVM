@@ -1,5 +1,5 @@
 module ViperVM.VirtualPlatform.MetaMemory (
-   MetaMemory, initMetaMemory,
+   MetaMemory(..), initMetaMemory,
    allocateMetaObject
 ) where
 

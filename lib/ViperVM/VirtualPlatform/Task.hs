@@ -1,5 +1,5 @@
 module ViperVM.VirtualPlatform.Task (
-   Task(..)
+   Task(..), taskExecute
 ) where
 
 import ViperVM.VirtualPlatform.MetaKernel
@@ -12,7 +12,6 @@ import ViperVM.STM.TSet as TSet
 import Control.Monad
 import Control.Applicative
 import Control.Concurrent.STM
-import Data.Set as Set
 
 -- | Task
 data Task = Task {
