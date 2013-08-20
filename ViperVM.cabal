@@ -14,7 +14,7 @@ cabal-version:       >=1.8
 data-files: 
   data/Codelets/Blas/Lu.vvm
   apps/samples/lisp/Sample.lisp
-  lib/ViperVM/Library/OpenCL/FloatMatrixAdd.cl
+  lib/ViperVM/Library/FloatMatrixAdd/OpenCL.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixSub.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixMul.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixTranspose.cl
@@ -26,6 +26,7 @@ library
 
     ViperVM.Common.Logger
     ViperVM.Common.Region
+    ViperVM.Common.Util
 
     ViperVM.Backends.Host.Memory
     ViperVM.Backends.Host.Buffer
@@ -76,6 +77,7 @@ library
     ViperVM.VirtualPlatform.Objects.Matrix
     ViperVM.VirtualPlatform.Objects.Vector
     ViperVM.VirtualPlatform.Task
+    ViperVM.VirtualPlatform.FunctionalKernel
 
 
 --    ViperVM.Runtime.Runtime
@@ -96,7 +98,12 @@ library
     ViperVM.STM.TList
     ViperVM.STM.TMap
     ViperVM.STM.TIntSet
---
+
+    ViperVM.Library.FloatMatrixAdd.OpenCL
+    ViperVM.Library.FloatMatrixAdd.Kernels
+    ViperVM.Library.FloatMatrixAdd.MetaKernel
+    ViperVM.Library.FloatMatrixAdd.Function
+
 --    ViperVM.Library.FloatMatrixAdd
 --    ViperVM.Library.FloatMatrixSub
 --    ViperVM.Library.FloatMatrixMul

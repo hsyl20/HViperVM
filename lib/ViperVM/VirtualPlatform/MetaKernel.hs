@@ -12,9 +12,9 @@ import Data.Set as Set
 -- Set of kernels performing the same operation
 data MetaKernel = MetaKernel {
    name :: String,
-   kernels :: Set Kernel,
    proto :: [Arg],
-   paramsFromObjects :: [Object] -> [KernelParameter]
+   paramsFromObjects :: [ObjectPeer] -> [KernelParameter],
+   kernels :: [Kernel]
 }
 
 -- | Parameter access modes

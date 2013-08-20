@@ -28,8 +28,8 @@ taskExecute task ker proc objs = do
    let 
       metaKer = metaKernel task
       params' = params task
-      validKer = Set.member ker (kernels metaKer)
-      kernelParams = paramsFromObjects metaKer objs
+      validKer = elem ker (kernels metaKer)
+      kernelParams = paramsFromObjects metaKer (fmap objectPeer objs)
 
    unless validKer (error "Invalid kernel")
    unless (canExecute proc ker) (error "Kernel cannot be executed on this processor")

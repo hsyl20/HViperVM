@@ -2,30 +2,30 @@
 module ViperVM.Backends.OpenCL.Kernel (
    Kernel(..), KernelConfiguration(..),
    initKernel, kernelExecute, CLKernelParameter(..),
-   clMemParam, clIntParam, clUIntParam, clULongParam
+   createPeerKernel
 ) where
 
 import ViperVM.Backends.OpenCL.Types
-import ViperVM.Backends.OpenCL.Buffer
 import ViperVM.Backends.OpenCL.Event
 import ViperVM.Backends.OpenCL.Processor
 import ViperVM.Backends.OpenCL.CommandQueue
 import ViperVM.Backends.OpenCL.Program
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Platform.KernelConstraint
+import ViperVM.STM.TMap as TMap
 
 import Control.Concurrent
-import Data.Word
+import Control.Concurrent.STM
 import Data.Monoid
 import Control.Monad (forM_,void)
 
 data Kernel = Kernel {
-   kernelName :: String,
-   kernelConstraints :: [KernelConstraint],
+   kernelPeers :: TMap Processor CLKernel,
    kernelConfigure :: [CLKernelParameter] -> KernelConfiguration,
+   kernelConstraints :: [KernelConstraint],
    kernelMutex :: MVar (),
-   kernelProgram :: Program,
-   kernelCLPeer :: CLKernel
+   kernelName :: String,
+   kernelProgram :: Program
 }
 
 instance Eq Kernel where
@@ -41,8 +41,8 @@ instance Show Kernel where
    show k = "OpenCL \"" ++ kernelName k ++ "\" kernel"
 
 data KernelConfiguration = KernelConfiguration {
-   globalDim :: [Word],
-   localDim :: [Word],
+   globalDim :: [CLuint],
+   localDim :: [CLuint],
    parameters :: [CLKernelParameter]
 } deriving (Show)
 
@@ -57,28 +57,23 @@ data CLKernelParameter =
 initKernel :: Program -> String -> [KernelConstraint] -> ([CLKernelParameter] -> KernelConfiguration) -> IO Kernel
 initKernel prog name consts conf = do
    mtex <- newEmptyMVar
-   peer <- clCreateKernel (programLib prog) (programCLPeer prog) name 
+   peers <- atomically TMap.empty
    return $ Kernel {
-      kernelName = name,
-      kernelConstraints = consts,
+      kernelPeers = peers,
       kernelConfigure = conf,
-      kernelProgram = prog,
-      kernelCLPeer = peer,
-      kernelMutex = mtex
+      kernelConstraints = consts,
+      kernelMutex = mtex,
+      kernelName = name,
+      kernelProgram = prog
    }
 
-clMemParam :: Buffer -> CLKernelParameter
-clMemParam b = CLMemParam (bufferPeer b)
+createPeerKernel :: Kernel -> Processor -> IO ()
+createPeerKernel k proc = do
+   Just prog <- programForProcessor (kernelProgram k) proc
+   peer <- clCreateKernel (procLibrary proc) prog (kernelName k)
+   atomically $ TMap.insert proc peer (kernelPeers k)
 
-clIntParam :: Int -> CLKernelParameter
-clIntParam i = CLIntParam (fromIntegral i)
-
-clUIntParam :: Word -> CLKernelParameter
-clUIntParam i = CLUIntParam (fromIntegral i)
-
-clULongParam :: Word64 -> CLKernelParameter
-clULongParam i = CLULongParam (fromIntegral i)
-
+-- | Set kernel parameter
 setCLKernelArg :: OpenCLLibrary -> CLKernel -> CLuint -> CLKernelParameter -> IO ()
 setCLKernelArg lib kernel idx (CLMemParam mem) = clSetKernelArgSto lib kernel idx mem
 setCLKernelArg lib kernel idx (CLIntParam i) = clSetKernelArgSto lib kernel idx i
@@ -95,7 +90,8 @@ kernelExecute proc ker params = do
        cq  = procQueue proc
        config = kernelConfigure ker params
        mutex = kernelMutex ker
-       peer = kernelCLPeer ker
+
+   peer <- atomically (kernelPeers ker TMap.! proc)
 
    putMVar mutex () -- OpenCL kernels are mutable (clSetKernelArg) so we use this mutex
 

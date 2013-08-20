@@ -3,6 +3,8 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Kernel where
 
+import Control.Applicative ((<$>))
+
 import ViperVM.Platform.Proc
 import ViperVM.Platform.KernelParameter
 import ViperVM.Platform.KernelConstraint
@@ -17,6 +19,9 @@ data Kernel = Kernel {
 
 instance Show Kernel where
    show k = show (kernelPeer k)
+
+initKernelsIO :: [IO Peer.KernelPeer] -> IO [Kernel]
+initKernelsIO peers = fmap Kernel <$> sequence peers
 
 -- | Constraints of the kernel
 kernelConstraints :: Kernel -> [KernelConstraint]

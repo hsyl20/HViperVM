@@ -8,6 +8,10 @@ import ViperVM.Platform.Primitive
 import ViperVM.Platform.Memory
 import Data.Word
 
+data ObjectType =
+     VectorType
+   | MatrixType
+
 -- | Descriptor of an object
 data Descriptor = 
      VectorDesc Primitive Word64         -- ^ Vector

@@ -14,7 +14,7 @@ module ViperVM.Backends.OpenCL.Program(
   clSetKernelArg, clSetKernelArgSto, clGetKernelFunctionName, clGetKernelNumArgs, 
   clGetKernelReferenceCount, clGetKernelContext, clGetKernelProgram, 
   clGetKernelWorkGroupSize, clGetKernelCompileWorkGroupSize, 
-  clGetKernelLocalMemSize
+  clGetKernelLocalMemSize, programForProcessor, initProgram
   ) where
 
 -- -----------------------------------------------------------------------------
@@ -23,24 +23,46 @@ import Control.Applicative ( (<$>) )
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String( CString, withCString, peekCString )
+import ViperVM.STM.TSet (TSet)
+import qualified ViperVM.STM.TSet as TSet
+import Data.Maybe (listToMaybe)
 import ViperVM.Backends.OpenCL.Loader
-import ViperVM.Backends.OpenCL.Types( 
+import ViperVM.Backends.OpenCL.Processor
+import ViperVM.Backends.OpenCL.Types(
   CLint, CLuint, CLulong, CLProgram, CLContext, CLKernel, CLDeviceID, CLError,
   CLProgramInfo_, CLBuildStatus(..), CLBuildStatus_, 
   CLKernelInfo_, wrapCheckSuccess, 
   whenSuccess, wrapPError, wrapGetInfo, getCLValue, getEnumCL )
+import Control.Concurrent.STM
+import Control.Monad (filterM)
 
+
+-- | Multiplex OpenCL programs from different platforms
 data Program = Program {
-   programCLPeer :: CLProgram,
-   programLib :: OpenCLLibrary
+   programSource :: String,
+   programPeers :: TSet ProgramPeer
 }
 
+data ProgramPeer = ProgramPeer OpenCLLibrary CLProgram
+
 instance Eq Program where
-   (==) p1 p2 = programCLPeer p1 == programCLPeer p2
+   (==) p1 p2 = programSource p1 == programSource p2
 
 instance Ord Program where
-   compare p1 p2 = compare (programCLPeer p1) (programCLPeer p2)
+   compare p1 p2 = compare (programSource p1) (programSource p2)
 
+
+initProgram :: String -> IO Program
+initProgram src = Program src <$> atomically TSet.empty
+
+programForProcessor :: Program -> Processor -> IO (Maybe CLProgram)
+programForProcessor prog proc = do
+   let dev = procDevice proc
+       f (ProgramPeer lib p) = elem dev <$> clGetProgramDevices lib p
+       g (ProgramPeer _ p) = p
+   peers <- atomically (TSet.elems (programPeers prog))
+   listToMaybe . fmap g <$> filterM f peers
+   
 
 clCreateProgramWithSource :: OpenCLLibrary -> CLContext -> String -> IO CLProgram
 clCreateProgramWithSource lib ctx source =
