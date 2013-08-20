@@ -14,7 +14,7 @@ cabal-version:       >=1.8
 data-files: 
   data/Codelets/Blas/Lu.vvm
   apps/samples/lisp/Sample.lisp
-  lib/ViperVM/Library/FloatMatrixAdd/OpenCL.cl
+  lib/ViperVM/Library/OpenCL/FloatMatrixAdd.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixSub.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixMul.cl
   lib/ViperVM/Library/OpenCL/FloatMatrixTranspose.cl
@@ -99,15 +99,18 @@ library
     ViperVM.STM.TMap
     ViperVM.STM.TIntSet
 
-    ViperVM.Library.FloatMatrixAdd.OpenCL
+    ViperVM.Library.OpenCL.FloatMatrixAdd
+    ViperVM.Library.OpenCL.FloatMatrixSub
+    ViperVM.Library.OpenCL.FloatMatrixMul
+    ViperVM.Library.OpenCL.FloatMatrixTranspose
+    ViperVM.Library.OpenCL.FloatMatrixTrsm
+    ViperVM.Library.OpenCL.FloatMatrixPotrf
     ViperVM.Library.FloatMatrixAdd
-
---    ViperVM.Library.FloatMatrixAdd
---    ViperVM.Library.FloatMatrixSub
---    ViperVM.Library.FloatMatrixMul
---    ViperVM.Library.FloatMatrixTranspose
---    ViperVM.Library.FloatMatrixPotrf
---    ViperVM.Library.FloatMatrixTrsm
+    ViperVM.Library.FloatMatrixSub
+    ViperVM.Library.FloatMatrixMul
+    ViperVM.Library.FloatMatrixTranspose
+    ViperVM.Library.FloatMatrixTrsm
+    ViperVM.Library.FloatMatrixPotrf
 
     ViperVM.Parsing.Parser
     ViperVM.Parsing.Lisp

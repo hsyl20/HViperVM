@@ -1,116 +1,93 @@
-{-# LANGUAGE LambdaCase #-}
 module ViperVM.Library.FloatMatrixMul (
-  floatMatrixMulKernelCL, floatMatrixMulObjectKernelCL,
-  floatMatrixMulBuiltin
-  ) where
+   builtin, function, metaKernel, kernels
+) where
 
-import ViperVM.Platform
-import ViperVM.Platform.Descriptor
-import qualified ViperVM.Platform.Primitive as Prim
-import ViperVM.Platform.SharedObject
-import ViperVM.Platform.Objects.Matrix
-import ViperVM.Platform.Runtime (MakeBuiltin)
-import ViperVM.Platform.KernelParameter
-import qualified ViperVM.Backends.OpenCL.Kernel as CL
-import ViperVM.Backends.OpenCL.Kernel (clUIntParam,clMemParam)
-import ViperVM.Graph.Builtins
 import Control.Applicative ( (<$>) )
-import Paths_ViperVM
 
-floatMatrixMulKernelCL :: IO CL.Kernel
-floatMatrixMulKernelCL = do
-   fileName <- getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixMul.cl"
-   CL.initKernelFromFile fileName "floatMatrixMul" [] "" configFromParamsCL
+import ViperVM.VirtualPlatform.FunctionalKernel hiding (metaKernel,proto)
+import ViperVM.VirtualPlatform.MetaObject
+import ViperVM.VirtualPlatform.Descriptor
+import ViperVM.VirtualPlatform.MetaKernel hiding (proto,name,kernels)
+import ViperVM.VirtualPlatform.Objects.Matrix
+import ViperVM.VirtualPlatform.Object
 
-configFromParamsCL :: [KernelParameter] -> CL.KernelConfiguration
-configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
+import ViperVM.Platform.Primitive as Prim
+import ViperVM.Platform.KernelParameter
+import ViperVM.Platform.Kernel
+import ViperVM.Platform.Peer.KernelPeer
+
+import qualified ViperVM.Library.OpenCL.FloatMatrixMul as CL
+
+----------------------------------------
+-- Builtin & Function
+---------------------------------------
+
+builtin :: MakeBuiltin
+builtin = makeBuiltinIO function
+
+function :: IO FunctionalKernel
+function = FunctionalKernel proto makeParams makeResult <$> metaKernel
    where
-      [WordParam k,
-       BufferParam a,
-       WordParam lda,
-       WordParam offa,
-       BufferParam b,
-       WordParam ldb,
-       WordParam offb,
-       BufferParam c,
-       WordParam ldc,
-       WordParam offc,
-       WordParam w,
-       WordParam h] = pms
+      proto = Prototype {
+            inputs = [MatrixType,MatrixType],
+            output = MatrixType
+         }
 
-      roundTo to v = v + (if ms /= 0 then to - ms else 0)
-         where ms = mod v to
+      makeParams args = do
+         let [a,b] = args
+             (w,_) = matrixDescDims (descriptor b)
+             (_,h) = matrixDescDims (descriptor a)
+             desc  = MatrixDesc Prim.Float w h
+         c <- allocate desc
+         return [a,b,c]
 
-      gDim = [roundTo 16 w, roundTo 16 h,1]
-
-      lDim = [16,16,1]
-
-      clParams = [clUIntParam k, 
-                  clUIntParam w,
-                  clUIntParam h,
-                  clMemParam (clBuffer a),
-                  clUIntParam lda,
-                  clUIntParam offa,
-                  clMemParam (clBuffer b),
-                  clUIntParam ldb,
-                  clUIntParam offb,
-                  clMemParam (clBuffer c),
-                  clUIntParam ldc,
-                  clUIntParam offc]
+      makeResult args = last args
 
 
-floatMatrixMulObjectKernelCL :: IO ObjectKernel
-floatMatrixMulObjectKernelCL = do
-   let modes = [ReadOnly,ReadOnly,ReadWrite]
-   ker <- CLKernel <$> floatMatrixMulKernelCL
-   return (ObjectKernel ker modes paramsFromObjects)
+----------------------------------------
+-- MetaKernel
+---------------------------------------
 
-
-
-paramsFromObjects :: [Object] -> KernelObjectConfig
-paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
+metaKernel :: IO MetaKernel
+metaKernel = MetaKernel name proto conf <$> kernels
    where
-      [MatrixObject ma, MatrixObject mb, MatrixObject mc] = objs
+      name = "FloatMatrixAdd"
+      proto = [
+            Arg ReadOnly "a",
+            Arg ReadOnly "b",
+            Arg WriteOnly "c"
+         ]
 
-      pms = [WordParam (fromIntegral k),
-             BufferParam (matrixBuffer ma),
-             WordParam (fromIntegral lda), 
-             WordParam (fromIntegral $ matrixOffset ma),
-             BufferParam (matrixBuffer mb),
-             WordParam (fromIntegral ldb), 
-             WordParam (fromIntegral $ matrixOffset mb),
-             BufferParam (matrixBuffer mc),
-             WordParam (fromIntegral ldc), 
-             WordParam (fromIntegral $ matrixOffset mc),
-             WordParam (fromIntegral w),
-             WordParam (fromIntegral h)]
+      conf :: [ObjectPeer] -> [KernelParameter]
+      conf objs = params
+         where
+            [MatrixObject ma, MatrixObject mb, MatrixObject mc] = objs
+            params = 
+               [WordParam (fromIntegral w),
+                WordParam (fromIntegral h),
+                WordParam (fromIntegral k),
+                BufferParam (matrixBuffer ma),
+                WordParam (fromIntegral lda), 
+                WordParam (fromIntegral $ matrixOffset ma),
+                BufferParam (matrixBuffer mb),
+                WordParam (fromIntegral ldb), 
+                WordParam (fromIntegral $ matrixOffset mb),
+                BufferParam (matrixBuffer mc),
+                WordParam (fromIntegral ldc), 
+                WordParam (fromIntegral $ matrixOffset mc)]
 
-      (k, _) = matrixDimensions ma
-      w = matrixWidth mb
-      h = matrixHeight ma
-      lda = ((matrixWidth ma) * 4 + (matrixPadding ma)) `div` 4
-      ldb = ((matrixWidth mb) * 4 + (matrixPadding mb)) `div` 4
-      ldc = ((matrixWidth mc) * 4 + (matrixPadding mc)) `div` 4
-      a = matrixBuffer ma
-      b = matrixBuffer mb
-      c = matrixBuffer mc
-      roRegions = [(a, matrixRegion ma), (b, matrixRegion mb)]
-      rwRegions = [(c, matrixRegion mc)]
+            (k, _) = matrixDimensions ma
+            w = matrixWidth mb
+            h = matrixHeight ma
+            lda = ((matrixWidth ma) * 4 + (matrixPadding ma)) `div` 4
+            ldb = ((matrixWidth mb) * 4 + (matrixPadding mb)) `div` 4
+            ldc = ((matrixWidth mc) * 4 + (matrixPadding mc)) `div` 4
 
+----------------------------------------
+-- Kernels
+---------------------------------------
 
-floatMatrixMulBuiltin :: MakeBuiltin
-floatMatrixMulBuiltin readData writeData exec alloc = do
-
-   ok <- floatMatrixMulObjectKernelCL
-
-   return $ Builtin [True,True] $ \case
-      ([x',y'],_) -> do
-         let 
-            (x,y) = (readData x', readData y')
-            (w,_) = matrixDescDims (descriptor y)
-            (_,h) = matrixDescDims (descriptor x)
-            desc  = MatrixDesc Prim.Float w h
-         e <- alloc desc
-         exec ok [x,y,e]
-         return (writeData e)
-      _ -> error "Bad kernel arguments"
+kernels :: IO [Kernel]
+kernels = initKernelsIO [
+      CLKernel <$> CL.kernel
+   ]

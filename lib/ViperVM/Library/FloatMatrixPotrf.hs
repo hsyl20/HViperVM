@@ -1,82 +1,80 @@
-{-# LANGUAGE LambdaCase #-}
 module ViperVM.Library.FloatMatrixPotrf (
-  floatMatrixPotrfKernelCL, floatMatrixPotrfObjectKernelCL,
-  floatMatrixPotrfBuiltin
-  ) where
+   builtin, function, metaKernel, kernels
+) where
 
-import ViperVM.Platform
-import ViperVM.Platform.SharedObject
-import ViperVM.Platform.Objects.Matrix
-import ViperVM.Platform.Runtime (MakeBuiltin)
-import ViperVM.Platform.KernelParameter
-import qualified ViperVM.Backends.OpenCL.Kernel as CL
-import ViperVM.Backends.OpenCL.Kernel (clUIntParam,clMemParam)
-import ViperVM.Graph.Builtins
 import Control.Applicative ( (<$>) )
-import Paths_ViperVM
 
-floatMatrixPotrfKernelCL :: IO CL.Kernel
-floatMatrixPotrfKernelCL = do
-   fileName <- getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixPotrf.cl"
-   CL.initKernelFromFile fileName "floatMatrixPotrf" [] "" configFromParamsCL
+import ViperVM.VirtualPlatform.FunctionalKernel hiding (metaKernel,proto)
+import ViperVM.VirtualPlatform.MetaObject
+import ViperVM.VirtualPlatform.Descriptor
+import ViperVM.VirtualPlatform.MetaKernel hiding (proto,name,kernels)
+import ViperVM.VirtualPlatform.Objects.Matrix
+import ViperVM.VirtualPlatform.Object
 
-configFromParamsCL :: [KernelParameter] -> CL.KernelConfiguration
-configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
+import ViperVM.Platform.KernelParameter
+import ViperVM.Platform.Kernel
+import ViperVM.Platform.Peer.KernelPeer
+
+import qualified ViperVM.Library.OpenCL.FloatMatrixPotrf as CL
+
+----------------------------------------
+-- Builtin & Function
+---------------------------------------
+
+builtin :: MakeBuiltin
+builtin = makeBuiltinIO function
+
+function :: IO FunctionalKernel
+function = FunctionalKernel proto makeParams makeResult <$> metaKernel
    where
-      [WordParam n, 
-       WordParam srcOffset, 
-       WordParam srcWidth, 
-       BufferParam a,
-       WordParam dstOffset, 
-       WordParam dstWidth, 
-       BufferParam b] = pms
-      gDim = [16,16,1]
-      lDim = [16,16,1]
-      clParams = [clUIntParam n, 
-                  clUIntParam srcOffset, 
-                  clUIntParam srcWidth, 
-                  clMemParam (clBuffer a),
-                  clUIntParam dstOffset, 
-                  clUIntParam dstWidth, 
-                  clMemParam (clBuffer b)]
+      proto = Prototype {
+            inputs = [MatrixType],
+            output = MatrixType
+         }
+
+      makeParams args = do
+         let [a] = args
+         b <- allocate (descriptor a)
+         return [a,b]
+
+      makeResult args = last args
 
 
-floatMatrixPotrfObjectKernelCL :: IO ObjectKernel
-floatMatrixPotrfObjectKernelCL = do
-   let modes = [ReadOnly,ReadWrite]
-   ker <- CLKernel <$> floatMatrixPotrfKernelCL
-   return (ObjectKernel ker modes paramsFromObjects)
+----------------------------------------
+-- MetaKernel
+---------------------------------------
 
-paramsFromObjects :: [Object] -> KernelObjectConfig
-paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
+metaKernel :: IO MetaKernel
+metaKernel = MetaKernel name proto conf <$> kernels
    where
-      [MatrixObject msrc, MatrixObject mdst] = objs
-      srcBuf = matrixBuffer msrc
-      dstBuf = matrixBuffer mdst
-      ldsrc = ((matrixWidth msrc) * 4 + (matrixPadding msrc)) `div` 4
-      lddst = ((matrixWidth mdst) * 4 + (matrixPadding mdst)) `div` 4
-      width = matrixWidth msrc
-      pms = [ -- FIXME: offsets and paddings must be divisible by 4
-            WordParam (fromIntegral width), 
-            WordParam (fromIntegral (matrixOffset msrc `div` 4)), 
-            WordParam (fromIntegral ldsrc), 
-            BufferParam srcBuf, 
-            WordParam (fromIntegral (matrixOffset mdst `div` 4)), 
-            WordParam (fromIntegral lddst), 
-            BufferParam dstBuf
+      name = "FloatMatrixPotrf"
+      proto = [
+            Arg ReadOnly "a",
+            Arg ReadOnly "b"
          ]
-      roRegions = [(srcBuf, matrixRegion msrc)]
-      rwRegions = [(dstBuf, matrixRegion mdst)]
 
-floatMatrixPotrfBuiltin :: MakeBuiltin
-floatMatrixPotrfBuiltin readData writeData exec alloc = do
+      conf :: [ObjectPeer] -> [KernelParameter]
+      conf objs = params
+         where
+            [MatrixObject ma, MatrixObject mb] = objs
+            params = [ -- FIXME: offsets and paddings must be divisible by 4
+                  WordParam (fromIntegral $ matrixWidth ma), 
+                  WordParam (fromIntegral (matrixOffset ma `div` 4)), 
+                  WordParam (fromIntegral lda), 
+                  BufferParam (matrixBuffer ma), 
+                  WordParam (fromIntegral (matrixOffset mb `div` 4)), 
+                  WordParam (fromIntegral ldb), 
+                  BufferParam (matrixBuffer mb)
+               ]
+            lda = ((matrixWidth ma) * 4 + (matrixPadding ma)) `div` 4
+            ldb = ((matrixWidth mb) * 4 + (matrixPadding mb)) `div` 4
 
-   ok <- floatMatrixPotrfObjectKernelCL
 
-   return $ Builtin [True] $ \case
-      ([x'],_) -> do
-         let x = readData x'
-         e <- alloc (descriptor x)
-         exec ok [x,e]
-         return (writeData e)
-      _ -> error "Bad kernel arguments"
+----------------------------------------
+-- Kernels
+---------------------------------------
+
+kernels :: IO [Kernel]
+kernels = initKernelsIO [
+      CLKernel <$> CL.kernel
+   ]

@@ -15,7 +15,7 @@ import ViperVM.Platform.KernelParameter
 import ViperVM.Platform.Kernel
 import ViperVM.Platform.Peer.KernelPeer
 
-import qualified ViperVM.Library.FloatMatrixAdd.OpenCL as CL
+import qualified ViperVM.Library.OpenCL.FloatMatrixAdd as CL
 
 ----------------------------------------
 -- Builtin & Function

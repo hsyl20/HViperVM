@@ -1,92 +1,83 @@
-{-# LANGUAGE LambdaCase #-}
 module ViperVM.Library.FloatMatrixTranspose (
-  floatMatrixTransposeKernelCL, floatMatrixTransposeObjectKernelCL,
-  floatMatrixTransposeBuiltin
-  ) where
+   builtin, function, metaKernel, kernels
+) where
 
-import ViperVM.Platform
-import ViperVM.Platform.SharedObject
-import ViperVM.Platform.Objects.Matrix
-import ViperVM.Platform.Runtime (MakeBuiltin)
-import ViperVM.Platform.KernelParameter
-import qualified ViperVM.Backends.OpenCL.Kernel as CL
-import ViperVM.Backends.OpenCL.Kernel (clUIntParam,clMemParam)
-import ViperVM.Graph.Builtins
 import Control.Applicative ( (<$>) )
-import Paths_ViperVM
 
-floatMatrixTransposeKernelCL :: IO CL.Kernel
-floatMatrixTransposeKernelCL = do
-   fileName <- getDataFileName "lib/ViperVM/Library/OpenCL/FloatMatrixTranspose.cl"
-   CL.initKernelFromFile fileName "floatMatrixTranspose" [] "" configFromParamsCL
+import ViperVM.VirtualPlatform.FunctionalKernel hiding (metaKernel,proto)
+import ViperVM.VirtualPlatform.MetaObject
+import ViperVM.VirtualPlatform.Descriptor
+import ViperVM.VirtualPlatform.MetaKernel hiding (proto,name,kernels)
+import ViperVM.VirtualPlatform.Objects.Matrix
+import ViperVM.VirtualPlatform.Object
 
-configFromParamsCL :: [KernelParameter] -> CL.KernelConfiguration
-configFromParamsCL pms = CL.KernelConfiguration gDim lDim clParams
+import ViperVM.Platform.KernelParameter
+import ViperVM.Platform.Kernel
+import ViperVM.Platform.Peer.KernelPeer
+
+import qualified ViperVM.Library.OpenCL.FloatMatrixTranspose as CL
+
+----------------------------------------
+-- Builtin & Function
+---------------------------------------
+
+builtin :: MakeBuiltin
+builtin = makeBuiltinIO function
+
+function :: IO FunctionalKernel
+function = FunctionalKernel proto makeParams makeResult <$> metaKernel
    where
-      [WordParam width, 
-       WordParam height, 
-       BufferParam a,
-       WordParam lda,
-       WordParam offa,
-       BufferParam b,
-       WordParam ldb,
-       WordParam offb] = pms
+      proto = Prototype {
+            inputs = [MatrixType],
+            output = MatrixType
+         }
 
-      roundTo to v = v + (if ms /= 0 then to - ms else 0)
-         where ms = mod v to
+      makeParams args = do
+         let [a] = args
+         b <- allocate (descriptor a)
+         return [a,b]
 
-      gDim = [roundTo 16 width, roundTo 16 height,1]
-
-      lDim = [16,16,1]
-
-      clParams = [clUIntParam width, 
-                  clUIntParam height, 
-                  clMemParam (clBuffer a),
-                  clUIntParam lda,
-                  clUIntParam offa,
-                  clMemParam (clBuffer b),
-                  clUIntParam ldb,
-                  clUIntParam offb]
+      makeResult args = last args
 
 
-floatMatrixTransposeObjectKernelCL :: IO ObjectKernel
-floatMatrixTransposeObjectKernelCL = do
-   let modes = [ReadOnly,ReadWrite]
-   ker <- CLKernel <$> floatMatrixTransposeKernelCL
-   return (ObjectKernel ker modes paramsFromObjects)
+----------------------------------------
+-- MetaKernel
+---------------------------------------
 
-paramsFromObjects :: [Object] -> KernelObjectConfig
-paramsFromObjects objs = KernelObjectConfig pms roRegions rwRegions
+metaKernel :: IO MetaKernel
+metaKernel = MetaKernel name proto conf <$> kernels
    where
-      [MatrixObject ma, MatrixObject mb] = objs
+      name = "FloatMatrixTranspose"
+      proto = [
+            Arg ReadOnly "a",
+            Arg WriteOnly "b"
+         ]
 
-      pms = [WordParam (fromIntegral width), 
-             WordParam (fromIntegral height), 
-             BufferParam (matrixBuffer ma), 
-             WordParam (fromIntegral lda), 
-             WordParam (fromIntegral $ matrixOffset ma),
-             BufferParam (matrixBuffer mb),
-             WordParam (fromIntegral ldb), 
-             WordParam (fromIntegral $ matrixOffset mb)]
+      conf :: [ObjectPeer] -> [KernelParameter]
+      conf objs = params
+         where
+            [MatrixObject ma, MatrixObject mb] = objs
 
-      (width, height) = matrixDimensions ma
-      lda = ((matrixWidth ma) * 4 + (matrixPadding ma)) `div` 4
-      ldb = ((matrixWidth mb) * 4 + (matrixPadding mb)) `div` 4
-      a = matrixBuffer ma
-      b = matrixBuffer mb
-      roRegions = [(a, matrixRegion ma)]
-      rwRegions = [(b, matrixRegion mb)]
+            params = 
+               [WordParam (fromIntegral width), 
+                WordParam (fromIntegral height), 
+                BufferParam (matrixBuffer ma), 
+                WordParam (fromIntegral lda), 
+                WordParam (fromIntegral $ matrixOffset ma),
+                BufferParam (matrixBuffer mb),
+                WordParam (fromIntegral ldb), 
+                WordParam (fromIntegral $ matrixOffset mb)]
+
+            (width, height) = matrixDimensions ma
+            lda = ((matrixWidth ma) * 4 + (matrixPadding ma)) `div` 4
+            ldb = ((matrixWidth mb) * 4 + (matrixPadding mb)) `div` 4
 
 
-floatMatrixTransposeBuiltin :: MakeBuiltin
-floatMatrixTransposeBuiltin readData writeData exec alloc = do
+----------------------------------------
+-- Kernels
+---------------------------------------
 
-   ok <- floatMatrixTransposeObjectKernelCL
-
-   return $ Builtin [True] $ \case
-      ([x'],_) -> do
-         let x = readData x'
-         e <- alloc (descriptor x)
-         exec ok [x,e]
-         return (writeData e)
-      _ -> error "Bad kernel arguments"
+kernels :: IO [Kernel]
+kernels = initKernelsIO [
+      CLKernel <$> CL.kernel
+   ]

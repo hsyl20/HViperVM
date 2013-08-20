@@ -1,7 +1,7 @@
-__kernel void floatMatrixMul(uint K, uint W, uint H,
+__kernel void floatMatrixMul(uint W, uint H, uint K,
       const float __global *A, uint lda, unsigned int offsetA,
       const float __global *B, uint ldb, unsigned int offsetB,
-      __global float *C, int ldc, unsigned int offsetC){
+            float __global *C, uint ldc, unsigned int offsetC){
 
    int i = get_global_id(1);
    int j = get_global_id(0);
