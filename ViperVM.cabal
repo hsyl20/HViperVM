@@ -100,9 +100,7 @@ library
     ViperVM.STM.TIntSet
 
     ViperVM.Library.FloatMatrixAdd.OpenCL
-    ViperVM.Library.FloatMatrixAdd.Kernels
-    ViperVM.Library.FloatMatrixAdd.MetaKernel
-    ViperVM.Library.FloatMatrixAdd.Function
+    ViperVM.Library.FloatMatrixAdd
 
 --    ViperVM.Library.FloatMatrixAdd
 --    ViperVM.Library.FloatMatrixSub
