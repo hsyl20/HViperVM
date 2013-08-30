@@ -17,6 +17,7 @@ import ViperVM.Platform.Compilation
 import Data.Set (Set,fromList)
 import Text.Printf
 import Control.Applicative ( (<$>) )
+import Data.List ( intersect )
 
 data Processor = Processor {
    procLibrary :: OpenCLLibrary,
@@ -41,8 +42,8 @@ instance Show Processor where
 -- | Initialize an OpenCL processor
 initProc :: OpenCLLibrary -> CLContext -> CLDeviceID -> (Int,Int) -> IO Processor
 initProc lib ctx dev (pfIdx,devIdx) = do
-   -- FIXME: Ensure that out-of-order mode is supported
-   let props = [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE] 
+   devProps <- clGetDeviceQueueProperties lib dev
+   let props = intersect [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE] devProps
 
    cq <- clCreateCommandQueue lib ctx dev props
    name <- clGetDeviceName lib dev

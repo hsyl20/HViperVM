@@ -46,7 +46,7 @@ import Data.List.Split
 import Text.ParserCombinators.Parsec hiding (spaces)
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Types( 
-  CLbool, CLuint, CLulong, CLDeviceType_,
+  CLbool, CLuint, CLulong, CLDeviceType_, CLError(..),
   CLDeviceInfo_, CLDeviceFPConfig(..), CLDeviceExecCapability(..),
   CLDeviceLocalMemType(..), CLDeviceMemCacheType(..), CLPlatformInfo(..),
   CLPlatformID, CLDeviceID, CLDeviceType(..), CLCommandQueueProperty, 
@@ -93,8 +93,10 @@ clGetPlatformInfo lib infoid platform = do
 
 getNumDevices :: OpenCLLibrary -> CLPlatformID -> CLDeviceType_ -> IO CLuint
 getNumDevices lib platform dtype = alloca $ \(num_devices :: Ptr CLuint) -> do
-  whenSuccess (rawClGetDeviceIDs lib platform dtype 0 nullPtr num_devices)
-    $ peek num_devices
+   res <- rawClGetDeviceIDs lib platform dtype 0 nullPtr num_devices
+   if res == getCLValue CL_DEVICE_NOT_AVAILABLE
+      then return 0
+      else whenSuccess (return res) $ peek num_devices
 
 -- | Obtain the list of devices available on a platform. Returns the list if 
 -- the function is executed successfully. Otherwise it returns the empty list 
@@ -102,12 +104,13 @@ getNumDevices lib platform dtype = alloca $ \(num_devices :: Ptr CLuint) -> do
 -- device_type were found.
 clGetDeviceIDs :: OpenCLLibrary -> CLDeviceType -> CLPlatformID -> IO [CLDeviceID]
 clGetDeviceIDs lib dtype platform = do
-  ndevs <- getNumDevices lib platform dval
-  allocaArray (fromIntegral ndevs) $ \(devs :: Ptr CLDeviceID) -> do
-    whenSuccess (rawClGetDeviceIDs lib platform dval ndevs devs nullPtr)
-      $ peekArray (fromIntegral ndevs) devs
-    where
-      dval = getCLValue dtype
+   let dval = getCLValue dtype
+   ndevs <- getNumDevices lib platform dval
+   if ndevs == 0 
+      then return []
+      else allocaArray (fromIntegral ndevs) $ \(devs :: Ptr CLDeviceID) -> do
+             whenSuccess (rawClGetDeviceIDs lib platform dval ndevs devs nullPtr)
+               $ peekArray (fromIntegral ndevs) devs
 
 getDeviceInfoSize :: OpenCLLibrary -> CLDeviceID -> CLDeviceInfo_ -> IO CSize
 getDeviceInfoSize lib device infoid = alloca $ \(value_size :: Ptr CSize) -> do

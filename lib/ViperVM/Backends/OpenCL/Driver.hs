@@ -6,6 +6,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Traversable (traverse)
 import Control.Applicative ( (<$>) )
+import Data.List ( intersect )
 
 import ViperVM.Platform.Configuration
 import ViperVM.Platform.LinkCapabilities
@@ -35,11 +36,14 @@ initOpenCL config hostMems = do
 initOpenCLPlatform :: OpenCLLibrary -> [Host.Memory] -> (CLPlatformID,Int) -> IO ([Memory],[Link],[Processor])
 initOpenCLPlatform lib hostMems (platform,pfIdx) = do
    devices <- clGetDeviceIDs lib CL_DEVICE_TYPE_ALL platform
-   context <- clCreateContext lib [CL_CONTEXT_PLATFORM platform] devices putStrLn
-   memories  <- initMemories lib context devices
-   links <- concat <$> traverse (initLinks lib context hostMems) (devices `zip` memories)
-   procs <- traverse (createProc lib pfIdx context) (zip3 devices memories [0..])
-   return (memories, links, procs)
+   case devices of
+      [] -> return ([],[],[])
+      _ -> do
+         context <- clCreateContext lib [CL_CONTEXT_PLATFORM platform] devices putStrLn
+         memories  <- initMemories lib context devices
+         links <- concat <$> traverse (initLinks lib context hostMems) (devices `zip` memories)
+         procs <- traverse (createProc lib pfIdx context) (zip3 devices memories [0..])
+         return (memories, links, procs)
    
 
 -- | Initialize OpenCL platform memories
@@ -50,7 +54,8 @@ initMemories lib ctx = traverse $ \dev -> do
 -- | Create links for a given device
 initLinks :: OpenCLLibrary -> CLContext -> [Host.Memory] -> (CLDeviceID,Memory) -> IO [Link]
 initLinks lib ctx hostMems (dev,mem) = do
-   let props = [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE] -- FIXME: Ensure that out-of-order mode is supported
+   devProps <- clGetDeviceQueueProperties lib dev
+   let props = intersect [CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE] devProps
 
    queue <- clCreateCommandQueue lib ctx dev props
    caps <- computeLinkCapabilities lib dev
