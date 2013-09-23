@@ -3,7 +3,7 @@
 import ViperVM.Platform.Configuration
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Platform
-import ViperVM.Common.Logger
+import ViperVM.Runtime.Logger
 
 import Data.Traversable (forM)
 import Data.Foldable (forM_)

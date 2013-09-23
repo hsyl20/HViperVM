@@ -2,7 +2,7 @@
 
 import ViperVM.Platform.Configuration
 import ViperVM.Platform.Platform
-import ViperVM.Common.Logger
+import ViperVM.Runtime.Logger
 
 main :: IO ()
 main = do

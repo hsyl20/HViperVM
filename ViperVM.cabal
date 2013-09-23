@@ -24,7 +24,6 @@ data-files:
 library
   exposed-modules:     
 
-    ViperVM.Common.Logger
     ViperVM.Common.Region
     ViperVM.Common.Util
 
@@ -81,6 +80,7 @@ library
     ViperVM.VirtualPlatform.FunctionalKernel
 
 
+    ViperVM.Runtime.Logger
     ViperVM.Runtime.Scheduler
 --    ViperVM.Runtime.Runtime
 

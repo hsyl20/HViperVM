@@ -1,4 +1,4 @@
-module ViperVM.Common.Logger where
+module ViperVM.Runtime.Logger where
 
 import System.Clock
 import Control.Concurrent
