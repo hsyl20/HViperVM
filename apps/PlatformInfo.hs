@@ -6,13 +6,15 @@ import ViperVM.Common.Logger
 
 main :: IO ()
 main = do
-  let config = Configuration {
-    libraryOpenCL = "/usr/lib/libOpenCL.so",
-    logger = stdOutLogger . filterLevel LogDebug
-  }
+   let 
+      logger = stdOutLogger . filterLevel LogDebug
+      config = Configuration {
+         libraryOpenCL = "/usr/lib/libOpenCL.so",
+         eventHandler = \e -> logger (CustomLog (show e))
+      }
 
-  putStrLn "Initializing platform..."
-  platform <- initPlatform config
+   putStrLn "Initializing platform..."
+   platform <- initPlatform config
 
-  putStrLn "Querying platform infos..."
-  putStrLn (platformInfo platform)
+   putStrLn "Querying platform infos..."
+   putStrLn (platformInfo platform)

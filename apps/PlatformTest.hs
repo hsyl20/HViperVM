@@ -13,10 +13,12 @@ import Text.Printf (printf)
 
 main :: IO ()
 main = do
-   let config = Configuration {
-      libraryOpenCL = "/usr/lib/libOpenCL.so",
+   let 
       logger = stdOutLogger . filterLevel LogDebug
-   }
+      config = Configuration {
+         libraryOpenCL = "/usr/lib/libOpenCL.so",
+         eventHandler = \e -> logger (CustomLog (show e))
+      }
 
    putStrLn "Initializing platform..."
    platform <- initPlatform config

@@ -20,8 +20,7 @@ import Data.Traversable (forM)
 data PlatformPeer = PlatformPeer {
   memories :: [Memory],
   links :: [Link],
-  processors :: [Proc],
-  configuration :: Configuration
+  processors :: [Proc]
 }
 
 initPlatform :: Configuration -> IO PlatformPeer
@@ -49,4 +48,4 @@ initPlatform config = do
    lnks <- forM linksPeer (wrapLink mems)
    procs <- forM (procsPeer `zip` [0..]) (uncurry (wrapProc mems))
 
-   return $ PlatformPeer mems lnks procs config
+   return $ PlatformPeer mems lnks procs

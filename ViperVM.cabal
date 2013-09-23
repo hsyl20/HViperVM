@@ -54,6 +54,7 @@ library
     ViperVM.Platform.Peer.ProgramPeer
     ViperVM.Platform.Peer.KernelPeer
 
+    ViperVM.Platform.PlatformEvent
     ViperVM.Platform.LinkCapabilities
     ViperVM.Platform.ProcessorCapabilities
     ViperVM.Platform.Memory

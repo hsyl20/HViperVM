@@ -1,9 +1,9 @@
 module ViperVM.Platform.Configuration where
 
-import ViperVM.Common.Logger
+import ViperVM.Platform.PlatformEvent
 
 -- | Platform configuration
 data Configuration = Configuration {
   libraryOpenCL :: String,
-  logger :: LogMsg -> IO ()
+  eventHandler :: PlatformEvent -> IO ()
 }

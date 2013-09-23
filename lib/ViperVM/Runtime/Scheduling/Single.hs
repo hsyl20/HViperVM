@@ -51,9 +51,9 @@ singleThread pf proc ch = forever $ do
    objs <- prepareObjects pf proc task kernel
 
    -- Execute kernel
-   customLog pf (printf "[Single %s] Executing %s with params %s " (show proc) (show kernel) (show objs))
+   --customLog pf (printf "[Single %s] Executing %s with params %s " (show proc) (show kernel) (show objs))
    taskExecute task kernel proc objs
-   customLog pf (printf "[Single %s] Execution complete" (show proc))
+   --customLog pf (printf "[Single %s] Execution complete" (show proc))
 
    -- Unprepare objects
    unprepareObjects pf proc task kernel objs

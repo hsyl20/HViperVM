@@ -1,13 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
-module ViperVM.Platform.Runtime (
+module ViperVM.Runtime.Runtime (
    Runtime,
    initRuntime, allocate, release, releaseMany,
    peekFloatMatrix, pokeFloatMatrix, pokeDummyFloatMatrix,
    execute, platform, scheduler,
    loadBuiltin, loadBuiltins, MakeBuiltin, readData, dataBuiltin,
-   allocateLinked, unsplit
+   allocateLinked, unsplit,
+   customLog, debugLog, errorLog
 ) where
 
+import ViperVM.Common.Logger
 import ViperVM.Platform (Platform,hostMemories)
 import ViperVM.Graph.Graph
 import ViperVM.Graph.Builtins
@@ -35,11 +37,11 @@ data Runtime = Runtime {
 }
 
 -- | Initialize a runtime system
-initRuntime :: Platform -> Scheduler -> IO Runtime
-initRuntime pf sch = do
+initRuntime :: Platform -> Scheduler -> Logger -> IO Runtime
+initRuntime pf sch lg = do
    chan <- newBroadcastTChanIO
    initScheduler sch som km =<< atomically (dupTChan chan)
-   return $ Runtime pf om som sch chan
+   return $ Runtime pf lg om som sch chan
 
 -- | Allocate and initialize a matrix of floats
 pokeFloatMatrix :: Runtime -> Descriptor -> [[Float]] -> IO SharedObject
@@ -127,3 +129,17 @@ dataBuiltin v _ _ _ _ = return (Builtin [] . const . return . Data $ toDyn v)
 
 unsplit :: Runtime -> [[SharedObject]] -> IO SharedObject
 unsplit rt = unsplitSharedObject (sharedObjectManager rt)
+
+
+
+-- | Put custom message in log
+customLog :: Runtime -> String -> IO ()
+customLog rt s = logger rt (CustomLog s)
+
+-- | Put error message in log
+errorLog :: Runtime -> String -> IO ()
+errorLog rt s = logger rt (ErrorLog s)
+
+-- | Put debug message in log
+debugLog :: Runtime -> String -> IO ()
+debugLog rt s = logger rt (DebugLog s)
