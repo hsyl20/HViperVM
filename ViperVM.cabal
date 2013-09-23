@@ -80,10 +80,11 @@ library
     ViperVM.VirtualPlatform.FunctionalKernel
 
 
+    ViperVM.Runtime.Scheduler
 --    ViperVM.Runtime.Runtime
 
 
---    ViperVM.Scheduling.Single
+    ViperVM.Runtime.Scheduling.Single
 --    ViperVM.Scheduling.RoundRobin
 --    ViperVM.Scheduling.Eager
 --

@@ -43,6 +43,7 @@ instance Show Object where
 initObject :: ObjectPeer -> Memory -> IO Object
 initObject peer mem = Object peer mem <$> newTVarIO False
 
+-- | Initialize an object with the lock mechanism shared with its parent
 initSubObject :: (ObjectPeer -> ObjectPeer) -> Object -> Object
 initSubObject f obj = Object peer mem lck
    where
@@ -50,12 +51,14 @@ initSubObject f obj = Object peer mem lck
       mem = objectMemory obj
       lck = locking obj
 
+-- | Lock an object in read-only mode
 lockObject :: Object -> STM ()
 lockObject obj = do
    v <- readTVar (locking obj)
    when v retry
    writeTVar (locking obj) True
 
+-- | Unlock an object
 unlockObject :: Object -> STM ()
 unlockObject obj = do
    writeTVar (locking obj) False

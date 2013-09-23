@@ -29,48 +29,17 @@ import Data.Map as Map
 import Data.Traversable (traverse)
 
 data Runtime = Runtime {
-      platform :: Platform,
-      objectManager :: ObjectManager,
-      sharedObjectManager :: SharedObjectManager,
-      scheduler :: Scheduler,
-      schedChan :: TChan SchedMsg
-   }
+   platform :: Platform,
+   scheduler :: Scheduler,
+   schedChan :: TChan SchedMsg
+}
 
 -- | Initialize a runtime system
 initRuntime :: Platform -> Scheduler -> IO Runtime
 initRuntime pf sch = do
-   bm <- createBufferManager pf
-   rm <- createRegionLockManager bm
-   km <- createKernelManager rm
-   tm <- createRegionTransferManager rm
-   om <- createObjectManager tm km
-   som <- createSharedObjectManager om
    chan <- newBroadcastTChanIO
-   
    initScheduler sch som km =<< atomically (dupTChan chan)
-
    return $ Runtime pf om som sch chan
-
--- | Allocate a new data
-allocate :: Runtime -> Descriptor -> IO SharedObject
-allocate rt desc = do
-   let som = sharedObjectManager rt
-   atomically (allocateSharedObject som desc)
-
-allocateLinked :: Runtime -> LinkType -> LinkIdx -> SharedObject -> IO SharedObject
-allocateLinked rt typ idx so = do
-   let som = sharedObjectManager rt
-   atomically (allocateLinkedSharedObject som so typ idx)
-
-
--- | Release data
-release :: Runtime -> SharedObject -> IO ()
-release _ _ = return () -- TODO
-
--- | Release several data
-releaseMany :: Runtime -> [SharedObject] -> IO ()
-releaseMany rt = traverse_ (release rt)
-
 
 -- | Allocate and initialize a matrix of floats
 pokeFloatMatrix :: Runtime -> Descriptor -> [[Float]] -> IO SharedObject

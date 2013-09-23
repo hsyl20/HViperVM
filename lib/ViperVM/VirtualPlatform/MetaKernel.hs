@@ -17,6 +17,7 @@ data MetaKernel = MetaKernel {
 
 -- | Parameter access modes
 data AccessMode = ReadOnly | WriteOnly | ReadWrite
+   deriving (Eq,Ord)
 
 -- | Kernel parameter prototype
 data Arg = Arg {

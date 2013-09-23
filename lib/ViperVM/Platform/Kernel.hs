@@ -1,6 +1,5 @@
-{-# LANGUAGE RecordWildCards, TupleSections #-}
+{-# LANGUAGE RecordWildCards, TupleSections, LambdaCase #-}
 
-{-# LANGUAGE LambdaCase #-}
 module ViperVM.Platform.Kernel where
 
 import Control.Applicative ((<$>))

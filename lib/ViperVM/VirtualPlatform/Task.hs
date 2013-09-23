@@ -1,5 +1,6 @@
 module ViperVM.VirtualPlatform.Task (
-   Task(..), taskExecute
+   Task(..), taskExecute,
+   taskParamsWithMode
 ) where
 
 import ViperVM.VirtualPlatform.MetaKernel
@@ -18,6 +19,15 @@ data Task = Task {
    metaKernel :: MetaKernel,
    params :: [MetaObject]
 }
+
+taskParamsWithMode :: Task -> AccessMode -> [MetaObject]
+taskParamsWithMode task m = fmap snd xs
+   where
+      xs = Prelude.filter f args
+      f = (== m) . mode . fst
+      args = zip (proto mk) (params task)
+      mk = metaKernel task
+
 
 -- | Synchronous task execution
 -- Selected kernel and objects must belong to task meta kernel and meta objects (respectively)
