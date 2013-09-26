@@ -27,10 +27,13 @@ library
     ViperVM.Common.Region
     ViperVM.Common.Util
 
+    ViperVM.Backends.Common.Buffer
+
     ViperVM.Backends.Host.Memory
     ViperVM.Backends.Host.Buffer
     ViperVM.Backends.Host.Link
     ViperVM.Backends.Host.Driver
+    ViperVM.Backends.Host.Hwloc
 
     ViperVM.Backends.OpenCL.Driver
     ViperVM.Backends.OpenCL.Buffer
@@ -79,6 +82,7 @@ library
     ViperVM.VirtualPlatform.Task
     ViperVM.VirtualPlatform.FunctionalKernel
 
+    ViperVM.Interfaces.CommandGraph
 
     ViperVM.Runtime.Logger
     ViperVM.Runtime.Scheduler

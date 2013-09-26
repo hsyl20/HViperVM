@@ -5,11 +5,12 @@ module ViperVM.Graph.Graph (
    Node, Expr(..), Name,
    newNodeIO, newNode, followAlias,
    getNodeExpr, getNodeExprIO, setNodeExpr, setNodeExprIO, lock, unlock,
-   instantiate, instantiateIO, freeVars
+   instantiate, instantiateIO, freeVars, lambdaLift
 ) where
 
 import Control.Concurrent.STM
 import Control.Applicative
+import Control.Monad (foldM)
 import Data.Traversable (traverse)
 import Data.Foldable (traverse_)
 import Data.List (intersperse)
@@ -198,4 +199,52 @@ freeVars = freeVars' []
 
          _ -> return []
    
+
+-- | Perform lambda-lifting on node
+lambdaLift :: Map Name Node -> Int -> Node -> STM (Map Name Node, Int, Node)
+lambdaLift ctx idx node = getNodeExpr node >>= \case
+
+   App e1 e2 -> do
+      (ctx1, idx1, e1') <- lambdaLift ctx idx e1
+      (ctx2, idx2, e2') <- lambdaLift ctx idx1 e2
+      node' <- newNode (App e1' e2')
+      return (union ctx1 ctx2, idx2, node')
+
+   Lambda vars body -> do
+      freeVars body >>= \case
+         [] -> freeVars node >>= \case
+            [] -> do
+               let name = "_lambda" ++ show idx
+                   ctx' = insert name node ctx
+               node' <- newNode (Symbol name)
+               return (ctx', idx+1, node')
+            xs -> do
+               lifted <- newNode (Lambda (xs++vars) body)
+               let name = "_lambda" ++ show idx
+                   ctx' = insert name lifted ctx
+                   f ns n = do
+                     s <- newNode (Symbol n)
+                     newNode (App ns s)
+               nameNode <- newNode (Symbol name)
+               node' <- foldM f nameNode xs
+               return (ctx', idx+1, node')
+         _ -> do
+            dummys <- Map.fromList <$> mapM (\x -> (x,) <$> newNode (Symbol "dummy")) vars
+            (ctx',idx',body') <- lambdaLift (Map.union ctx dummys) idx body
+            node' <- newNode (Lambda vars body')
+            lambdaLift ctx' idx' node'
+
+
+   ListCons e1 e2 -> do
+      (ctx1, idx1, e1') <- lambdaLift ctx idx e1
+      (ctx2, idx2, e2') <- lambdaLift ctx idx1 e2
+      node' <- newNode (ListCons e1' e2')
+      return (union ctx1 ctx2, idx2, node')
+
+   Alias e -> do
+      (ctx', idx', e') <- lambdaLift ctx idx e
+      node' <- newNode (Alias e')
+      return (ctx', idx', node')
+
+   _ -> return (ctx, idx, node)
 
