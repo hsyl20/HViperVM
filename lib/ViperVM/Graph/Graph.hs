@@ -5,7 +5,7 @@ module ViperVM.Graph.Graph (
    Node, Expr(..), Name,
    newNodeIO, newNode, followAlias,
    getNodeExpr, getNodeExprIO, setNodeExpr, setNodeExprIO, lock, unlock,
-   instantiate, instantiateIO
+   instantiate, instantiateIO, freeVars
 ) where
 
 import Control.Concurrent.STM
@@ -170,4 +170,32 @@ instantiate' ctx node = getNodeExpr node >>= \case
          if or (c:cs)
             then return (True, body')
             else return (False,node)
+
+
+-- | Return free variables of the given node
+freeVars :: Node -> STM [Name]
+freeVars = freeVars' [] 
+   where
+      freeVars' names node = getNodeExpr node >>= \case
+         Lambda ns body -> freeVars' (ns++names) body
+         Symbol name
+            | elem name names -> return []
+            | otherwise       -> return [name]
+         App e1 e2 -> (++) <$> freeVars' names e1 <*> freeVars' names e2
+         ListCons e1 e2 -> (++) <$> freeVars' names e1 <*> freeVars' names e2
+
+         Let False ctx e -> do
+            let names' = names ++ keys ctx
+            ctxVars <- concat <$> traverse (freeVars' names) (elems ctx)
+            (++ ctxVars) <$> freeVars' names' e
+
+         Let True ctx e -> do
+            let names' = names ++ keys ctx
+            ctxVars <- concat <$> traverse (freeVars' names') (elems ctx)
+            (++ ctxVars) <$> freeVars' names' e
+
+         Alias e -> freeVars' names e
+
+         _ -> return []
+   
 
