@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 module ViperVM.VirtualPlatform.Descriptor where
 
+import ViperVM.Backends.Common.Buffer
 import ViperVM.VirtualPlatform.Object
 import ViperVM.VirtualPlatform.Objects.Vector
 import ViperVM.VirtualPlatform.Objects.Matrix
@@ -24,13 +25,13 @@ allocateFromDescriptor :: Memory -> Descriptor -> IO Object
 allocateFromDescriptor mem (MatrixDesc prim w h) = do
    let padding = (w * sizeOf prim) `mod` 4
    matrixAllocate mem prim w h padding >>= \case
-      Nothing -> error "Unable to allocate matrix"
-      Just m -> initObject (MatrixObject m) mem
+      AllocError -> error "Unable to allocate matrix"
+      AllocSuccess m -> initObject (MatrixObject m) mem
 
 allocateFromDescriptor mem (VectorDesc prim sz) = do
    vectorAllocate mem prim sz >>= \case
-      Nothing -> error "Unable to allocate vector"
-      Just v -> initObject (VectorObject v) mem
+      AllocError -> error "Unable to allocate vector"
+      AllocSuccess v -> initObject (VectorObject v) mem
 
 
 

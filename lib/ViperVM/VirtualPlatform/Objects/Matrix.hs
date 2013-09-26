@@ -10,6 +10,7 @@ import ViperVM.Platform.Memory
 import ViperVM.Platform.Primitive
 import ViperVM.Platform.Link
 import ViperVM.Common.Region
+import ViperVM.Backends.Common.Buffer
 import ViperVM.Platform.Primitive as Prim
 import ViperVM.Platform.Peer.MemoryPeer (BufferPeer(..))
 import qualified ViperVM.Backends.Host.Buffer as Host
@@ -87,7 +88,7 @@ matrixSubMatrixTrim m x y w h = matrixSubMatrix m x y w' h'
       h' = if y+h > gh then gh-y else h
 
 -- | Try to allocate a matrix object
-matrixAllocate :: Memory -> Primitive -> Word64 -> Word64 -> Word64 -> IO (Maybe Matrix)
+matrixAllocate :: Memory -> Primitive -> Word64 -> Word64 -> Word64 -> IO (AllocResult Matrix)
 matrixAllocate mem p width height padding = do
    let 
       rowSize = width * (sizeOf p)

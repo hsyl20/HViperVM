@@ -7,6 +7,7 @@ module ViperVM.Platform.Peer.MemoryPeer (
    hostBuffer, clBuffer
 ) where
 
+import ViperVM.Backends.Common.Buffer
 import qualified ViperVM.Backends.Host.Memory as Host
 import qualified ViperVM.Backends.OpenCL.Memory as CL
 import qualified ViperVM.Backends.OpenCL.Buffer as CL
@@ -49,7 +50,7 @@ bufferSize = bufferPeerApply Host.bufferSize CL.bufferSize
               
 
 -- | Try to allocate a buffer in a memory
-bufferAllocate :: Word64 -> MemoryPeer -> IO (Maybe BufferPeer)
+bufferAllocate :: Word64 -> MemoryPeer -> IO (AllocResult BufferPeer)
 bufferAllocate sz m = memoryPeerApply 
    (\m' -> fmap HostBuffer <$> Host.bufferAllocate sz m')
    (\m' -> fmap CLBuffer <$> CL.bufferAllocate sz m')

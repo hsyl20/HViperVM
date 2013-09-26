@@ -2,6 +2,7 @@ module ViperVM.Backends.OpenCL.Buffer (
    Buffer(..), bufferName, bufferAllocate, bufferRelease
 ) where
 
+import ViperVM.Backends.Common.Buffer
 import ViperVM.Backends.OpenCL.Types
 import ViperVM.Backends.OpenCL.Loader
 import ViperVM.Backends.OpenCL.Memory
@@ -21,7 +22,7 @@ bufferName :: Buffer -> String
 bufferName _ = "OpenCL Buffer"
 
 -- | Try to allocate a buffer in a memory
-bufferAllocate :: Word64 -> Memory -> IO (Maybe Buffer)
+bufferAllocate :: Word64 -> Memory -> IO (AllocResult Buffer)
 bufferAllocate sz mem = do
 
    let 
@@ -30,7 +31,7 @@ bufferAllocate sz mem = do
 
    clmem <- clCreateBuffer lib ctx [] (sz,nullPtr)
    -- TODO: Force allocation on dev (clMemMigrate if available, copybuffer otherwise)
-   return $ Just (Buffer lib mem clmem sz)
+   return $ AllocSuccess (Buffer lib mem clmem sz)
 
 bufferRelease :: Buffer -> IO ()
 bufferRelease b = do

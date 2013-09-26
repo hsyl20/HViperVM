@@ -4,6 +4,7 @@ module ViperVM.Backends.Host.Buffer (
    bufferAllocate, bufferRelease
 ) where
 
+import ViperVM.Backends.Common.Buffer
 import ViperVM.Backends.Host.Memory
 
 import Foreign.Marshal.Alloc
@@ -17,12 +18,12 @@ data Buffer = Buffer {
    bufferMemory :: Memory
 } deriving (Eq,Ord)
 
-bufferAllocate :: Word64 -> Memory -> IO (Maybe Buffer)
+bufferAllocate :: Word64 -> Memory -> IO (AllocResult Buffer)
 bufferAllocate sz m = do
    ptr <- mallocBytes (fromIntegral sz)
    return $ if ptr == nullPtr 
-      then Nothing 
-      else Just (Buffer sz ptr m)
+      then AllocError
+      else AllocSuccess (Buffer sz ptr m)
 
 bufferRelease :: Buffer -> IO ()
 bufferRelease = free . bufferPtr

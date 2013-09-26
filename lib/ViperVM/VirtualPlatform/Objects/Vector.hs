@@ -7,6 +7,7 @@ import ViperVM.Platform.Memory
 import ViperVM.Platform.Primitive
 import ViperVM.Platform.Link
 import ViperVM.Common.Region
+import ViperVM.Backends.Common.Buffer
 
 import Control.Monad (liftM)
 import Data.Word
@@ -31,7 +32,7 @@ vectorSize v = s `div` ps
       ps = sizeOf (vectorCellType v)
       
 -- | Try to allocate a vector
-vectorAllocate :: Memory -> Primitive -> Word64 -> IO (Maybe Vector)
+vectorAllocate :: Memory -> Primitive -> Word64 -> IO (AllocResult Vector)
 vectorAllocate mem p sz = do
    let
       bSize = sz * (sizeOf p)

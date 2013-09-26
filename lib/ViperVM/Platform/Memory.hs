@@ -6,6 +6,7 @@ module ViperVM.Platform.Memory (
    bufferAllocate, bufferRelease
 ) where
 
+import ViperVM.Backends.Common.Buffer
 import qualified ViperVM.Platform.Peer.MemoryPeer as Peer
 
 import ViperVM.STM.TSet
@@ -14,7 +15,6 @@ import qualified ViperVM.STM.TSet as TSet
 import Text.Printf
 import Data.Typeable
 import Data.Word
-import Data.Traversable (forM)
 import Control.Applicative ( (<$>), (<*>) )
 import Control.Concurrent.STM (atomically,TVar,newTVarIO,writeTVar,readTVar)
 
@@ -121,26 +121,29 @@ bufferSize :: Buffer -> Word64
 bufferSize = Peer.bufferSize . bufferPeer
 
 -- | Try to allocate a buffer in a memory
-bufferAllocate :: Word64 -> Memory -> IO (Maybe Buffer)
+bufferAllocate :: Word64 -> Memory -> IO (AllocResult Buffer)
 bufferAllocate sz m = do
 
    -- Peer allocate
    peerBuf <- Peer.bufferAllocate sz (memoryPeer m)
 
    -- If allocation is successful, wrap buffer
-   forM peerBuf $ \b -> atomically $ do
+   case peerBuf of
 
-      -- Get buffer ID and increase for the next one
-      bId <- readTVar (memoryNextBufferId m)
-      writeTVar (memoryNextBufferId m) (bId + 1)
+      AllocSuccess b -> atomically $ do
+         -- Get buffer ID and increase for the next one
+         bId <- readTVar (memoryNextBufferId m)
+         writeTVar (memoryNextBufferId m) (bId + 1)
 
-      -- Wrap buffer
-      let buf = wrapBuffer bId b m
+         -- Wrap buffer
+         let buf = wrapBuffer bId b m
 
-      -- Add the buffer to the memory buffer list
-      TSet.insert buf (memoryBuffers m)
+         -- Add the buffer to the memory buffer list
+         TSet.insert buf (memoryBuffers m)
 
-      return buf
+         return (AllocSuccess buf)
+
+      AllocError -> return AllocError
 
 
 -- | Release a buffer

@@ -4,8 +4,9 @@ import ViperVM.Platform.Configuration
 import ViperVM.Platform.Memory
 import ViperVM.Platform.Platform
 import ViperVM.Runtime.Logger
+import ViperVM.Backends.Common.Buffer
 
-import Data.Traversable (forM)
+import Data.Traversable (traverse)
 import Data.Foldable (forM_)
 import Data.Maybe (catMaybes)
 import Control.Applicative ( (<$>) )
@@ -28,8 +29,10 @@ main = do
 
    putStrLn "Allocate a buffer in each memory..."
    let mems = memories platform
+       f (AllocSuccess x) = Just x
+       f AllocError = Nothing
 
-   buffers <- catMaybes <$> forM mems (bufferAllocate 1024)
+   buffers <- catMaybes <$> traverse (\x -> f <$> bufferAllocate 1024 x) mems
    putStrLn (printf "%d buffers have been allocated" (length buffers))
 
    putStrLn "Release buffers..."
